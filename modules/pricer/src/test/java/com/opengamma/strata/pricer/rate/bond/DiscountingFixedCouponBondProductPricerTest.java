@@ -120,7 +120,7 @@ public class DiscountingFixedCouponBondProductPricerTest {
   private static final CurveName NAME_ISSUER = CurveName.of("TestIssuerCurve");
   private static final CurveMetadata METADATA_ISSUER = Curves.zeroRates(NAME_ISSUER, ACT_365F);
   private static final InterpolatedNodalCurve CURVE_ISSUER = InterpolatedNodalCurve.of(
-      METADATA_ISSUER, new double[] {0.2, 9.0, 15.0 }, new double[] {0.03, 0.5, 0.13 }, INTERPOLATOR);
+      METADATA_ISSUER, new double[] {0.2, 9.0, 15.0 }, new double[] {0.03, 0.05, 0.13 }, INTERPOLATOR);
   private static final DiscountFactors DSC_FACTORS_ISSUER = ZeroRateDiscountFactors.of(EUR, VALUATION, CURVE_ISSUER);
   private static final LegalEntityGroup GROUP_ISSUER = LegalEntityGroup.of("GOVT1");
   private static final LegalEntityDiscountingProvider PROVIDER = LegalEntityDiscountingProvider.builder()
@@ -297,7 +297,7 @@ public class DiscountingFixedCouponBondProductPricerTest {
     PointSensitivityBuilder point = PRICER.presentValueSensitivity(PRODUCT, PROVIDER);
     CurveCurrencyParameterSensitivities computed = PROVIDER.curveParameterSensitivity(point.build());
     CurveCurrencyParameterSensitivities expected = sensitivity(PROVIDER, (p) -> PRICER.presentValue(PRODUCT, (p)), EPS);
-    assertTrue(computed.equalWithTolerance(expected, NOTIONAL * EPS));
+    assertTrue(computed.equalWithTolerance(expected, 30d * NOTIONAL * EPS));
   }
 
   public void test_presentValueSensitivityWithZSpread_continuous() {
@@ -305,7 +305,7 @@ public class DiscountingFixedCouponBondProductPricerTest {
     CurveCurrencyParameterSensitivities computed = PROVIDER.curveParameterSensitivity(point.build());
     CurveCurrencyParameterSensitivities expected = sensitivity(
         PROVIDER, (p) -> PRICER.presentValueWithZSpread(PRODUCT, (p), Z_SPREAD, false, 0), EPS);
-    assertTrue(computed.equalWithTolerance(expected, NOTIONAL * EPS));
+    assertTrue(computed.equalWithTolerance(expected, 20d * NOTIONAL * EPS));
   }
 
   public void test_presentValueSensitivityWithZSpread_periodic() {
@@ -314,7 +314,7 @@ public class DiscountingFixedCouponBondProductPricerTest {
     CurveCurrencyParameterSensitivities computed = PROVIDER.curveParameterSensitivity(point.build());
     CurveCurrencyParameterSensitivities expected = sensitivity(
         PROVIDER, (p) -> PRICER.presentValueWithZSpread(PRODUCT, (p), Z_SPREAD, true, PERIOD_PER_YEAR), EPS);
-    assertTrue(computed.equalWithTolerance(expected, NOTIONAL * EPS));
+    assertTrue(computed.equalWithTolerance(expected, 20d * NOTIONAL * EPS));
   }
 
   public void test_presentValueProductSensitivity_noExcoupon() {
@@ -322,7 +322,7 @@ public class DiscountingFixedCouponBondProductPricerTest {
     CurveCurrencyParameterSensitivities computed = PROVIDER.curveParameterSensitivity(point.build());
     CurveCurrencyParameterSensitivities expected = sensitivity(
         PROVIDER, (p) -> PRICER.presentValue(PRODUCT_NO_EXCOUPON, (p)), EPS);
-    assertTrue(computed.equalWithTolerance(expected, NOTIONAL * EPS));
+    assertTrue(computed.equalWithTolerance(expected, 30d * NOTIONAL * EPS));
   }
 
   public void test_presentValueSensitivityWithZSpread_continuous_noExcoupon() {
@@ -331,7 +331,7 @@ public class DiscountingFixedCouponBondProductPricerTest {
     CurveCurrencyParameterSensitivities computed = PROVIDER.curveParameterSensitivity(point.build());
     CurveCurrencyParameterSensitivities expected = sensitivity(
         PROVIDER, (p) -> PRICER.presentValueWithZSpread(PRODUCT_NO_EXCOUPON, (p), Z_SPREAD, false, 0), EPS);
-    assertTrue(computed.equalWithTolerance(expected, NOTIONAL * EPS));
+    assertTrue(computed.equalWithTolerance(expected, 20d * NOTIONAL * EPS));
   }
 
   public void test_presentValueSensitivityWithZSpread_periodic_noExcoupon() {
@@ -340,7 +340,7 @@ public class DiscountingFixedCouponBondProductPricerTest {
     CurveCurrencyParameterSensitivities computed = PROVIDER.curveParameterSensitivity(point.build());
     CurveCurrencyParameterSensitivities expected = sensitivity(PROVIDER,
         (p) -> PRICER.presentValueWithZSpread(PRODUCT_NO_EXCOUPON, (p), Z_SPREAD, true, PERIOD_PER_YEAR), EPS);
-    assertTrue(computed.equalWithTolerance(expected, NOTIONAL * EPS));
+    assertTrue(computed.equalWithTolerance(expected, 20d * NOTIONAL * EPS));
   }
 
   public void test_dirtyPriceSensitivity() {
