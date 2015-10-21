@@ -144,7 +144,7 @@ public class DiscountingFixedCouponBondTradePricer {
     double pvStandard =
         (cleanPrice * product.getNotional() + productPricer.accruedInterest(product, standardSettlementDate)) * df;
     if (standardSettlementDate.isEqual(tradeSettlementDate)) {
-      return CurrencyAmount.of(currency, pvStandard);
+      return presentValueFromProductPresentValue(trade, provider, CurrencyAmount.of(currency, pvStandard));
     }
     // check coupon payment between two settlement dates
     IssuerCurveDiscountFactors discountFactors = provider.issuerCurveDiscountFactors(legalEntityId, currency);
@@ -158,7 +158,7 @@ public class DiscountingFixedCouponBondTradePricer {
       pvDiff = -productPricer.presentValueCoupon(
           expanded, discountFactors, standardSettlementDate, tradeSettlementDate, exCoupon);
     }
-    return CurrencyAmount.of(currency, pvStandard + pvDiff);
+    return presentValueFromProductPresentValue(trade, provider, CurrencyAmount.of(currency, pvStandard + pvDiff));
   }
 
   /**
@@ -200,7 +200,7 @@ public class DiscountingFixedCouponBondTradePricer {
     double pvStandard =
         (cleanPrice * product.getNotional() + productPricer.accruedInterest(product, standardSettlementDate)) * df;
     if (standardSettlementDate.isEqual(tradeSettlementDate)) {
-      return CurrencyAmount.of(currency, pvStandard);
+      return presentValueFromProductPresentValue(trade, provider, CurrencyAmount.of(currency, pvStandard));
     }
     // check coupon payment between two settlement dates
     IssuerCurveDiscountFactors discountFactors = provider.issuerCurveDiscountFactors(legalEntityId, currency);
@@ -214,7 +214,7 @@ public class DiscountingFixedCouponBondTradePricer {
       pvDiff = -productPricer.presentValueCouponWithZSpread(
           expanded, discountFactors, standardSettlementDate, tradeSettlementDate, zSpread, periodic, periodsPerYear, exCoupon);
     }
-    return CurrencyAmount.of(currency, pvStandard + pvDiff);
+    return presentValueFromProductPresentValue(trade, provider, CurrencyAmount.of(currency, pvStandard + pvDiff));
   }
 
   //-------------------------------------------------------------------------
