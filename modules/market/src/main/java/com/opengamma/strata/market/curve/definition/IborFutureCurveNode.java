@@ -14,7 +14,6 @@ import org.joda.beans.PropertyDefinition;
 import com.google.common.collect.ImmutableSet;
 import com.opengamma.strata.basics.market.ObservableKey;
 import com.opengamma.strata.basics.market.ObservableValues;
-import com.opengamma.strata.finance.Trade;
 import com.opengamma.strata.finance.rate.future.IborFutureTemplate;
 import com.opengamma.strata.finance.rate.future.IborFutureTrade;
 import com.opengamma.strata.market.curve.DatedCurveParameterMetadata;
@@ -59,6 +58,35 @@ public class IborFutureCurveNode
   @PropertyDefinition
   private final double spread;
 
+  //-------------------------------------------------------------------------
+  /**
+   * Returns a curve node for a Ibor Future using the specified instrument template and rate key.
+   *
+   * @param template  the template used for building the instrument for the node
+   * @param rateKey  the key identifying the market rate used when building the instrument for the node
+   * @return a node whose instrument is built from the template using a market rate
+   */
+  public static IborFutureCurveNode of(IborFutureTemplate template, ObservableKey rateKey) {
+    return IborFutureCurveNode.builder()
+        .template(template)
+        .rateKey(rateKey).build();
+  }
+
+  /**
+   * Returns a curve node for a Ibor Future using the specified instrument template, rate key and spread.
+   *
+   * @param template  the template defining the node instrument
+   * @param rateKey  the key identifying the market data providing the rate for the node instrument
+   * @param spread  the spread amount added to the rate
+   * @return a node whose instrument is built from the template using a market rate
+   */
+  public static IborFutureCurveNode of(IborFutureTemplate template, ObservableKey rateKey, double spread) {
+    return IborFutureCurveNode.builder()
+        .template(template)
+        .rateKey(rateKey)
+        .spread(spread).build();
+  }
+
   @Override
   public Set<ObservableKey> requirements() {
     return ImmutableSet.of(rateKey);
@@ -66,15 +94,13 @@ public class IborFutureCurveNode
 
   @Override
   public DatedCurveParameterMetadata metadata(LocalDate valuationDate) {
-    IborFutureTrade trade = template.toTrade(valuationDate, 1L, 1.0, 0.0);
-    LocalDate effectiveDate = 
-        template.getConvention().getIndex().calculateEffectiveFromFixing(trade.getProduct().getFixingDate());
-    LocalDate maturityDate = template.getConvention().getIndex().calculateMaturityFromEffective(effectiveDate);
-    return YearMonthCurveNodeMetadata.of(maturityDate, YearMonth.from(trade.getProduct().getFixingDate()));
+    LocalDate referenceDate = template.referenceDate(valuationDate);
+    LocalDate maturityDate = template.getConvention().getIndex().calculateMaturityFromEffective(referenceDate);
+    return YearMonthCurveNodeMetadata.of(maturityDate, YearMonth.from(referenceDate));
   }
 
   @Override
-  public Trade trade(LocalDate valuationDate, ObservableValues marketData) {
+  public IborFutureTrade trade(LocalDate valuationDate, ObservableValues marketData) {
     double price = marketData.getValue(rateKey) + spread;
     return  template.toTrade(valuationDate, 1L, 1.0, price);
   }
