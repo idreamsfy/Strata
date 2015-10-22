@@ -71,7 +71,7 @@ import com.opengamma.strata.pricer.rate.swap.DiscountingSwapProductPricer;
  * One curve is Discounting and Fed Fund forward and the other one is Libor 3M forward.
  */
 @Test
-public class CalibrationDiscountingSimpleUsd2Test {
+public class CalibrationZeroRateUsd2OisIrsTest {
 
   private static final LocalDate VALUATION_DATE = LocalDate.of(2015, 7, 21);
 
@@ -313,11 +313,11 @@ public class CalibrationDiscountingSimpleUsd2Test {
 
   //-------------------------------------------------------------------------
   @SuppressWarnings("unused")
-  @Test(enabled = false)
+  @Test(enabled = true)
   void performance() {
     long startTime, endTime;
     int nbTests = 100;
-    int nbRep = 5;
+    int nbRep = 3;
     int count = 0;
 
     for (int i = 0; i < nbRep; i++) {
@@ -332,7 +332,7 @@ public class CalibrationDiscountingSimpleUsd2Test {
           + (endTime - startTime) + " ms.");
     }
     System.out.println("Avoiding hotspot: " + count);
-    // Previous run: 2150 ms for 100 calibrations (2 curve simultaneous - 30 nodes)
+    // Previous run: 1600 ms for 100 calibrations (2 curve simultaneous - 30 nodes)
   }
 
 }
