@@ -15,10 +15,8 @@ import org.testng.annotations.Test;
 
 import com.opengamma.strata.basics.currency.CurrencyAmount;
 import com.opengamma.strata.finance.SecurityLink;
-import com.opengamma.strata.finance.TradeInfo;
 import com.opengamma.strata.finance.rate.bond.BondFuture;
 import com.opengamma.strata.finance.rate.bond.FixedCouponBond;
-import com.opengamma.strata.finance.rate.bond.FixedCouponBondTrade;
 import com.opengamma.strata.market.curve.CurveMetadata;
 import com.opengamma.strata.market.sensitivity.CurveCurrencyParameterSensitivities;
 import com.opengamma.strata.market.sensitivity.CurveCurrencyParameterSensitivity;
@@ -48,55 +46,33 @@ public class DiscountingBondFutureProductPricerTest {
   private static final double EPS = 1.0e-6;
   // pricer
   private static final DiscountingBondFutureProductPricer FUTURE_PRICER = DiscountingBondFutureProductPricer.DEFAULT;
-  private static final DiscountingFixedCouponBondTradePricer BOND_PRICER = DiscountingFixedCouponBondTradePricer.DEFAULT;
+  private static final DiscountingFixedCouponBondProductPricer BOND_PRICER = DiscountingFixedCouponBondProductPricer.DEFAULT;
   private static final RatesFiniteDifferenceSensitivityCalculator FD_CAL = new RatesFiniteDifferenceSensitivityCalculator(EPS);
 
   public void test_price() {
     double computed = FUTURE_PRICER.price(FUTURE_PRODUCT, PROVIDER);
-    TradeInfo tradeInfo = TradeInfo.builder()
-        .tradeDate(TRADE_DATE)
-        .settlementDate(FUTURE_PRODUCT.getLastDeliveryDate())
-        .build();
-    FixedCouponBondTrade bondTrade = FixedCouponBondTrade.builder()
-        .quantity(1)
-        .securityLink(BOND_SECURITY_LINK[0])
-        .tradeInfo(tradeInfo)
-        .build();
-    double dirtyPrice = BOND_PRICER.dirtyPriceFromCurves(bondTrade, PROVIDER);
-    double expected = BOND_PRICER.cleanPriceFromDirtyPrice(bondTrade, dirtyPrice) / CONVERSION_FACTOR[0];
+    double dirtyPrice = BOND_PRICER.dirtyPriceFromCurves(
+        BOND_SECURITY_LINK[0].resolvedTarget(), PROVIDER, FUTURE_PRODUCT.getLastDeliveryDate());
+    double expected = BOND_PRICER.cleanPriceFromDirtyPrice(BOND_SECURITY_LINK[0].resolvedTarget().getProduct(),
+        FUTURE_PRODUCT.getLastDeliveryDate(), dirtyPrice) / CONVERSION_FACTOR[0];
     assertEquals(computed, expected, TOL);
   }
 
   public void test_priceWithZSpread_continuous() {
     double computed = FUTURE_PRICER.priceWithZSpread(FUTURE_PRODUCT, PROVIDER, Z_SPREAD, false, 0);
-    TradeInfo tradeInfo = TradeInfo.builder()
-        .tradeDate(TRADE_DATE)
-        .settlementDate(FUTURE_PRODUCT.getLastDeliveryDate())
-        .build();
-    FixedCouponBondTrade bondTrade = FixedCouponBondTrade.builder()
-        .quantity(1)
-        .securityLink(BOND_SECURITY_LINK[0])
-        .tradeInfo(tradeInfo)
-        .build();
-    double dirtyPrice = BOND_PRICER.dirtyPriceFromCurvesWithZSpread(bondTrade, PROVIDER, Z_SPREAD, false, 0);
-    double expected = BOND_PRICER.cleanPriceFromDirtyPrice(bondTrade, dirtyPrice) / CONVERSION_FACTOR[0];
+    double dirtyPrice = BOND_PRICER.dirtyPriceFromCurvesWithZSpread(
+        BOND_SECURITY_LINK[0].resolvedTarget(), PROVIDER, Z_SPREAD, false, 0, FUTURE_PRODUCT.getLastDeliveryDate());
+    double expected = BOND_PRICER.cleanPriceFromDirtyPrice(BOND_SECURITY_LINK[0].resolvedTarget().getProduct(),
+        FUTURE_PRODUCT.getLastDeliveryDate(), dirtyPrice) / CONVERSION_FACTOR[0];
     assertEquals(computed, expected, TOL);
   }
 
   public void test_priceWithZSpread_periodic() {
     double computed = FUTURE_PRICER.priceWithZSpread(FUTURE_PRODUCT, PROVIDER, Z_SPREAD, true, PERIOD_PER_YEAR);
-    TradeInfo tradeInfo = TradeInfo.builder()
-        .tradeDate(TRADE_DATE)
-        .settlementDate(FUTURE_PRODUCT.getLastDeliveryDate())
-        .build();
-    FixedCouponBondTrade bondTrade = FixedCouponBondTrade.builder()
-        .quantity(1)
-        .securityLink(BOND_SECURITY_LINK[0])
-        .tradeInfo(tradeInfo)
-        .build();
-    double dirtyPrice = BOND_PRICER.dirtyPriceFromCurvesWithZSpread(
-        bondTrade, PROVIDER, Z_SPREAD, true, PERIOD_PER_YEAR);
-    double expected = BOND_PRICER.cleanPriceFromDirtyPrice(bondTrade, dirtyPrice) / CONVERSION_FACTOR[0];
+    double dirtyPrice = BOND_PRICER.dirtyPriceFromCurvesWithZSpread(BOND_SECURITY_LINK[0].resolvedTarget(),
+        PROVIDER, Z_SPREAD, true, PERIOD_PER_YEAR, FUTURE_PRODUCT.getLastDeliveryDate());
+    double expected = BOND_PRICER.cleanPriceFromDirtyPrice(BOND_SECURITY_LINK[0].resolvedTarget().getProduct(),
+        FUTURE_PRODUCT.getLastDeliveryDate(), dirtyPrice) / CONVERSION_FACTOR[0];
     assertEquals(computed, expected, TOL);
   }
 

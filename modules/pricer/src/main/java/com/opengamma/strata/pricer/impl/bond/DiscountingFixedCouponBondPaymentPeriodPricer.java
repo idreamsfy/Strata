@@ -53,6 +53,10 @@ public class DiscountingFixedCouponBondPaymentPeriodPricer {
    * @return the present value of the period
    */
   public double presentValue(FixedCouponBondPaymentPeriod period, IssuerCurveDiscountFactors discountFactors) {
+
+    if (period.getPaymentDate().isBefore(discountFactors.getValuationDate())) {
+      return 0d;
+    }
     double df = discountFactors.discountFactor(period.getPaymentDate());
     return period.getFixedRate() * period.getNotional() * period.getYearFraction() * df;
   }
@@ -60,8 +64,8 @@ public class DiscountingFixedCouponBondPaymentPeriodPricer {
   /**
    * Calculates the present value of a single fixed coupon payment period with z-spread.
    * <p>
-   * The z-spread is a parallel shift applied to continuously compounded rates or periodic compounded rates 
-   * of the discounting curve. 
+   * The z-spread is a parallel shift applied to continuously compounded rates or periodic
+   * compounded rates of the discounting curve.
    * <p>
    * The amount is expressed in the currency of the period.
    * This returns the value of the period with discounting.
@@ -72,19 +76,23 @@ public class DiscountingFixedCouponBondPaymentPeriodPricer {
    * @param period  the period to price
    * @param discountFactors  the discount factor provider
    * @param zSpread  the z-spread
-   * @param periodic  If true, the spread is added to periodic compounded rates. If false, the spread is added to 
-   * continuously compounded rates
-   * @param periodPerYear  the number of periods per year
+   * @param periodic  if true, the spread is added to periodic compounded rates,
+   *  if false, the spread is added to continuously compounded rates
+   * @param periodsPerYear  the number of periods per year
    * @return the present value of the period
    */
-  public double presentValue(
+  public double presentValueWithSpread(
       FixedCouponBondPaymentPeriod period,
       IssuerCurveDiscountFactors discountFactors,
       double zSpread,
       boolean periodic,
-      int periodPerYear) {
+      int periodsPerYear) {
+
+    if (period.getPaymentDate().isBefore(discountFactors.getValuationDate())) {
+      return 0d;
+    }
     double df = discountFactors.getDiscountFactors()
-        .discountFactorWithSpread(period.getPaymentDate(), zSpread, periodic, periodPerYear);
+        .discountFactorWithSpread(period.getPaymentDate(), zSpread, periodic, periodsPerYear);
     return period.getFixedRate() * period.getNotional() * period.getYearFraction() * df;
   }
 
@@ -105,6 +113,10 @@ public class DiscountingFixedCouponBondPaymentPeriodPricer {
    * @return the present value of the period
    */
   public double futureValue(FixedCouponBondPaymentPeriod period, IssuerCurveDiscountFactors discountFactors) {
+
+    if (period.getPaymentDate().isBefore(discountFactors.getValuationDate())) {
+      return 0d;
+    }
     return period.getFixedRate() * period.getNotional() * period.getYearFraction();
   }
 
@@ -119,9 +131,13 @@ public class DiscountingFixedCouponBondPaymentPeriodPricer {
    * @param discountFactors  the discount factor provider
    * @return the present value curve sensitivity of the period
    */
-  public IssuerCurveZeroRateSensitivity presentValueSensitivity(
+  public PointSensitivityBuilder presentValueSensitivity(
       FixedCouponBondPaymentPeriod period,
       IssuerCurveDiscountFactors discountFactors) {
+
+    if (period.getPaymentDate().isBefore(discountFactors.getValuationDate())) {
+      return PointSensitivityBuilder.none();
+    }
     IssuerCurveZeroRateSensitivity dscSensi = discountFactors.zeroRatePointSensitivity(period.getPaymentDate());
     return dscSensi.multipliedBy(period.getFixedRate() * period.getNotional() * period.getYearFraction());
   }
@@ -129,8 +145,8 @@ public class DiscountingFixedCouponBondPaymentPeriodPricer {
   /**
    * Calculates the present value sensitivity of a single fixed coupon payment period with z-spread.
    * <p>
-   * The z-spread is a parallel shift applied to continuously compounded rates or periodic compounded rates 
-   * of the discounting curve. 
+   * The z-spread is a parallel shift applied to continuously compounded rates or periodic
+   * compounded rates of the discounting curve.
    * <p>
    * The present value sensitivity of the period is the sensitivity of the present value to
    * the underlying curves.
@@ -138,19 +154,23 @@ public class DiscountingFixedCouponBondPaymentPeriodPricer {
    * @param period  the period to price
    * @param discountFactors  the discount factor provider
    * @param zSpread  the z-spread
-   * @param periodic  If true, the spread is added to periodic compounded rates. If false, the spread is added to 
-   * continuously compounded rates
-   * @param periodPerYear  the number of periods per year
+   * @param periodic  if true, the spread is added to periodic compounded rates,
+   *  if false, the spread is added to continuously compounded rates
+   * @param periodsPerYear  the number of periods per year
    * @return the present value curve sensitivity of the period
    */
-  public IssuerCurveZeroRateSensitivity presentValueSensitivity(
+  public PointSensitivityBuilder presentValueSensitivityWithSpread(
       FixedCouponBondPaymentPeriod period,
       IssuerCurveDiscountFactors discountFactors,
       double zSpread,
       boolean periodic,
-      int periodPerYear) {
+      int periodsPerYear) {
+
+    if (period.getPaymentDate().isBefore(discountFactors.getValuationDate())) {
+      return PointSensitivityBuilder.none();
+    }
     ZeroRateSensitivity zeroSensi = discountFactors.getDiscountFactors().zeroRatePointSensitivityWithSpread(
-        period.getPaymentDate(), zSpread, periodic, periodPerYear);
+        period.getPaymentDate(), zSpread, periodic, periodsPerYear);
     IssuerCurveZeroRateSensitivity dscSensi =
         IssuerCurveZeroRateSensitivity.of(zeroSensi, discountFactors.getLegalEntityGroup());
     return dscSensi.multipliedBy(period.getFixedRate() * period.getNotional() * period.getYearFraction());
@@ -172,6 +192,7 @@ public class DiscountingFixedCouponBondPaymentPeriodPricer {
   public PointSensitivityBuilder futureValueSensitivity(
       FixedCouponBondPaymentPeriod period,
       IssuerCurveDiscountFactors discountFactors) {
+
     return PointSensitivityBuilder.none();
   }
 
@@ -189,17 +210,10 @@ public class DiscountingFixedCouponBondPaymentPeriodPricer {
       FixedCouponBondPaymentPeriod period,
       IssuerCurveDiscountFactors discountFactors,
       ExplainMapBuilder builder) {
+
     Currency currency = period.getCurrency();
     LocalDate paymentDate = period.getPaymentDate();
-
-    builder.put(ExplainKey.ENTRY_TYPE, "FixedCouponBondPaymentPeriod");
-    builder.put(ExplainKey.PAYMENT_DATE, paymentDate);
-    builder.put(ExplainKey.PAYMENT_CURRENCY, currency);
-    builder.put(ExplainKey.START_DATE, period.getStartDate());
-    builder.put(ExplainKey.UNADJUSTED_START_DATE, period.getUnadjustedStartDate());
-    builder.put(ExplainKey.END_DATE, period.getEndDate());
-    builder.put(ExplainKey.ACCRUAL_DAYS, (int) DAYS.between(period.getStartDate(), period.getEndDate()));
-    builder.put(ExplainKey.UNADJUSTED_END_DATE, period.getUnadjustedEndDate());
+    explainBasics(period, builder, currency, paymentDate);
     if (paymentDate.isBefore(discountFactors.getValuationDate())) {
       builder.put(ExplainKey.FUTURE_VALUE, CurrencyAmount.zero(currency));
       builder.put(ExplainKey.PRESENT_VALUE, CurrencyAmount.zero(currency));
@@ -215,27 +229,43 @@ public class DiscountingFixedCouponBondPaymentPeriodPricer {
    * <p>
    * This adds information to the {@link ExplainMapBuilder} to aid understanding of the calculation.
    * <p>
-   * The z-spread is a parallel shift applied to continuously compounded rates or periodic compounded rates 
-   * of the discounting curve. 
+   * The z-spread is a parallel shift applied to continuously compounded rates or periodic
+   * compounded rates of the discounting curve.
    * 
    * @param period  the period to price
    * @param discountFactors  the discount factor provider
    * @param zSpread  the z-spread
-   * @param periodic  If true, the spread is added to periodic compounded rates. If false, the spread is added to 
-   * continuously compounded rates
-   * @param periodPerYear  the number of periods per year
+   * @param periodic  if true, the spread is added to periodic compounded rates,
+   *  if false, the spread is added to continuously compounded rates
+   * @param periodsPerYear  the number of periods per year
    * @param builder  the builder to populate
    */
-  public void explainPresentValue(
+  public void explainPresentValueWithSpread(
       FixedCouponBondPaymentPeriod period,
       IssuerCurveDiscountFactors discountFactors,
       ExplainMapBuilder builder,
       double zSpread,
       boolean periodic,
-      int periodPerYear) {
+      int periodsPerYear) {
+
     Currency currency = period.getCurrency();
     LocalDate paymentDate = period.getPaymentDate();
+    explainBasics(period, builder, currency, paymentDate);
+    if (paymentDate.isBefore(discountFactors.getValuationDate())) {
+      builder.put(ExplainKey.FUTURE_VALUE, CurrencyAmount.zero(currency));
+      builder.put(ExplainKey.PRESENT_VALUE, CurrencyAmount.zero(currency));
+    } else {
+      builder.put(ExplainKey.DISCOUNT_FACTOR,
+          discountFactors.getDiscountFactors().discountFactorWithSpread(paymentDate, zSpread, periodic, periodsPerYear));
+      builder.put(ExplainKey.FUTURE_VALUE, CurrencyAmount.of(currency, futureValue(period, discountFactors)));
+      builder.put(ExplainKey.PRESENT_VALUE,
+          CurrencyAmount.of(currency, presentValueWithSpread(period, discountFactors, zSpread, periodic, periodsPerYear)));
+    }
+  }
 
+  // common parts of explain
+  private void explainBasics(FixedCouponBondPaymentPeriod period, ExplainMapBuilder builder, Currency currency,
+      LocalDate paymentDate) {
     builder.put(ExplainKey.ENTRY_TYPE, "FixedCouponBondPaymentPeriod");
     builder.put(ExplainKey.PAYMENT_DATE, paymentDate);
     builder.put(ExplainKey.PAYMENT_CURRENCY, currency);
@@ -244,15 +274,6 @@ public class DiscountingFixedCouponBondPaymentPeriodPricer {
     builder.put(ExplainKey.END_DATE, period.getEndDate());
     builder.put(ExplainKey.ACCRUAL_DAYS, (int) DAYS.between(period.getStartDate(), period.getEndDate()));
     builder.put(ExplainKey.UNADJUSTED_END_DATE, period.getUnadjustedEndDate());
-    if (paymentDate.isBefore(discountFactors.getValuationDate())) {
-      builder.put(ExplainKey.FUTURE_VALUE, CurrencyAmount.zero(currency));
-      builder.put(ExplainKey.PRESENT_VALUE, CurrencyAmount.zero(currency));
-    } else {
-      builder.put(ExplainKey.DISCOUNT_FACTOR,
-          discountFactors.getDiscountFactors().discountFactorWithSpread(paymentDate, zSpread, periodic, periodPerYear));
-      builder.put(ExplainKey.FUTURE_VALUE, CurrencyAmount.of(currency, futureValue(period, discountFactors)));
-      builder.put(ExplainKey.PRESENT_VALUE,
-          CurrencyAmount.of(currency, presentValue(period, discountFactors, zSpread, periodic, periodPerYear)));
-    }
   }
+
 }

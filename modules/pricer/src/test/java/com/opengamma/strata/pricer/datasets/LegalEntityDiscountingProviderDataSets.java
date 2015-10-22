@@ -4,11 +4,8 @@ import static com.opengamma.strata.basics.currency.Currency.USD;
 import static com.opengamma.strata.basics.date.DayCounts.ACT_ACT_ISDA;
 
 import java.time.LocalDate;
-import java.util.List;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.opengamma.analytics.math.interpolation.Interpolator1DFactory;
 import com.opengamma.strata.basics.currency.Currency;
 import com.opengamma.strata.basics.interpolator.CurveInterpolator;
 import com.opengamma.strata.collect.id.StandardId;
@@ -22,6 +19,7 @@ import com.opengamma.strata.market.value.DiscountFactors;
 import com.opengamma.strata.market.value.LegalEntityGroup;
 import com.opengamma.strata.market.value.SimpleDiscountFactors;
 import com.opengamma.strata.market.value.ZeroRateDiscountFactors;
+import com.opengamma.strata.math.impl.interpolation.Interpolator1DFactory;
 import com.opengamma.strata.pricer.rate.LegalEntityDiscountingProvider;
 
 /**
@@ -56,7 +54,6 @@ public class LegalEntityDiscountingProviderDataSets {
   /** meta data of issuer discount factor curve */
   public static final CurveMetadata META_SIMPLE_ISSUER = Curves.discountFactors(NAME_ISSUER, ACT_ACT_ISDA);
   private static final BondGroup GROUP_REPO = BondGroup.of("GOVT1 BONDS");
-  private static final ImmutableList<StandardId> LIST_REPO = ImmutableList.<StandardId>of(ISSUER_ID, BOND_SECURITY_ID);
   private static final LegalEntityGroup GROUP_ISSUER = LegalEntityGroup.of("GOVT1");
   // zero rate curves
   private static final InterpolatedNodalCurve CURVE_ZERO_REPO =
@@ -74,7 +71,7 @@ public class LegalEntityDiscountingProviderDataSets {
       .legalEntityMap(ImmutableMap.<StandardId, LegalEntityGroup>of(ISSUER_ID, GROUP_ISSUER))
       .repoCurves(ImmutableMap.<Pair<BondGroup, Currency>, DiscountFactors>of(
           Pair.<BondGroup, Currency>of(GROUP_REPO, USD), DSC_FACTORS_ZERO_REPO))
-      .BondMap(ImmutableMap.<List<StandardId>, BondGroup>of(LIST_REPO, GROUP_REPO))
+      .bondMap(ImmutableMap.<StandardId, BondGroup>of(BOND_SECURITY_ID, GROUP_REPO))
       .build();
   // discount factor curves
   private static final InterpolatedNodalCurve CURVE_SIMPLE_REPO =
@@ -92,6 +89,6 @@ public class LegalEntityDiscountingProviderDataSets {
       .legalEntityMap(ImmutableMap.<StandardId, LegalEntityGroup>of(ISSUER_ID, GROUP_ISSUER))
       .repoCurves(ImmutableMap.<Pair<BondGroup, Currency>, DiscountFactors>of(
           Pair.<BondGroup, Currency>of(GROUP_REPO, USD), DSC_FACTORS_SIMPLE_REPO))
-      .BondMap(ImmutableMap.<List<StandardId>, BondGroup>of(LIST_REPO, GROUP_REPO))
+      .bondMap(ImmutableMap.<StandardId, BondGroup>of(BOND_SECURITY_ID, GROUP_REPO))
       .build();
 }

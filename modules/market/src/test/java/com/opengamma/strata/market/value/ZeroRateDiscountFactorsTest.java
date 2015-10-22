@@ -18,8 +18,9 @@ import java.time.LocalDate;
 
 import org.testng.annotations.Test;
 
-import com.opengamma.analytics.math.interpolation.Interpolator1DFactory;
 import com.opengamma.strata.basics.interpolator.CurveInterpolator;
+import com.opengamma.strata.basics.market.Perturbation;
+import com.opengamma.strata.market.curve.Curve;
 import com.opengamma.strata.market.curve.CurveMetadata;
 import com.opengamma.strata.market.curve.CurveName;
 import com.opengamma.strata.market.curve.Curves;
@@ -27,6 +28,7 @@ import com.opengamma.strata.market.curve.DefaultCurveMetadata;
 import com.opengamma.strata.market.curve.InterpolatedNodalCurve;
 import com.opengamma.strata.market.sensitivity.CurveUnitParameterSensitivities;
 import com.opengamma.strata.market.sensitivity.ZeroRateSensitivity;
+import com.opengamma.strata.math.impl.interpolation.Interpolator1DFactory;
 
 /**
  * Test {@link ZeroRateDiscountFactors}.
@@ -90,7 +92,7 @@ public class ZeroRateDiscountFactorsTest {
     ZeroRateDiscountFactors test = ZeroRateDiscountFactors.of(GBP, DATE_VAL, CURVE);
     double relativeYearFraction = ACT_365F.relativeYearFraction(DATE_VAL, DATE_AFTER);
     double expected = Math.exp(-relativeYearFraction * (CURVE.yValue(relativeYearFraction) + SPREAD));
-    assertEquals(test.discountFactorWithSpread(DATE_AFTER, SPREAD, false, 0), expected);
+    assertEquals(test.discountFactorWithSpread(DATE_AFTER, SPREAD, false, 0), expected, TOL);
   }
 
   public void test_discountFactorWithSpread_periodic() {
@@ -100,12 +102,12 @@ public class ZeroRateDiscountFactorsTest {
     double discountFactorBase = test.discountFactor(DATE_AFTER);
     double rate = (Math.pow(discountFactorBase, -1d / periodPerYear / relativeYearFraction) - 1d) * periodPerYear;
     double expected = discountFactorFromPeriodicallyCompoundedRate(rate + SPREAD, periodPerYear, relativeYearFraction);
-    assertEquals(test.discountFactorWithSpread(DATE_AFTER, SPREAD, true, periodPerYear), expected);
+    assertEquals(test.discountFactorWithSpread(DATE_AFTER, SPREAD, true, periodPerYear), expected, TOL);
   }
 
   public void test_discountFactorWithSpread_smallYearFraction() {
     ZeroRateDiscountFactors test = ZeroRateDiscountFactors.of(GBP, DATE_VAL, CURVE);
-    assertEquals(test.discountFactorWithSpread(DATE_VAL, SPREAD, true, 1), 1d);
+    assertEquals(test.discountFactorWithSpread(DATE_VAL, SPREAD, true, 1), 1d, TOL);
   }
 
   private double discountFactorFromPeriodicallyCompoundedRate(double rate, double periodPerYear, double time) {
@@ -213,6 +215,12 @@ public class ZeroRateDiscountFactorsTest {
   }
 
   //-------------------------------------------------------------------------
+  public void test_applyPerturbation() {
+    Perturbation<Curve> perturbation = curve -> CURVE2;
+    ZeroRateDiscountFactors test = ZeroRateDiscountFactors.of(GBP, DATE_VAL, CURVE).applyPerturbation(perturbation);
+    assertEquals(test.getCurve(), CURVE2);
+  }
+
   public void test_withCurve() {
     ZeroRateDiscountFactors test = ZeroRateDiscountFactors.of(GBP, DATE_VAL, CURVE).withCurve(CURVE2);
     assertEquals(test.getCurve(), CURVE2);
