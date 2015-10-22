@@ -26,10 +26,12 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
 
 import org.testng.annotations.Test;
 
 import com.google.common.collect.ImmutableList;
+import com.opengamma.strata.basics.BuySell;
 import com.opengamma.strata.basics.Trade;
 import com.opengamma.strata.basics.currency.Currency;
 import com.opengamma.strata.basics.currency.CurrencyAmount;
@@ -42,8 +44,8 @@ import com.opengamma.strata.basics.date.Tenor;
 import com.opengamma.strata.basics.index.Index;
 import com.opengamma.strata.basics.interpolator.CurveExtrapolator;
 import com.opengamma.strata.basics.interpolator.CurveInterpolator;
+import com.opengamma.strata.basics.market.ImmutableObservableValues;
 import com.opengamma.strata.basics.market.ObservableKey;
-import com.opengamma.strata.basics.market.ObservableValues;
 import com.opengamma.strata.collect.id.StandardId;
 import com.opengamma.strata.collect.timeseries.LocalDateDoubleTimeSeries;
 import com.opengamma.strata.finance.rate.deposit.IborFixingDepositTemplate;
@@ -56,6 +58,7 @@ import com.opengamma.strata.finance.rate.fra.FraTrade;
 import com.opengamma.strata.finance.rate.swap.SwapTrade;
 import com.opengamma.strata.finance.rate.swap.type.FixedIborSwapTemplate;
 import com.opengamma.strata.finance.rate.swap.type.FixedOvernightSwapTemplate;
+import com.opengamma.strata.finance.rate.swap.type.IborIborSwapConventions;
 import com.opengamma.strata.finance.rate.swap.type.IborIborSwapTemplate;
 import com.opengamma.strata.market.curve.CurveGroupName;
 import com.opengamma.strata.market.curve.CurveMetadata;
@@ -71,6 +74,8 @@ import com.opengamma.strata.market.curve.definition.IborIborSwapCurveNode;
 import com.opengamma.strata.market.curve.definition.InterpolatedNodalCurveDefinition;
 import com.opengamma.strata.market.curve.definition.TermDepositCurveNode;
 import com.opengamma.strata.market.key.QuoteKey;
+import com.opengamma.strata.market.sensitivity.CurveCurrencyParameterSensitivities;
+import com.opengamma.strata.market.sensitivity.PointSensitivityBuilder;
 import com.opengamma.strata.market.value.ValueType;
 import com.opengamma.strata.math.impl.interpolation.FlatExtrapolator1D;
 import com.opengamma.strata.math.impl.interpolation.LinearInterpolator1D;
@@ -79,6 +84,7 @@ import com.opengamma.strata.pricer.rate.deposit.DiscountingIborFixingDepositProd
 import com.opengamma.strata.pricer.rate.deposit.DiscountingTermDepositProductPricer;
 import com.opengamma.strata.pricer.rate.fra.DiscountingFraTradePricer;
 import com.opengamma.strata.pricer.rate.swap.DiscountingSwapProductPricer;
+import com.opengamma.strata.pricer.sensitivity.MarketQuoteSensitivityCalculator;
 
 /**
  * Test for curve calibration with 2 curves in USD.
@@ -101,7 +107,7 @@ public class CalibrationZeroRateUsd3OisIrsBsTest {
   private static final CurveName DSCON_CURVE_NAME = CurveName.of(DSCON_NAME);
   private static final String FWD3_NAME = "USD-LIBOR3M-FRAIRS";
   private static final CurveName FWD3_CURVE_NAME = CurveName.of(FWD3_NAME);
-  private static final String FWD6_NAME = "USD-LIBOR3M-FRABS";
+  private static final String FWD6_NAME = "USD-LIBOR6M-FRABS";
   private static final CurveName FWD6_CURVE_NAME = CurveName.of(FWD6_NAME);
   /** Curves associations to currencies and indices. */
   private static final Map<CurveName, Currency> DSC_NAMES = new HashMap<>();
@@ -115,8 +121,12 @@ public class CalibrationZeroRateUsd3OisIrsBsTest {
     Set<Index> usdLibor3Set = new HashSet<>();
     usdLibor3Set.add(USD_LIBOR_3M);
     IDX_NAMES.put(FWD3_CURVE_NAME, usdLibor3Set);
-    TS.put(USD_LIBOR_3M, TS_EMTPY);
+    Set<Index> usdLibor6Set = new HashSet<>();
+    usdLibor6Set.add(USD_LIBOR_6M);
+    IDX_NAMES.put(FWD6_CURVE_NAME, usdLibor6Set);
     TS.put(USD_FED_FUND, TS_EMTPY);
+    TS.put(USD_LIBOR_3M, TS_EMTPY);
+    TS.put(USD_LIBOR_6M, TS_EMTPY);
   }
 
   /** Data for USD-DSCON curve */
@@ -232,7 +242,7 @@ public class CalibrationZeroRateUsd3OisIrsBsTest {
   }
 
   /** All quotes for the curve calibration */
-  private static final ObservableValues ALL_QUOTES;
+  private static final ImmutableObservableValues ALL_QUOTES;
   static {
     Map<ObservableKey, Double> map = new HashMap<>();
     for (int i = 0; i < DSC_NB_NODES; i++) {
@@ -244,7 +254,7 @@ public class CalibrationZeroRateUsd3OisIrsBsTest {
     for (int i = 0; i < FWD6_NB_NODES; i++) {
       map.put(QuoteKey.of(StandardId.of(SCHEME, FWD6_ID_VALUE[i])), FWD6_MARKET_QUOTES[i]);
     }
-    ALL_QUOTES = ObservableValues.of(map);
+    ALL_QUOTES = ImmutableObservableValues.of(map);
   }
 
   /** All nodes by groups. */
@@ -286,12 +296,14 @@ public class CalibrationZeroRateUsd3OisIrsBsTest {
       DiscountingSwapProductPricer.DEFAULT;
   private static final DiscountingTermDepositProductPricer DEPO_PRICER =
       DiscountingTermDepositProductPricer.DEFAULT;
+  private static final MarketQuoteSensitivityCalculator MQC = MarketQuoteSensitivityCalculator.DEFAULT;
 
   private static final CalibrationMeasures CALIBRATION_MEASURES = CalibrationMeasures.DEFAULT;
   private static final CurveCalibrator CALIBRATOR = CurveCalibrator.of(1e-9, 1e-9, 100, CALIBRATION_MEASURES);
 
   // Constants
   private static final double TOLERANCE_PV = 1.0E-6;
+  private static final double TOLERANCE_PV_DELTA = 1.0E+3;
 
   private static final CurveGroupName CURVE_GROUP_NAME = CurveGroupName.of("USD-DSCON-LIBOR3M");
   private static final InterpolatedNodalCurveDefinition DSC_CURVE_DEFN =
@@ -331,39 +343,95 @@ public class CalibrationZeroRateUsd3OisIrsBsTest {
           .addForwardCurve(FWD3_CURVE_DEFN, USD_LIBOR_3M)
           .addForwardCurve(FWD6_CURVE_DEFN, USD_LIBOR_6M).build();
 
+  private static final CurveGroupDefinition GROUP_1 =
+      CurveGroupDefinition.builder()
+          .name(CurveGroupName.of(DSCON_NAME))
+          .addCurve(DSC_CURVE_DEFN, USD, USD_FED_FUND)
+          .build();
+  private static final CurveGroupDefinition GROUP_2 =
+      CurveGroupDefinition.builder()
+          .name(CurveGroupName.of(FWD3_NAME))
+          .addForwardCurve(FWD3_CURVE_DEFN, USD_LIBOR_3M)
+          .build();
+  private static final CurveGroupDefinition GROUP_3 =
+      CurveGroupDefinition.builder()
+          .name(CurveGroupName.of(FWD6_NAME))
+          .addForwardCurve(FWD6_CURVE_DEFN, USD_LIBOR_6M)
+          .build();
+  private static final ImmutableRatesProvider KNOWN_DATA = ImmutableRatesProvider.builder()
+      .valuationDate(VALUATION_DATE)
+      .timeSeries(TS)
+      .build();
+
   //-------------------------------------------------------------------------
   public void calibration_present_value_oneGroup() {
     ImmutableRatesProvider result =
         CALIBRATOR.calibrate(CURVE_GROUP_CONFIG, VALUATION_DATE, ALL_QUOTES, TS, FxMatrix.empty());
-    assertResult(result);
+    assertPresentValue(result);
   }
 
   public void calibration_present_value_threeGroups() {
-    CurveGroupDefinition group1 =
-        CurveGroupDefinition.builder()
-            .name(CurveGroupName.of(DSCON_NAME))
-            .addCurve(DSC_CURVE_DEFN, USD, USD_FED_FUND)
-            .build();
-    CurveGroupDefinition group2 =
-        CurveGroupDefinition.builder()
-            .name(CurveGroupName.of(FWD3_NAME))
-            .addForwardCurve(FWD3_CURVE_DEFN, USD_LIBOR_3M)
-            .build();
-    CurveGroupDefinition group3 =
-        CurveGroupDefinition.builder()
-            .name(CurveGroupName.of(FWD6_NAME))
-            .addForwardCurve(FWD6_CURVE_DEFN, USD_LIBOR_6M)
-            .build();
-    ImmutableRatesProvider knownData = ImmutableRatesProvider.builder()
-        .valuationDate(VALUATION_DATE)
-        .timeSeries(TS)
-        .build();
     ImmutableRatesProvider result =
-        CALIBRATOR.calibrate(ImmutableList.of(group1, group2, group3), knownData, ALL_QUOTES);
-    assertResult(result);
+        CALIBRATOR.calibrate(ImmutableList.of(GROUP_1, GROUP_2, GROUP_3), KNOWN_DATA, ALL_QUOTES);
+    assertPresentValue(result);
+  }
+  
+  public void calibration_market_quote_sensitivity_one_group() {
+    double shift = 1.0E-6;
+    Function<ImmutableObservableValues, ImmutableRatesProvider> f =
+        (ov) -> CALIBRATOR.calibrate(CURVE_GROUP_CONFIG, VALUATION_DATE, ov, TS, FxMatrix.empty());
+    calibration_market_quote_sensitivity_check(f, shift);
+  }
+  
+  public void calibration_market_quote_sensitivity_three_group() {
+    double shift = 1.0E-6;
+    Function<ImmutableObservableValues, ImmutableRatesProvider> calibrator =
+        (ov) -> CALIBRATOR.calibrate(ImmutableList.of(GROUP_1, GROUP_2, GROUP_3), KNOWN_DATA, ov);
+    calibration_market_quote_sensitivity_check(calibrator, shift);
   }
 
-  private void assertResult(ImmutableRatesProvider result) {
+  private void calibration_market_quote_sensitivity_check(
+      Function<ImmutableObservableValues, ImmutableRatesProvider> calibrator,
+      double shift) {
+    double notional = 100_000_000.0;
+    double spread = 0.0050;
+    SwapTrade trade = IborIborSwapConventions.USD_LIBOR_3M_LIBOR_6M.toTrade(VALUATION_DATE, Period.ofMonths(8),
+        Tenor.TENOR_7Y, BuySell.BUY, notional, spread);
+    ImmutableRatesProvider result = calibrator.apply(ALL_QUOTES);
+    PointSensitivityBuilder pts = SWAP_PRICER.presentValueSensitivity(trade.getProduct(), result);
+    CurveCurrencyParameterSensitivities ps = result.curveParameterSensitivity(pts.build());
+    CurveCurrencyParameterSensitivities mqs = MQC.sensitivity(ps, result);
+    double pv0 = SWAP_PRICER.presentValue(trade.getProduct(), result).getAmount(USD).getAmount();
+    double[] mqsDscComputed = mqs.getSensitivity(DSCON_CURVE_NAME, USD).getSensitivity().toArray();
+    for (int i = 0; i < DSC_NB_NODES; i++) {
+      Map<ObservableKey, Double> map = new HashMap<>(ALL_QUOTES.getValues());
+      map.put(QuoteKey.of(StandardId.of(SCHEME, DSC_ID_VALUE[i])), DSC_MARKET_QUOTES[i] + shift);
+      ImmutableObservableValues ov = ImmutableObservableValues.of(map);
+      ImmutableRatesProvider rpShifted = calibrator.apply(ov);
+      double pvS = SWAP_PRICER.presentValue(trade.getProduct(), rpShifted).getAmount(USD).getAmount();
+      assertEquals(mqsDscComputed[i], (pvS - pv0) / shift, TOLERANCE_PV_DELTA, "DSC - node " + i);
+    }
+    double[] mqsFwd3Computed = mqs.getSensitivity(FWD3_CURVE_NAME, USD).getSensitivity().toArray();
+    for (int i = 0; i < FWD3_NB_NODES; i++) {
+      Map<ObservableKey, Double> map = new HashMap<>(ALL_QUOTES.getValues());
+      map.put(QuoteKey.of(StandardId.of(SCHEME, FWD3_ID_VALUE[i])), FWD3_MARKET_QUOTES[i] + shift);
+      ImmutableObservableValues ov = ImmutableObservableValues.of(map);
+      ImmutableRatesProvider rpShifted = calibrator.apply(ov);
+      double pvS = SWAP_PRICER.presentValue(trade.getProduct(), rpShifted).getAmount(USD).getAmount();
+      assertEquals(mqsFwd3Computed[i], (pvS - pv0) / shift, TOLERANCE_PV_DELTA, "FWD3 - node " + i);
+    }
+    double[] mqsFwd6Computed = mqs.getSensitivity(FWD6_CURVE_NAME, USD).getSensitivity().toArray();
+    for (int i = 0; i < FWD6_NB_NODES; i++) {
+      Map<ObservableKey, Double> map = new HashMap<>(ALL_QUOTES.getValues());
+      map.put(QuoteKey.of(StandardId.of(SCHEME, FWD6_ID_VALUE[i])), FWD6_MARKET_QUOTES[i] + shift);
+      ImmutableObservableValues ov = ImmutableObservableValues.of(map);
+      ImmutableRatesProvider rpShifted = calibrator.apply(ov);
+      double pvS = SWAP_PRICER.presentValue(trade.getProduct(), rpShifted).getAmount(USD).getAmount();
+      assertEquals(mqsFwd6Computed[i], (pvS - pv0) / shift, TOLERANCE_PV_DELTA, "FWD6 - node " + i);
+    }
+  }
+
+  private void assertPresentValue(ImmutableRatesProvider result) {
     // Test PV Dsc
     CurveNode[] dscNodes = CURVES_NODES.get(0).get(0);
     List<Trade> dscTrades = new ArrayList<>();
@@ -430,7 +498,7 @@ public class CalibrationZeroRateUsd3OisIrsBsTest {
 
   //-------------------------------------------------------------------------
   @SuppressWarnings("unused")
-  @Test(enabled = true)
+  @Test(enabled = false)
   void performance() {
     long startTime, endTime;
     int nbTests = 100;

@@ -309,25 +309,34 @@ public final class CurveCalibrator {
     }
     DoubleMatrix pDpPreviousMatrix = (DoubleMatrix) MATRIX_ALGEBRA.scale(
         MATRIX_ALGEBRA.multiply(pDmCurrentMatrix, DoubleMatrix.copyOf(nonDirect)), -1d);
+    // All curves: order and size
+    int[] nbParametersBefore = new int[orderPrevious.size()];
+    int[] startIndexBefore = new int[orderPrevious.size()];
+    int tempNbParam = 0;
+    int loopc = 0;
+    for (CurveParameterSize order : orderPrevious) {
+      nbParametersBefore[loopc] = order.getParameterCount();
+      startIndexBefore[loopc] = tempNbParam;
+      tempNbParam += nbParametersBefore[loopc];
+      loopc++;
+    }
     // transition Matrix: all curves from previous groups
     double[][] transition = new double[totalParamsPrevious][totalParamsPrevious];
-    int startIndexOuter = 0;
-    for (CurveParameterSize order : orderPrevious) {  // l
-      int paramCountOuter = order.getParameterCount();
-      JacobianCalibrationMatrix thisInfo = jacobiansPrevious.get(order.getName());
+    for (int l = 0; l < orderPrevious.size(); l++) {
+      int paramCountOuter = orderPrevious.get(l).getParameterCount();
+      JacobianCalibrationMatrix thisInfo = jacobiansPrevious.get(orderPrevious.get(l).getName());
       DoubleMatrix thisMatrix = thisInfo.getJacobianMatrix();
       int startIndexInner = 0;
-      for (CurveParameterSize order2 : orderPrevious) {  // k
-        int paramCountInner = order2.getParameterCount();
-        if (thisInfo.containsCurve(order2.getName())) { // If not, the matrix stay with 0
+      for(int k=0; k<orderPrevious.size(); k++) {
+        int paramCountInner = orderPrevious.get(k).getParameterCount();
+        if (thisInfo.containsCurve(orderPrevious.get(k).getName())) { // If not, the matrix stay with 0
           for (int p = 0; p < paramCountOuter; p++) {
             System.arraycopy(
-                thisMatrix.rowArray(p), startIndexOuter, transition[startIndexOuter + p], startIndexInner, paramCountInner);
+                thisMatrix.rowArray(p), startIndexInner, transition[startIndexBefore[l] + p], startIndexBefore[k], paramCountInner);
           }
         }
         startIndexInner += paramCountInner;
       }
-      startIndexOuter += paramCountOuter;
     }
     DoubleMatrix transitionMatrix = DoubleMatrix.copyOf(transition);
     return (DoubleMatrix) MATRIX_ALGEBRA.multiply(pDpPreviousMatrix, transitionMatrix);
