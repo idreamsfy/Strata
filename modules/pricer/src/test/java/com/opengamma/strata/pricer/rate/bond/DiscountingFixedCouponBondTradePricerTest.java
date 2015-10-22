@@ -12,11 +12,7 @@ import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
 
 import java.time.LocalDate;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.function.Function;
 
-import org.joda.beans.MetaProperty;
 import org.testng.annotations.Test;
 
 import com.google.common.collect.ImmutableList;
@@ -46,14 +42,11 @@ import com.opengamma.strata.finance.rate.bond.FixedCouponBond;
 import com.opengamma.strata.finance.rate.bond.FixedCouponBondPaymentPeriod;
 import com.opengamma.strata.finance.rate.bond.FixedCouponBondTrade;
 import com.opengamma.strata.finance.rate.bond.YieldConvention;
-import com.opengamma.strata.market.curve.Curve;
 import com.opengamma.strata.market.curve.CurveMetadata;
 import com.opengamma.strata.market.curve.CurveName;
 import com.opengamma.strata.market.curve.Curves;
 import com.opengamma.strata.market.curve.InterpolatedNodalCurve;
-import com.opengamma.strata.market.curve.NodalCurve;
 import com.opengamma.strata.market.sensitivity.CurveCurrencyParameterSensitivities;
-import com.opengamma.strata.market.sensitivity.CurveCurrencyParameterSensitivity;
 import com.opengamma.strata.market.sensitivity.PointSensitivities;
 import com.opengamma.strata.market.sensitivity.PointSensitivityBuilder;
 import com.opengamma.strata.market.value.BondGroup;
@@ -64,6 +57,7 @@ import com.opengamma.strata.math.impl.interpolation.Interpolator1DFactory;
 import com.opengamma.strata.pricer.DiscountingPaymentPricer;
 import com.opengamma.strata.pricer.impl.bond.DiscountingFixedCouponBondPaymentPeriodPricer;
 import com.opengamma.strata.pricer.rate.LegalEntityDiscountingProvider;
+import com.opengamma.strata.pricer.sensitivity.RatesFiniteDifferenceSensitivityCalculator;
 
 /**
  * Test {@link DiscountingFixedCouponBondTradePricer}.
@@ -177,6 +171,11 @@ public class DiscountingFixedCouponBondTradePricerTest {
   private static final LegalEntityDiscountingProvider PROVIDER = createRatesProvider(VALUATION);
   private static final LegalEntityDiscountingProvider PROVIDER_BEFORE = createRatesProvider(TRADE_BEFORE);
 
+  private static final double Z_SPREAD = 0.035;
+  private static final int PERIOD_PER_YEAR = 4;
+  private static final double TOL = 1.0e-12;
+  private static final double EPS = 1.0e-6;
+
   // pricers
   private static final DiscountingFixedCouponBondTradePricer TRADE_PRICER = DiscountingFixedCouponBondTradePricer.DEFAULT;
   private static final DiscountingFixedCouponBondProductPricer PRODUCT_PRICER =
@@ -184,11 +183,7 @@ public class DiscountingFixedCouponBondTradePricerTest {
   private static final DiscountingPaymentPricer PRICER_NOMINAL = DiscountingPaymentPricer.DEFAULT;
   private static final DiscountingFixedCouponBondPaymentPeriodPricer COUPON_PRICER =
       DiscountingFixedCouponBondPaymentPeriodPricer.DEFAULT;
-
-  private static final double Z_SPREAD = 0.035;
-  private static final int PERIOD_PER_YEAR = 4;
-  private static final double TOL = 1.0e-12;
-  private static final double EPS = 1.0e-6;
+  private static final RatesFiniteDifferenceSensitivityCalculator FD_CAL = new RatesFiniteDifferenceSensitivityCalculator(EPS);
 
   public void test_presentValue() {
     CurrencyAmount computedTrade = TRADE_PRICER.presentValue(TRADE, PROVIDER);
@@ -819,8 +814,8 @@ public class DiscountingFixedCouponBondTradePricerTest {
   public void test_presentValueSensitivity() {
     PointSensitivityBuilder pointTrade = TRADE_PRICER.presentValueSensitivity(TRADE, PROVIDER);
     CurveCurrencyParameterSensitivities computedTrade = PROVIDER.curveParameterSensitivity(pointTrade.build());
-    CurveCurrencyParameterSensitivities expectedTrade = sensitivity(PROVIDER,
-        (p) -> TRADE_PRICER.presentValue(TRADE, (p)), EPS);
+    CurveCurrencyParameterSensitivities expectedTrade = FD_CAL.sensitivity(PROVIDER,
+        (p) -> TRADE_PRICER.presentValue(TRADE, (p)));
     assertTrue(computedTrade.equalWithTolerance(expectedTrade, 30d * NOTIONAL * QUANTITY * EPS));
   }
 
@@ -828,8 +823,8 @@ public class DiscountingFixedCouponBondTradePricerTest {
     PointSensitivityBuilder pointTrade =
         TRADE_PRICER.presentValueSensitivityWithZSpread(TRADE, PROVIDER, Z_SPREAD, false, 0);
     CurveCurrencyParameterSensitivities computedTrade = PROVIDER.curveParameterSensitivity(pointTrade.build());
-    CurveCurrencyParameterSensitivities expectedTrade = sensitivity(
-        PROVIDER, (p) -> TRADE_PRICER.presentValueWithZSpread(TRADE, (p), Z_SPREAD, false, 0), EPS);
+    CurveCurrencyParameterSensitivities expectedTrade = FD_CAL.sensitivity(
+        PROVIDER, (p) -> TRADE_PRICER.presentValueWithZSpread(TRADE, (p), Z_SPREAD, false, 0));
     assertTrue(computedTrade.equalWithTolerance(expectedTrade, 20d * NOTIONAL * QUANTITY * EPS));
   }
 
@@ -837,16 +832,16 @@ public class DiscountingFixedCouponBondTradePricerTest {
     PointSensitivityBuilder pointTrade =
         TRADE_PRICER.presentValueSensitivityWithZSpread(TRADE, PROVIDER, Z_SPREAD, true, PERIOD_PER_YEAR);
     CurveCurrencyParameterSensitivities computedTrade = PROVIDER.curveParameterSensitivity(pointTrade.build());
-    CurveCurrencyParameterSensitivities expectedTrade = sensitivity(
-        PROVIDER, (p) -> TRADE_PRICER.presentValueWithZSpread(TRADE, (p), Z_SPREAD, true, PERIOD_PER_YEAR), EPS);
+    CurveCurrencyParameterSensitivities expectedTrade = FD_CAL.sensitivity(
+        PROVIDER, (p) -> TRADE_PRICER.presentValueWithZSpread(TRADE, (p), Z_SPREAD, true, PERIOD_PER_YEAR));
     assertTrue(computedTrade.equalWithTolerance(expectedTrade, 20d * NOTIONAL * QUANTITY * EPS));
   }
 
   public void test_presentValueProductSensitivity_noExcoupon() {
     PointSensitivityBuilder pointTrade = TRADE_PRICER.presentValueSensitivity(TRADE_NO_EXCOUPON, PROVIDER);
     CurveCurrencyParameterSensitivities computedTrade = PROVIDER.curveParameterSensitivity(pointTrade.build());
-    CurveCurrencyParameterSensitivities expectedTrade = sensitivity(
-        PROVIDER, (p) -> TRADE_PRICER.presentValue(TRADE_NO_EXCOUPON, (p)), EPS);
+    CurveCurrencyParameterSensitivities expectedTrade = FD_CAL.sensitivity(
+        PROVIDER, (p) -> TRADE_PRICER.presentValue(TRADE_NO_EXCOUPON, (p)));
     assertTrue(computedTrade.equalWithTolerance(expectedTrade, 30d * NOTIONAL * QUANTITY * EPS));
   }
 
@@ -854,8 +849,8 @@ public class DiscountingFixedCouponBondTradePricerTest {
     PointSensitivityBuilder pointTrade =
         TRADE_PRICER.presentValueSensitivityWithZSpread(TRADE_NO_EXCOUPON, PROVIDER, Z_SPREAD, false, 0);
     CurveCurrencyParameterSensitivities computedTrade = PROVIDER.curveParameterSensitivity(pointTrade.build());
-    CurveCurrencyParameterSensitivities expectedTrade = sensitivity(
-        PROVIDER, (p) -> TRADE_PRICER.presentValueWithZSpread(TRADE_NO_EXCOUPON, (p), Z_SPREAD, false, 0), EPS);
+    CurveCurrencyParameterSensitivities expectedTrade = FD_CAL.sensitivity(
+        PROVIDER, (p) -> TRADE_PRICER.presentValueWithZSpread(TRADE_NO_EXCOUPON, (p), Z_SPREAD, false, 0));
     assertTrue(computedTrade.equalWithTolerance(expectedTrade, 20d * NOTIONAL * QUANTITY * EPS));
   }
 
@@ -863,8 +858,8 @@ public class DiscountingFixedCouponBondTradePricerTest {
     PointSensitivityBuilder pointTrade = TRADE_PRICER.presentValueSensitivityWithZSpread(
         TRADE_NO_EXCOUPON, PROVIDER, Z_SPREAD, true, PERIOD_PER_YEAR);
     CurveCurrencyParameterSensitivities computedTrade = PROVIDER.curveParameterSensitivity(pointTrade.build());
-    CurveCurrencyParameterSensitivities expectedTrade = sensitivity(PROVIDER,
-        (p) -> TRADE_PRICER.presentValueWithZSpread(TRADE_NO_EXCOUPON, (p), Z_SPREAD, true, PERIOD_PER_YEAR), EPS);
+    CurveCurrencyParameterSensitivities expectedTrade = FD_CAL.sensitivity(PROVIDER,
+        (p) -> TRADE_PRICER.presentValueWithZSpread(TRADE_NO_EXCOUPON, (p), Z_SPREAD, true, PERIOD_PER_YEAR));
     assertTrue(computedTrade.equalWithTolerance(expectedTrade, 20d * NOTIONAL * QUANTITY * EPS));
   }
 
@@ -1013,53 +1008,53 @@ public class DiscountingFixedCouponBondTradePricerTest {
   }
 
   //-------------------------------------------------------------------------
-  private CurveCurrencyParameterSensitivities sensitivity(
-      LegalEntityDiscountingProvider provider,
-      Function<LegalEntityDiscountingProvider, CurrencyAmount> valueFn, double shift) {
-
-    CurrencyAmount valueInit = valueFn.apply(provider);
-    CurveCurrencyParameterSensitivities discounting = sensitivity(
-        provider, valueFn, LegalEntityDiscountingProvider.meta().repoCurves(), valueInit, shift);
-    CurveCurrencyParameterSensitivities forward = sensitivity(
-        provider, valueFn, LegalEntityDiscountingProvider.meta().issuerCurves(), valueInit, shift);
-    return discounting.combinedWith(forward);
-  }
-
-  private <T> CurveCurrencyParameterSensitivities sensitivity(
-      LegalEntityDiscountingProvider provider,
-      Function<LegalEntityDiscountingProvider, CurrencyAmount> valueFn,
-      MetaProperty<ImmutableMap<Pair<T, Currency>, DiscountFactors>> metaProperty,
-      CurrencyAmount valueInit,
-      double shift) {
-
-    ImmutableMap<Pair<T, Currency>, DiscountFactors> baseCurves = metaProperty.get(provider);
-    CurveCurrencyParameterSensitivities result = CurveCurrencyParameterSensitivities.empty();
-    for (Pair<T, Currency> key : baseCurves.keySet()) {
-      DiscountFactors discountFactors = baseCurves.get(key);
-      // Assume underlying object is ZeroRateDiscountFactors 
-      NodalCurve curveInt = (NodalCurve) ((ZeroRateDiscountFactors) discountFactors).getCurve();
-      int nbNodePoint = curveInt.getXValues().length;
-      double[] sensitivity = new double[nbNodePoint];
-      for (int i = 0; i < nbNodePoint; i++) {
-        Curve dscBumped = bumpedCurve(curveInt, i, shift);
-        Map<Pair<T, Currency>, DiscountFactors> mapBumped = new HashMap<>(baseCurves);
-        mapBumped.put(key, ZeroRateDiscountFactors.of(
-            discountFactors.getCurrency(), discountFactors.getValuationDate(), dscBumped));
-        LegalEntityDiscountingProvider providerDscBumped = provider.toBuilder().set(metaProperty, mapBumped).build();
-        sensitivity[i] = (valueFn.apply(providerDscBumped).getAmount() - valueInit.getAmount()) / shift;
-      }
-      CurveMetadata metadata = curveInt.getMetadata();
-      result = result.combinedWith(
-          CurveCurrencyParameterSensitivity.of(metadata, valueInit.getCurrency(), sensitivity));
-    }
-    return result;
-  }
-
-  private NodalCurve bumpedCurve(NodalCurve curveInt, int loopnode, double shift) {
-    double[] yieldBumped = curveInt.getYValues();
-    yieldBumped[loopnode] += shift;
-    return curveInt.withYValues(yieldBumped);
-  }
+//  private CurveCurrencyParameterSensitivities sensitivity(
+//      LegalEntityDiscountingProvider provider,
+//      Function<LegalEntityDiscountingProvider, CurrencyAmount> valueFn, double shift) {
+//
+//    CurrencyAmount valueInit = valueFn.apply(provider);
+//    CurveCurrencyParameterSensitivities discounting = sensitivity(
+//        provider, valueFn, LegalEntityDiscountingProvider.meta().repoCurves(), valueInit, shift);
+//    CurveCurrencyParameterSensitivities forward = sensitivity(
+//        provider, valueFn, LegalEntityDiscountingProvider.meta().issuerCurves(), valueInit, shift);
+//    return discounting.combinedWith(forward);
+//  }
+//
+//  private <T> CurveCurrencyParameterSensitivities sensitivity(
+//      LegalEntityDiscountingProvider provider,
+//      Function<LegalEntityDiscountingProvider, CurrencyAmount> valueFn,
+//      MetaProperty<ImmutableMap<Pair<T, Currency>, DiscountFactors>> metaProperty,
+//      CurrencyAmount valueInit,
+//      double shift) {
+//
+//    ImmutableMap<Pair<T, Currency>, DiscountFactors> baseCurves = metaProperty.get(provider);
+//    CurveCurrencyParameterSensitivities result = CurveCurrencyParameterSensitivities.empty();
+//    for (Pair<T, Currency> key : baseCurves.keySet()) {
+//      DiscountFactors discountFactors = baseCurves.get(key);
+//      // Assume underlying object is ZeroRateDiscountFactors 
+//      NodalCurve curveInt = (NodalCurve) ((ZeroRateDiscountFactors) discountFactors).getCurve();
+//      int nbNodePoint = curveInt.getXValues().length;
+//      double[] sensitivity = new double[nbNodePoint];
+//      for (int i = 0; i < nbNodePoint; i++) {
+//        Curve dscBumped = bumpedCurve(curveInt, i, shift);
+//        Map<Pair<T, Currency>, DiscountFactors> mapBumped = new HashMap<>(baseCurves);
+//        mapBumped.put(key, ZeroRateDiscountFactors.of(
+//            discountFactors.getCurrency(), discountFactors.getValuationDate(), dscBumped));
+//        LegalEntityDiscountingProvider providerDscBumped = provider.toBuilder().set(metaProperty, mapBumped).build();
+//        sensitivity[i] = (valueFn.apply(providerDscBumped).getAmount() - valueInit.getAmount()) / shift;
+//      }
+//      CurveMetadata metadata = curveInt.getMetadata();
+//      result = result.combinedWith(
+//          CurveCurrencyParameterSensitivity.of(metadata, valueInit.getCurrency(), sensitivity));
+//    }
+//    return result;
+//  }
+//
+//  private NodalCurve bumpedCurve(NodalCurve curveInt, int loopnode, double shift) {
+//    double[] yieldBumped = curveInt.getYValues();
+//    yieldBumped[loopnode] += shift;
+//    return curveInt.withYValues(yieldBumped);
+//  }
 
   private static LegalEntityDiscountingProvider createRatesProvider(LocalDate valuationDate) {
     DiscountFactors dscRepo = ZeroRateDiscountFactors.of(EUR, valuationDate, CURVE_REPO);

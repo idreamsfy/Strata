@@ -9,8 +9,6 @@ import static com.opengamma.strata.basics.currency.Currency.USD;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
 
-import java.time.LocalDate;
-
 import org.testng.annotations.Test;
 
 import com.opengamma.strata.basics.currency.CurrencyAmount;
@@ -32,7 +30,6 @@ import com.opengamma.strata.pricer.sensitivity.RatesFiniteDifferenceSensitivityC
 public class DiscountingBondFutureProductPricerTest {
   // product 
   private static final BondFuture FUTURE_PRODUCT = BondDataSets.FUTURE_PRODUCT;
-  private static final LocalDate TRADE_DATE = BondDataSets.TRADE_DATE;
   private static final SecurityLink<FixedCouponBond>[] BOND_SECURITY_LINK = BondDataSets.BOND_SECURITY_LINK.clone();
   private static final Double[] CONVERSION_FACTOR = BondDataSets.CONVERSION_FACTOR.clone();
   // curves

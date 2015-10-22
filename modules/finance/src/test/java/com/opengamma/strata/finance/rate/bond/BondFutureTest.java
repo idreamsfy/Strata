@@ -222,6 +222,22 @@ public class BondFutureTest {
         .build());
   }
 
+  public void test_getBondSecurityBasket() {
+    BondFuture test = BondFuture.builder()
+        .conversionFactor(ImmutableList.copyOf(CONVERSION_FACTOR))
+        .deliveryBasket(SECURITY_LINK)
+        .firstNoticeDate(FIRST_NOTICE_DATE)
+        .lastNoticeDate(LAST_NOTICE_DATE)
+        .lastTradeDate(LAST_TRADING_DATE)
+        .rounding(ROUNDING)
+        .build();
+    ImmutableList<Security<FixedCouponBond>> trades = test.getBondSecurityBasket();
+    assertEquals(trades.size(), NB_BOND);
+    for (int i = 0; i < NB_BOND; ++i) {
+      assertEquals(trades.get(i), SECURITY_LINK[i].resolvedTarget());
+    }
+  }
+
   //-------------------------------------------------------------------------
   public void coverage() {
     BondFuture test1 = BondFuture.builder()
@@ -245,7 +261,7 @@ public class BondFutureTest {
     coverBeanEquals(test1, test2);
   }
 
-  public void test_serialization() {
+  public void serialization() {
     BondFuture test = BondFuture.builder()
         .conversionFactor(ImmutableList.copyOf(CONVERSION_FACTOR))
         .deliveryBasket(SECURITY_LINK)
