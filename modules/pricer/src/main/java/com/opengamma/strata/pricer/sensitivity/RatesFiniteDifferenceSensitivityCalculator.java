@@ -61,7 +61,7 @@ public class RatesFiniteDifferenceSensitivityCalculator {
   /**
    * Computes the first order sensitivities of a function of a RatesProvider to a double by finite difference.
    * <p>
-   * The curves underlying the rates provider must be of type {@link NodalCurve}.
+   * The curves underlying the rates provider must be convertible to a {@link NodalCurve}.
    * The finite difference is computed by forward type. 
    * The function should return a value in the same currency for any rate provider.
    * 
@@ -91,7 +91,7 @@ public class RatesFiniteDifferenceSensitivityCalculator {
     Map<T, Curve> baseCurves = metaProperty.get(provider);
     CurveCurrencyParameterSensitivities result = CurveCurrencyParameterSensitivities.empty();
     for (Entry<T, Curve> entry : baseCurves.entrySet()) {
-      NodalCurve curveInt = checkNodal(entry.getValue());
+      NodalCurve curveInt = entry.getValue().toNodalCurve();
       int nbNodePoint = curveInt.getXValues().length;
       double[] sensitivity = new double[nbNodePoint];
       for (int i = 0; i < nbNodePoint; i++) {

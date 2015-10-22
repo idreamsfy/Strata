@@ -33,7 +33,6 @@ import com.opengamma.strata.basics.value.Rounding;
 import com.opengamma.strata.collect.id.StandardId;
 import com.opengamma.strata.finance.Security;
 import com.opengamma.strata.finance.SecurityLink;
-import com.opengamma.strata.finance.TradeInfo;
 import com.opengamma.strata.finance.UnitSecurity;
 
 /**
@@ -223,8 +222,7 @@ public class BondFutureTest {
         .build());
   }
 
-  public void test_createBondTradeBasket() {
-    LocalDate tradeDate = LocalDate.of(2011, 6, 20);
+  public void test_getBondSecurityBasket() {
     BondFuture test = BondFuture.builder()
         .conversionFactor(ImmutableList.copyOf(CONVERSION_FACTOR))
         .deliveryBasket(SECURITY_LINK)
@@ -233,16 +231,10 @@ public class BondFutureTest {
         .lastTradeDate(LAST_TRADING_DATE)
         .rounding(ROUNDING)
         .build();
-    ImmutableList<FixedCouponBondTrade> trades = test.createBondTradeBasket(tradeDate);
+    ImmutableList<Security<FixedCouponBond>> trades = test.getBondSecurityBasket();
     assertEquals(trades.size(), NB_BOND);
     for (int i = 0; i < NB_BOND; ++i) {
-      TradeInfo tradeInfo = TradeInfo.builder().tradeDate(tradeDate).settlementDate(LAST_DELIVERY_DATE).build();
-      FixedCouponBondTrade expected = FixedCouponBondTrade.builder()
-          .quantity(1L)
-          .securityLink(SECURITY_LINK[i])
-          .tradeInfo(tradeInfo)
-          .build();
-      assertEquals(trades.get(i), expected);
+      assertEquals(trades.get(i), SECURITY_LINK[i].resolvedTarget());
     }
   }
 
@@ -269,7 +261,7 @@ public class BondFutureTest {
     coverBeanEquals(test1, test2);
   }
 
-  public void test_serialization() {
+  public void serialization() {
     BondFuture test = BondFuture.builder()
         .conversionFactor(ImmutableList.copyOf(CONVERSION_FACTOR))
         .deliveryBasket(SECURITY_LINK)

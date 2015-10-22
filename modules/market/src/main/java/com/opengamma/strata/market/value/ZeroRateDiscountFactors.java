@@ -27,6 +27,7 @@ import org.joda.beans.impl.direct.DirectMetaPropertyMap;
 
 import com.opengamma.strata.basics.currency.Currency;
 import com.opengamma.strata.basics.date.DayCount;
+import com.opengamma.strata.basics.market.Perturbation;
 import com.opengamma.strata.collect.ArgChecker;
 import com.opengamma.strata.market.curve.Curve;
 import com.opengamma.strata.market.curve.CurveName;
@@ -46,6 +47,11 @@ import com.opengamma.strata.market.sensitivity.ZeroRateSensitivity;
 @BeanDefinition(builderScope = "private")
 public final class ZeroRateDiscountFactors
     implements DiscountFactors, ImmutableBean, Serializable {
+
+  /**
+   * Year fraction used as an effective zero.
+   */
+  private static final double EFFECTIVE_ZERO = 1e-10;
 
   /**
    * The currency that the discount factors are for.
@@ -81,11 +87,7 @@ public final class ZeroRateDiscountFactors
    * @param underlyingCurve  the underlying curve
    * @return the curve
    */
-  public static ZeroRateDiscountFactors of(
-      Currency currency,
-      LocalDate valuationDate,
-      Curve underlyingCurve) {
-
+  public static ZeroRateDiscountFactors of(Currency currency, LocalDate valuationDate, Curve underlyingCurve) {
     return new ZeroRateDiscountFactors(currency, valuationDate, underlyingCurve);
   }
 
@@ -132,19 +134,18 @@ public final class ZeroRateDiscountFactors
   @Override
   public double discountFactorWithSpread(LocalDate date, double zSpread, boolean periodic, int periodPerYear) {
     double yearFraction = relativeYearFraction(date);
-    double factor = 1d;
-    if (Math.abs(yearFraction) < 1.0E-10) {
-      return factor;
+    if (Math.abs(yearFraction) < EFFECTIVE_ZERO) {
+      return 1d;
     }
+    double df = discountFactor(date);
     if (periodic) {
-      ArgChecker.isTrue(periodPerYear > 0, "periodPerYear must be strictly positive");
+      ArgChecker.notNegativeOrZero(periodPerYear, "periodPerYear");
       double ratePeriodicAnnualPlusOne =
-          Math.pow(discountFactor(date), -1.0 / periodPerYear / yearFraction) + zSpread / periodPerYear;
-      factor = Math.pow(ratePeriodicAnnualPlusOne, -periodPerYear * yearFraction);
+          Math.pow(df, -1.0 / periodPerYear / yearFraction) + zSpread / periodPerYear;
+      return Math.pow(ratePeriodicAnnualPlusOne, -periodPerYear * yearFraction);
     } else {
-      factor = discountFactor(date) * Math.exp(-zSpread * yearFraction);
+      return df * Math.exp(-zSpread * yearFraction);
     }
-    return factor;
   }
 
   // calculates the discount factor at a given time
@@ -173,12 +174,13 @@ public final class ZeroRateDiscountFactors
       double zSpread,
       boolean periodic,
       int periodPerYear) {
+
     double yearFraction = relativeYearFraction(date);
     ZeroRateSensitivity sensi = zeroRatePointSensitivity(date, sensitivityCurrency);
-    double factor = 1d;
-    if (Math.abs(yearFraction) < 1.0E-10) {
+    if (Math.abs(yearFraction) < EFFECTIVE_ZERO) {
       return sensi;
     }
+    double factor;
     if (periodic) {
       double df = discountFactor(date);
       double dfRoot = Math.pow(df, -1d / periodPerYear / yearFraction);
@@ -189,6 +191,7 @@ public final class ZeroRateDiscountFactors
     return sensi.multipliedBy(factor);
   }
 
+  //-------------------------------------------------------------------------
   @Override
   public CurveUnitParameterSensitivities unitParameterSensitivity(LocalDate date) {
     double relativeYearFraction = relativeYearFraction(date);
@@ -202,6 +205,11 @@ public final class ZeroRateDiscountFactors
   }
 
   //-------------------------------------------------------------------------
+  @Override
+  public ZeroRateDiscountFactors applyPerturbation(Perturbation<Curve> perturbation) {
+    return withCurve(curve.applyPerturbation(perturbation));
+  }
+
   /**
    * Returns a new instance with a different curve.
    * 

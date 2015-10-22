@@ -20,11 +20,6 @@ import java.util.function.Function;
 
 import org.testng.annotations.Test;
 
-import com.opengamma.analytics.financial.model.volatility.BlackFormulaRepository;
-import com.opengamma.analytics.math.interpolation.CombinedInterpolatorExtrapolatorFactory;
-import com.opengamma.analytics.math.interpolation.GridInterpolator2D;
-import com.opengamma.analytics.math.interpolation.Interpolator1D;
-import com.opengamma.analytics.math.interpolation.Interpolator1DFactory;
 import com.opengamma.strata.basics.currency.Currency;
 import com.opengamma.strata.basics.currency.CurrencyAmount;
 import com.opengamma.strata.collect.id.StandardId;
@@ -42,7 +37,12 @@ import com.opengamma.strata.market.surface.SurfaceMetadata;
 import com.opengamma.strata.market.surface.SurfaceName;
 import com.opengamma.strata.market.surface.SurfaceParameterMetadata;
 import com.opengamma.strata.market.value.ValueType;
+import com.opengamma.strata.math.impl.interpolation.CombinedInterpolatorExtrapolatorFactory;
+import com.opengamma.strata.math.impl.interpolation.GridInterpolator2D;
+import com.opengamma.strata.math.impl.interpolation.Interpolator1D;
+import com.opengamma.strata.math.impl.interpolation.Interpolator1DFactory;
 import com.opengamma.strata.pricer.datasets.LegalEntityDiscountingProviderDataSets;
+import com.opengamma.strata.pricer.impl.option.BlackFormulaRepository;
 import com.opengamma.strata.pricer.rate.LegalEntityDiscountingProvider;
 import com.opengamma.strata.pricer.sensitivity.RatesFiniteDifferenceSensitivityCalculator;
 

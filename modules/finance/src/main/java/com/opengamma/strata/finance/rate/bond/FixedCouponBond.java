@@ -6,8 +6,6 @@
 package com.opengamma.strata.finance.rate.bond;
 
 import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
@@ -52,9 +50,7 @@ import com.opengamma.strata.collect.id.StandardId;
  * <p>
  * The accrual factor between two dates is computed {@code dayCount}. 
  * The legal entity of this fixed coupon bond is identified by {@link StandardId}.
- * The enum, {@link YieldConvention}, specifies the yield computation convention,
- * and {@link DaysAdjustment} does the number of days between valuation date and settlement date. 
- * {@code exCouponDays} represent the ex-coupon period measured in days. 
+ * The enum, {@link YieldConvention}, specifies the yield computation convention.
  */
 @BeanDefinition
 public final class FixedCouponBond
@@ -96,6 +92,9 @@ public final class FixedCouponBond
    * <p>
    * The conversion from dates to a numerical value is made based on this day count. 
    * For the fixed bond, the day count convention is used to compute accrued interest.
+   * <p>
+   * Note that the year fraction of a coupon payment is computed based on the unadjusted
+   * dates in the schedule.
    */
   @PropertyDefinition(validate = "notNull")
   private final DayCount dayCount;
@@ -126,12 +125,12 @@ public final class FixedCouponBond
   /**
    * Ex-coupon period. 
    * <p>
-   * Some bonds trade ex-coupons before the coupon payment. The coupon is paid not to the owner of the bond on 
-   * the payment date but to the owner of the bond on the detachment date. The difference between the two is the
-   * ex-coupon period (measured in days).
+   * Some bonds trade ex-coupons before the coupon payment. The coupon is paid not to the
+   * owner of the bond on the payment date but to the owner of the bond on the detachment date.
+   * The difference between the two is the ex-coupon period (measured in days).
    * <p>
-   * Because the detachment date is not after the coupon date, the number of days stored in this field should be zero or 
-   * negative. 
+   * Because the detachment date is not after the coupon date, the number of days
+   * stored in this field should be zero or negative. 
    */
   @PropertyDefinition(validate = "notNull")
   private final DaysAdjustment exCouponPeriod;
@@ -155,7 +154,7 @@ public final class FixedCouponBond
   @Override
   public ExpandedFixedCouponBond expand() {
     Schedule adjustedSchedule = periodicSchedule.createSchedule();
-    Schedule unadjustedSchedule = createUnadjustedSchedule(adjustedSchedule);
+    Schedule unadjustedSchedule = adjustedSchedule.toUnadjusted();
     ImmutableList.Builder<FixedCouponBondPaymentPeriod> accrualPeriods = ImmutableList.builder();
     for (int i = 0; i < adjustedSchedule.size(); i++) {
       SchedulePeriod period = adjustedSchedule.getPeriod(i);
@@ -183,34 +182,6 @@ public final class FixedCouponBond
         .dayCount(dayCount)
         .yieldConvention(yieldConvention)
         .settlementDateOffset(settlementDateOffset)
-        .build();
-  }
-
-  /**
-   * Creates a new schedule with unadjusted dates from a schedule with adjusted dates. 
-   * <p>
-   * The start date and end date are unadjusted in the resulting {@code Schedule}, i.e., the {@code unadjustedStartDate} 
-   * and {@code unadjustedEndDate} coincide with {@code startDate} and {@code endDate}, respectively. 
-   * <p>
-   * The year fraction for a coupon payment of the fixed coupon bond is computed based on unadjusted dates. 
-   * Thus {@link DayCount}, and accordingly {@link SchedulePeriod}, require this schedule to compute year fraction for 
-   * the bond.  
-   * 
-   * @param adjustedSchedule  the adjusted schedule
-   * @return the unadjusted schedule
-   */
-  public Schedule createUnadjustedSchedule(Schedule adjustedSchedule) {
-    ImmutableList<SchedulePeriod> periodsAdjusted = adjustedSchedule.getPeriods();
-    int size = periodsAdjusted.size();
-    List<SchedulePeriod> periodsUnadjusted = new ArrayList<>(size);
-    for (int i = 0; i < size; i++) {
-      SchedulePeriod period = periodsAdjusted.get(i);
-      periodsUnadjusted.add(SchedulePeriod.of(period.getUnadjustedStartDate(), period.getUnadjustedEndDate()));
-    }
-    return Schedule.builder()
-        .periods(periodsUnadjusted)
-        .frequency(periodicSchedule.getFrequency())
-        .rollConvention(periodicSchedule.getEffectiveRollConvention())
         .build();
   }
 
@@ -339,6 +310,9 @@ public final class FixedCouponBond
    * <p>
    * The conversion from dates to a numerical value is made based on this day count.
    * For the fixed bond, the day count convention is used to compute accrued interest.
+   * <p>
+   * Note that the year fraction of a coupon payment is computed based on the unadjusted
+   * dates in the schedule.
    * @return the value of the property, not null
    */
   public DayCount getDayCount() {
@@ -385,12 +359,12 @@ public final class FixedCouponBond
   /**
    * Gets ex-coupon period.
    * <p>
-   * Some bonds trade ex-coupons before the coupon payment. The coupon is paid not to the owner of the bond on
-   * the payment date but to the owner of the bond on the detachment date. The difference between the two is the
-   * ex-coupon period (measured in days).
+   * Some bonds trade ex-coupons before the coupon payment. The coupon is paid not to the
+   * owner of the bond on the payment date but to the owner of the bond on the detachment date.
+   * The difference between the two is the ex-coupon period (measured in days).
    * <p>
-   * Because the detachment date is not after the coupon date, the number of days stored in this field should be zero or
-   * negative.
+   * Because the detachment date is not after the coupon date, the number of days
+   * stored in this field should be zero or negative.
    * @return the value of the property, not null
    */
   public DaysAdjustment getExCouponPeriod() {
@@ -884,6 +858,9 @@ public final class FixedCouponBond
      * <p>
      * The conversion from dates to a numerical value is made based on this day count.
      * For the fixed bond, the day count convention is used to compute accrued interest.
+     * <p>
+     * Note that the year fraction of a coupon payment is computed based on the unadjusted
+     * dates in the schedule.
      * @param dayCount  the new value, not null
      * @return this, for chaining, not null
      */
@@ -938,12 +915,12 @@ public final class FixedCouponBond
     /**
      * Sets ex-coupon period.
      * <p>
-     * Some bonds trade ex-coupons before the coupon payment. The coupon is paid not to the owner of the bond on
-     * the payment date but to the owner of the bond on the detachment date. The difference between the two is the
-     * ex-coupon period (measured in days).
+     * Some bonds trade ex-coupons before the coupon payment. The coupon is paid not to the
+     * owner of the bond on the payment date but to the owner of the bond on the detachment date.
+     * The difference between the two is the ex-coupon period (measured in days).
      * <p>
-     * Because the detachment date is not after the coupon date, the number of days stored in this field should be zero or
-     * negative.
+     * Because the detachment date is not after the coupon date, the number of days
+     * stored in this field should be zero or negative.
      * @param exCouponPeriod  the new value, not null
      * @return this, for chaining, not null
      */

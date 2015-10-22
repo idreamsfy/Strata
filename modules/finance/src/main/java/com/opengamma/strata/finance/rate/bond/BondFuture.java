@@ -33,8 +33,8 @@ import com.opengamma.strata.basics.currency.Currency;
 import com.opengamma.strata.basics.value.Rounding;
 import com.opengamma.strata.collect.ArgChecker;
 import com.opengamma.strata.finance.Product;
+import com.opengamma.strata.finance.Security;
 import com.opengamma.strata.finance.SecurityLink;
-import com.opengamma.strata.finance.TradeInfo;
 
 /**
  * A futures contract, based on a basket of fixed coupon bonds.
@@ -193,27 +193,14 @@ public final class BondFuture
   }
 
   /**
-   * Creates the bond trades from the delivery basket by specifying trade date. 
-   * <p>
-   * This method sets the settlement date of the trades to be the last delivery date, and the quantity to be unity.
+   * Obtains the bond securities from the delivery basket.  
    * 
-   * @param tradeDate  the trade date
-   * @return  the trades
+   * @return the bond securities
    */
-  public ImmutableList<FixedCouponBondTrade> createBondTradeBasket(LocalDate tradeDate) {
-    return createBondTradeBasket(tradeDate, getLastDeliveryDate());
-  }
-
-  private ImmutableList<FixedCouponBondTrade> createBondTradeBasket(LocalDate tradeDate, LocalDate settlementDate) {
-    TradeInfo tradeInfo = TradeInfo.builder().tradeDate(tradeDate).settlementDate(settlementDate).build();
-    List<FixedCouponBondTrade> list = new ArrayList<FixedCouponBondTrade>();
+  public ImmutableList<Security<FixedCouponBond>> getBondSecurityBasket() {
+    List<Security<FixedCouponBond>> list = new ArrayList<Security<FixedCouponBond>>();
     for (SecurityLink<FixedCouponBond> securityLink : deliveryBasket) {
-      FixedCouponBondTrade trade = FixedCouponBondTrade.builder()
-          .quantity(1L)
-          .securityLink(securityLink)
-          .tradeInfo(tradeInfo)
-          .build();
-      list.add(trade);
+      list.add(securityLink.resolvedTarget());
     }
     return ImmutableList.copyOf(list);
   }

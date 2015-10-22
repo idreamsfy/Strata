@@ -5,13 +5,13 @@
  */
 package com.opengamma.strata.pricer.rate.bond;
 
-import com.opengamma.analytics.financial.model.volatility.BlackFormulaRepository;
 import com.opengamma.strata.collect.ArgChecker;
 import com.opengamma.strata.finance.common.FutureOptionPremiumStyle;
 import com.opengamma.strata.finance.rate.bond.BondFuture;
 import com.opengamma.strata.finance.rate.bond.BondFutureOption;
 import com.opengamma.strata.market.sensitivity.BondFutureOptionSensitivity;
 import com.opengamma.strata.market.sensitivity.PointSensitivities;
+import com.opengamma.strata.pricer.impl.option.BlackFormulaRepository;
 import com.opengamma.strata.pricer.rate.LegalEntityDiscountingProvider;
 
 /**

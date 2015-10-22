@@ -8,8 +8,9 @@ package com.opengamma.strata.pricer.rate.bond;
 import com.google.common.collect.ImmutableList;
 import com.google.common.primitives.Doubles;
 import com.opengamma.strata.collect.ArgChecker;
+import com.opengamma.strata.finance.Security;
 import com.opengamma.strata.finance.rate.bond.BondFuture;
-import com.opengamma.strata.finance.rate.bond.FixedCouponBondTrade;
+import com.opengamma.strata.finance.rate.bond.FixedCouponBond;
 import com.opengamma.strata.market.sensitivity.PointSensitivities;
 import com.opengamma.strata.market.sensitivity.PointSensitivityBuilder;
 import com.opengamma.strata.pricer.rate.LegalEntityDiscountingProvider;
@@ -25,18 +26,18 @@ public final class DiscountingBondFutureProductPricer extends AbstractBondFuture
    * Default implementation.
    */
   public static final DiscountingBondFutureProductPricer DEFAULT =
-      new DiscountingBondFutureProductPricer(DiscountingFixedCouponBondTradePricer.DEFAULT);
+      new DiscountingBondFutureProductPricer(DiscountingFixedCouponBondProductPricer.DEFAULT);
   /**
    * Underlying pricer.
    */
-  private final DiscountingFixedCouponBondTradePricer bondPricer;
+  private final DiscountingFixedCouponBondProductPricer bondPricer;
 
   /**
    * Creates an instance. 
    * 
-   * @param bondPricer  the pricer for {@link FixedCouponBondTrade}.
+   * @param bondPricer  the pricer for {@link FixedCouponBond}.
    */
-  public DiscountingBondFutureProductPricer(DiscountingFixedCouponBondTradePricer bondPricer) {
+  public DiscountingBondFutureProductPricer(DiscountingFixedCouponBondProductPricer bondPricer) {
     this.bondPricer = ArgChecker.notNull(bondPricer, "bondPricer");
   }
 
@@ -51,13 +52,14 @@ public final class DiscountingBondFutureProductPricer extends AbstractBondFuture
    * @return the price of the product, in decimal form
    */
   public double price(BondFuture future, LegalEntityDiscountingProvider provider) {
-    ImmutableList<FixedCouponBondTrade> bondsAtDelivery = future.createBondTradeBasket(provider.getValuationDate());
-    int size = bondsAtDelivery.size();
-    double[] priceBonds = new double[bondsAtDelivery.size()];
+    ImmutableList<Security<FixedCouponBond>> bondSecurity = future.getBondSecurityBasket();
+    int size = bondSecurity.size();
+    double[] priceBonds = new double[size];
     for (int i = 0; i < size; ++i) {
-      FixedCouponBondTrade bond = bondsAtDelivery.get(i);
-      double dirtyPrice = bondPricer.dirtyPriceFromCurves(bond, provider);
-      priceBonds[i] = bondPricer.cleanPriceFromDirtyPrice(bond, dirtyPrice) / future.getConversionFactor().get(i);
+      Security<FixedCouponBond> bond = bondSecurity.get(i);
+      double dirtyPrice = bondPricer.dirtyPriceFromCurves(bond, provider, future.getLastDeliveryDate());
+      priceBonds[i] = bondPricer.cleanPriceFromDirtyPrice(
+          bond.getProduct(), future.getLastDeliveryDate(), dirtyPrice) / future.getConversionFactor().get(i);
     }
     final double priceFuture = Doubles.min(priceBonds);
     return priceFuture;
@@ -85,13 +87,15 @@ public final class DiscountingBondFutureProductPricer extends AbstractBondFuture
       double zSpread,
       boolean periodic,
       int periodPerYear) {
-    ImmutableList<FixedCouponBondTrade> bondsAtDelivery = future.createBondTradeBasket(provider.getValuationDate());
-    int size = bondsAtDelivery.size();
+    ImmutableList<Security<FixedCouponBond>> bondSecurity = future.getBondSecurityBasket();
+    int size = bondSecurity.size();
     double[] priceBonds = new double[size];
     for (int i = 0; i < size; ++i) {
-      FixedCouponBondTrade bond = bondsAtDelivery.get(i);
-      double dirtyPrice = bondPricer.dirtyPriceFromCurvesWithZSpread(bond, provider, zSpread, periodic, periodPerYear);
-      priceBonds[i] = bondPricer.cleanPriceFromDirtyPrice(bond, dirtyPrice) / future.getConversionFactor().get(i);
+      Security<FixedCouponBond> bond = bondSecurity.get(i);
+      double dirtyPrice = bondPricer.dirtyPriceFromCurvesWithZSpread(
+          bond, provider, zSpread, periodic, periodPerYear, future.getLastDeliveryDate());
+      priceBonds[i] = bondPricer.cleanPriceFromDirtyPrice(
+          bond.getProduct(), future.getLastDeliveryDate(), dirtyPrice) / future.getConversionFactor().get(i);
     }
     double priceFuture = Doubles.min(priceBonds);
     return priceFuture;
@@ -109,21 +113,23 @@ public final class DiscountingBondFutureProductPricer extends AbstractBondFuture
    * @return the price curve sensitivity of the product
    */
   public PointSensitivities priceSensitivity(BondFuture future, LegalEntityDiscountingProvider provider) {
-    ImmutableList<FixedCouponBondTrade> bondsAtDelivery = future.createBondTradeBasket(provider.getValuationDate());
-    int size = bondsAtDelivery.size();
+    ImmutableList<Security<FixedCouponBond>> bondSecurity = future.getBondSecurityBasket();
+    int size = bondSecurity.size();
     double[] priceBonds = new double[size];
     int indexCTD = 0;
     double priceMin = 2d;
     for (int i = 0; i < size; i++) {
-      FixedCouponBondTrade bond = bondsAtDelivery.get(i);
-      double dirtyPrice = bondPricer.dirtyPriceFromCurves(bond, provider);
-      priceBonds[i] = bondPricer.cleanPriceFromDirtyPrice(bond, dirtyPrice) / future.getConversionFactor().get(i);
+      Security<FixedCouponBond> bond = bondSecurity.get(i);
+      double dirtyPrice = bondPricer.dirtyPriceFromCurves(bond, provider, future.getLastDeliveryDate());
+      priceBonds[i] = bondPricer.cleanPriceFromDirtyPrice(
+          bond.getProduct(), future.getLastDeliveryDate(), dirtyPrice) / future.getConversionFactor().get(i);
       if (priceBonds[i] < priceMin) {
         priceMin = priceBonds[i];
         indexCTD = i;
       }
     }
-    PointSensitivityBuilder pointSensi = bondPricer.dirtyPriceSensitivity(bondsAtDelivery.get(indexCTD), provider);
+    PointSensitivityBuilder pointSensi = bondPricer.dirtyPriceSensitivity(
+        bondSecurity.get(indexCTD), provider, future.getLastDeliveryDate());
     return pointSensi.multipliedBy(1d / future.getConversionFactor().get(indexCTD)).build();
   }
 
@@ -151,22 +157,24 @@ public final class DiscountingBondFutureProductPricer extends AbstractBondFuture
       double zSpread,
       boolean periodic,
       int periodPerYear) {
-    ImmutableList<FixedCouponBondTrade> bondsAtDelivery = future.createBondTradeBasket(provider.getValuationDate());
-    int size = bondsAtDelivery.size();
+    ImmutableList<Security<FixedCouponBond>> bondSecurity = future.getBondSecurityBasket();
+    int size = bondSecurity.size();
     double[] priceBonds = new double[size];
     int indexCTD = 0;
     double priceMin = 2d;
     for (int i = 0; i < size; i++) {
-      FixedCouponBondTrade bond = bondsAtDelivery.get(i);
-      double dirtyPrice = bondPricer.dirtyPriceFromCurvesWithZSpread(bond, provider, zSpread, periodic, periodPerYear);
-      priceBonds[i] = bondPricer.cleanPriceFromDirtyPrice(bond, dirtyPrice) / future.getConversionFactor().get(i);
+      Security<FixedCouponBond> bond = bondSecurity.get(i);
+      double dirtyPrice = bondPricer.dirtyPriceFromCurvesWithZSpread(
+          bond, provider, zSpread, periodic, periodPerYear, future.getLastDeliveryDate());
+      priceBonds[i] = bondPricer.cleanPriceFromDirtyPrice(
+          bond.getProduct(), future.getLastDeliveryDate(), dirtyPrice) / future.getConversionFactor().get(i);
       if (priceBonds[i] < priceMin) {
         priceMin = priceBonds[i];
         indexCTD = i;
       }
     }
     PointSensitivityBuilder pointSensi = bondPricer.dirtyPriceSensitivityWithZspread(
-        bondsAtDelivery.get(indexCTD), provider, zSpread, periodic, periodPerYear);
+        bondSecurity.get(indexCTD), provider, zSpread, periodic, periodPerYear, future.getLastDeliveryDate());
     return pointSensi.multipliedBy(1d / future.getConversionFactor().get(indexCTD)).build();
   }
 }

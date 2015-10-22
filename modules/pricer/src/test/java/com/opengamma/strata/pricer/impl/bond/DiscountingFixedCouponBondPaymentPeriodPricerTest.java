@@ -16,7 +16,6 @@ import java.time.LocalDate;
 
 import org.testng.annotations.Test;
 
-import com.opengamma.analytics.math.interpolation.Interpolator1DFactory;
 import com.opengamma.strata.basics.interpolator.CurveInterpolator;
 import com.opengamma.strata.finance.rate.bond.FixedCouponBondPaymentPeriod;
 import com.opengamma.strata.market.curve.CurveMetadata;
@@ -32,12 +31,14 @@ import com.opengamma.strata.market.value.DiscountFactors;
 import com.opengamma.strata.market.value.IssuerCurveDiscountFactors;
 import com.opengamma.strata.market.value.LegalEntityGroup;
 import com.opengamma.strata.market.value.ZeroRateDiscountFactors;
+import com.opengamma.strata.math.impl.interpolation.Interpolator1DFactory;
 
 /**
  * Test {@link DiscountingFixedCouponBondPaymentPeriodPricer}.
  */
 @Test
 public class DiscountingFixedCouponBondPaymentPeriodPricerTest {
+
   // issuer curves
   private static final LocalDate VALUATION = date(2015, 1, 28);
   private static final LocalDate VALUATION_AFTER = date(2015, 8, 28);
@@ -45,7 +46,7 @@ public class DiscountingFixedCouponBondPaymentPeriodPricerTest {
   private static final CurveName NAME = CurveName.of("TestCurve");
   private static final CurveMetadata METADATA = Curves.zeroRates(NAME, ACT_365F);
   private static final InterpolatedNodalCurve CURVE =
-      InterpolatedNodalCurve.of(METADATA, new double[] {0, 10 }, new double[] {0.1, 0.18 }, INTERPOLATOR);
+      InterpolatedNodalCurve.of(METADATA, new double[] {0, 10}, new double[] {0.1, 0.18}, INTERPOLATOR);
   private static final DiscountFactors DSC_FACTORS = ZeroRateDiscountFactors.of(GBP, VALUATION, CURVE);
   private static final DiscountFactors DSC_FACTORS_AFTER = ZeroRateDiscountFactors.of(GBP, VALUATION_AFTER, CURVE);
   private static final LegalEntityGroup GROUP = LegalEntityGroup.of("ISSUER1");
@@ -78,14 +79,15 @@ public class DiscountingFixedCouponBondPaymentPeriodPricerTest {
       DiscountingFixedCouponBondPaymentPeriodPricer.DEFAULT;
   private static final double TOL = 1.0e-12;
 
+  //-------------------------------------------------------------------------
   public void test_presentValue() {
     double computed = PRICER.presentValue(PAYMENT_PERIOD, ISSUER_CURVE);
     double expected = FIXED_RATE * NOTIONAL * YEAR_FRACTION * DSC_FACTORS.discountFactor(END_ADJUSTED);
     assertEquals(computed, expected);
   }
 
-  public void test_presentValue_withSpread() {
-    double computed = PRICER.presentValue(PAYMENT_PERIOD, ISSUER_CURVE, Z_SPREAD, true, PERIOD_PER_YEAR);
+  public void test_presentValueWithSpread() {
+    double computed = PRICER.presentValueWithSpread(PAYMENT_PERIOD, ISSUER_CURVE, Z_SPREAD, true, PERIOD_PER_YEAR);
     double expected = FIXED_RATE * NOTIONAL * YEAR_FRACTION *
         DSC_FACTORS.discountFactorWithSpread(END_ADJUSTED, Z_SPREAD, true, PERIOD_PER_YEAR);
     assertEquals(computed, expected);
@@ -97,6 +99,21 @@ public class DiscountingFixedCouponBondPaymentPeriodPricerTest {
     assertEquals(computed, expected);
   }
 
+  public void test_presentValue_past() {
+    double computed = PRICER.presentValue(PAYMENT_PERIOD, ISSUER_CURVE_AFTER);
+    assertEquals(computed, 0d);
+  }
+
+  public void test_presentValueWithSpread_past() {
+    double computed = PRICER.presentValueWithSpread(PAYMENT_PERIOD, ISSUER_CURVE_AFTER, Z_SPREAD, true, PERIOD_PER_YEAR);
+    assertEquals(computed, 0d);
+  }
+
+  public void test_futureValue_past() {
+    double computed = PRICER.futureValue(PAYMENT_PERIOD, ISSUER_CURVE_AFTER);
+    assertEquals(computed, 0d);
+  }
+
   //-------------------------------------------------------------------------
   public void test_presentValueSensitivity() {
     PointSensitivityBuilder computed = PRICER.presentValueSensitivity(PAYMENT_PERIOD, ISSUER_CURVE);
@@ -105,8 +122,8 @@ public class DiscountingFixedCouponBondPaymentPeriodPricerTest {
     assertEquals(computed, expected);
   }
 
-  public void test_presentValueSensitivity_withSpread() {
-    PointSensitivityBuilder computed = PRICER.presentValueSensitivity(
+  public void test_presentValueSensitivityWithSpread() {
+    PointSensitivityBuilder computed = PRICER.presentValueSensitivityWithSpread(
         PAYMENT_PERIOD, ISSUER_CURVE, Z_SPREAD, true, PERIOD_PER_YEAR);
     PointSensitivityBuilder expected = IssuerCurveZeroRateSensitivity.of(
         DSC_FACTORS.zeroRatePointSensitivityWithSpread(END_ADJUSTED, Z_SPREAD, true, PERIOD_PER_YEAR)
@@ -116,6 +133,17 @@ public class DiscountingFixedCouponBondPaymentPeriodPricerTest {
 
   public void test_futureValueSensitivity() {
     PointSensitivityBuilder computed = PRICER.futureValueSensitivity(PAYMENT_PERIOD, ISSUER_CURVE);
+    assertEquals(computed, PointSensitivityBuilder.none());
+  }
+
+  public void test_presentValueSensitivity_past() {
+    PointSensitivityBuilder computed = PRICER.presentValueSensitivity(PAYMENT_PERIOD, ISSUER_CURVE_AFTER);
+    assertEquals(computed, PointSensitivityBuilder.none());
+  }
+
+  public void test_presentValueSensitivityWithSpread_past() {
+    PointSensitivityBuilder computed =
+        PRICER.presentValueSensitivityWithSpread(PAYMENT_PERIOD, ISSUER_CURVE_AFTER, Z_SPREAD, true, PERIOD_PER_YEAR);
     assertEquals(computed, PointSensitivityBuilder.none());
   }
 
@@ -138,7 +166,6 @@ public class DiscountingFixedCouponBondPaymentPeriodPricerTest {
         FIXED_RATE * NOTIONAL * YEAR_FRACTION, NOTIONAL * TOL);
     assertEquals(explain.get(ExplainKey.PRESENT_VALUE).get().getAmount(),
         FIXED_RATE * NOTIONAL * YEAR_FRACTION * DSC_FACTORS.discountFactor(END_ADJUSTED), NOTIONAL * TOL);
-
   }
 
   public void test_explainPresentValue_past() {
@@ -158,9 +185,9 @@ public class DiscountingFixedCouponBondPaymentPeriodPricerTest {
     assertEquals(explain.get(ExplainKey.PRESENT_VALUE).get().getAmount(), 0d, NOTIONAL * TOL);
   }
 
-  public void test_explainPresentValue_withSpread() {
+  public void test_explainPresentValueWithSpread() {
     ExplainMapBuilder builder = ExplainMap.builder();
-    PRICER.explainPresentValue(PAYMENT_PERIOD, ISSUER_CURVE, builder, Z_SPREAD, true, PERIOD_PER_YEAR);
+    PRICER.explainPresentValueWithSpread(PAYMENT_PERIOD, ISSUER_CURVE, builder, Z_SPREAD, true, PERIOD_PER_YEAR);
     ExplainMap explain = builder.build();
     assertEquals(explain.get(ExplainKey.ENTRY_TYPE).get(), "FixedCouponBondPaymentPeriod");
     assertEquals(explain.get(ExplainKey.PAYMENT_DATE).get(), PAYMENT_PERIOD.getPaymentDate());
@@ -179,9 +206,9 @@ public class DiscountingFixedCouponBondPaymentPeriodPricerTest {
         DSC_FACTORS.discountFactorWithSpread(END_ADJUSTED, Z_SPREAD, true, PERIOD_PER_YEAR), NOTIONAL * TOL);
   }
 
-  public void test_explainPresentValue_withSpread_past() {
+  public void test_explainPresentValueWithSpread_past() {
     ExplainMapBuilder builder = ExplainMap.builder();
-    PRICER.explainPresentValue(PAYMENT_PERIOD, ISSUER_CURVE_AFTER, builder, Z_SPREAD, true, PERIOD_PER_YEAR);
+    PRICER.explainPresentValueWithSpread(PAYMENT_PERIOD, ISSUER_CURVE_AFTER, builder, Z_SPREAD, true, PERIOD_PER_YEAR);
     ExplainMap explain = builder.build();
     assertEquals(explain.get(ExplainKey.ENTRY_TYPE).get(), "FixedCouponBondPaymentPeriod");
     assertEquals(explain.get(ExplainKey.PAYMENT_DATE).get(), PAYMENT_PERIOD.getPaymentDate());
@@ -195,4 +222,5 @@ public class DiscountingFixedCouponBondPaymentPeriodPricerTest {
     assertEquals(explain.get(ExplainKey.FUTURE_VALUE).get().getAmount(), 0d, NOTIONAL * TOL);
     assertEquals(explain.get(ExplainKey.PRESENT_VALUE).get().getAmount(), 0d, NOTIONAL * TOL);
   }
+
 }

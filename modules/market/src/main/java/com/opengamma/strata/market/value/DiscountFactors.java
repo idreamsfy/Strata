@@ -8,6 +8,8 @@ package com.opengamma.strata.market.value;
 import java.time.LocalDate;
 
 import com.opengamma.strata.basics.currency.Currency;
+import com.opengamma.strata.basics.market.Perturbation;
+import com.opengamma.strata.market.curve.Curve;
 import com.opengamma.strata.market.curve.CurveName;
 import com.opengamma.strata.market.sensitivity.CurveCurrencyParameterSensitivities;
 import com.opengamma.strata.market.sensitivity.CurveUnitParameterSensitivities;
@@ -76,20 +78,20 @@ public interface DiscountFactors {
    * The discount factor represents the time value of money for the specified currency
    * when comparing the valuation date to the specified date.
    * <p>
-   * The z-spread is a parallel shift applied to continuously compounded rates or periodic compounded rates 
-   * of the discounting curve. 
+   * The z-spread is a parallel shift applied to continuously compounded rates or periodic
+   * compounded rates of the discounting curve. 
    * <p>
    * If the valuation date is on or after the specified date, the discount factor is 1.
    * 
    * @param date  the date to discount to
    * @param zSpread  the z-spread
-   * @param periodic  If true, the spread is added to periodic compounded rates. If false, the spread is added to 
-   * continuously compounded rates
-   * @param periodPerYear  the number of periods per year
+   * @param periodic  if true, the spread is added to periodic compounded rates,
+   *  if false, the spread is added to continuously compounded rates
+   * @param periodsPerYear  the number of periods per year
    * @return the discount factor
    * @throws RuntimeException if the value cannot be obtained
    */
-  public abstract double discountFactorWithSpread(LocalDate date, double zSpread, boolean periodic, int periodPerYear);
+  public abstract double discountFactorWithSpread(LocalDate date, double zSpread, boolean periodic, int periodsPerYear);
 
   /**
    * Calculates the zero rate point sensitivity at the specified date.
@@ -114,13 +116,13 @@ public interface DiscountFactors {
    * used to determine the discount factor.
    * The sensitivity refers to the result of {@link #discountFactorWithSpread(LocalDate, double, boolean, int)}.
    * <p>
-   * The z-spread is a parallel shift applied to continuously compounded rates or periodic compounded rates 
-   * of the discounting curve. 
+   * The z-spread is a parallel shift applied to continuously compounded rates or periodic
+   * compounded rates of the discounting curve. 
    * 
    * @param date  the date to discount to
    * @param zSpread  the z-spread
-   * @param periodic  If true, the spread is added to periodic compounded rates. If false, the spread is added to 
-   * continuously compounded rates
+   * @param periodic  if true, the spread is added to periodic compounded rates,
+   *  if false, the spread is added to continuously compounded rates
    * @param periodPerYear  the number of periods per year
    * @return the point sensitivity of the zero rate
    * @throws RuntimeException if the result cannot be calculated
@@ -151,24 +153,24 @@ public interface DiscountFactors {
   public abstract ZeroRateSensitivity zeroRatePointSensitivity(LocalDate date, Currency sensitivityCurrency);
 
   /**
-   * Calculates the zero rate point sensitivity with z-spread at the specified date specifying the currency 
-   * of the sensitivity.
+   * Calculates the zero rate point sensitivity with z-spread at the specified date specifying
+   * the currency of the sensitivity.
    * <p>
    * This returns a sensitivity instance referring to the zero rate sensitivity of the curve
    * used to determine the discount factor.
    * The sensitivity refers to the result of {@link #discountFactorWithSpread(LocalDate, double, boolean, int)}.
    * <p>
-   * The z-spread is a parallel shift applied to continuously compounded rates or periodic compounded rates 
-   * of the discounting curve. 
+   * The z-spread is a parallel shift applied to continuously compounded rates or periodic
+   * compounded rates of the discounting curve. 
    * <p>
    * This method allows the currency of the sensitivity to differ from the currency of the curve.
    * 
    * @param date  the date to discount to
    * @param sensitivityCurrency  the currency of the sensitivity
    * @param zSpread  the z-spread
-   * @param periodic  If true, the spread is added to periodic compounded rates. If false, the spread is added to 
-   * continuously compounded rates
-   * @param periodPerYear  the number of periods per year
+   * @param periodic  if true, the spread is added to periodic compounded rates,
+   *  if false, the spread is added to continuously compounded rates
+   * @param periodsPerYear  the number of periods per year
    * @return the point sensitivity of the zero rate
    * @throws RuntimeException if the result cannot be calculated
    */
@@ -177,7 +179,7 @@ public interface DiscountFactors {
       Currency sensitivityCurrency,
       double zSpread,
       boolean periodic,
-      int periodPerYear);
+      int periodsPerYear);
 
   //-------------------------------------------------------------------------
   /**
@@ -203,5 +205,17 @@ public interface DiscountFactors {
    * @throws RuntimeException if the result cannot be calculated
    */
   public abstract CurveCurrencyParameterSensitivities curveParameterSensitivity(ZeroRateSensitivity pointSensitivity);
+
+  //-------------------------------------------------------------------------
+  /**
+   * Applies the specified perturbation to the underlying curve.
+   * <p>
+   * This returns an instance where the curve that has been changed by the {@link Perturbation} instance.
+   * 
+   * @param perturbation  the perturbation to apply
+   * @return the perturbed instance
+   * @throws RuntimeException if the perturbation cannot be applied
+   */
+  public abstract DiscountFactors applyPerturbation(Perturbation<Curve> perturbation);
 
 }

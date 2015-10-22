@@ -5,11 +5,8 @@ import static com.opengamma.strata.basics.currency.Currency.USD;
 import static com.opengamma.strata.basics.date.DayCounts.ACT_ACT_ISDA;
 
 import java.time.LocalDate;
-import java.util.List;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
-import com.opengamma.analytics.math.interpolation.Interpolator1DFactory;
 import com.opengamma.strata.basics.currency.Currency;
 import com.opengamma.strata.basics.interpolator.CurveInterpolator;
 import com.opengamma.strata.collect.id.StandardId;
@@ -23,6 +20,7 @@ import com.opengamma.strata.market.value.DiscountFactors;
 import com.opengamma.strata.market.value.LegalEntityGroup;
 import com.opengamma.strata.market.value.SimpleDiscountFactors;
 import com.opengamma.strata.market.value.ZeroRateDiscountFactors;
+import com.opengamma.strata.math.impl.interpolation.Interpolator1DFactory;
 import com.opengamma.strata.pricer.rate.LegalEntityDiscountingProvider;
 
 /**
@@ -58,8 +56,6 @@ public class LegalEntityDiscountingProviderDataSets {
   /** meta data of issuer discount factor curve */
   public static final CurveMetadata META_SIMPLE_ISSUER_USD = Curves.discountFactors(NAME_ISSUER_USD, ACT_ACT_ISDA);
   private static final BondGroup GROUP_REPO_USD = BondGroup.of("GOVT1 BONDS");
-  private static final ImmutableList<StandardId> LIST_REPO_USD =
-      ImmutableList.<StandardId>of(ISSUER_ID_USD, BOND_SECURITY_ID_USD);
   private static final LegalEntityGroup GROUP_ISSUER_USD = LegalEntityGroup.of("GOVT1");
   // zero rate curves
   private static final InterpolatedNodalCurve CURVE_ZERO_REPO_USD =
@@ -103,8 +99,6 @@ public class LegalEntityDiscountingProviderDataSets {
   /** meta data of issuer discount factor curve */
   public static final CurveMetadata META_SIMPLE_ISSUER_EUR = Curves.discountFactors(NAME_ISSUER_EUR, ACT_ACT_ISDA);
   private static final BondGroup GROUP_REPO_EUR = BondGroup.of("GOVT2 BONDS");
-  private static final ImmutableList<StandardId> LIST_REPO_EUR =
-      ImmutableList.<StandardId>of(ISSUER_ID_EUR, BOND_SECURITY_ID_EUR);
   private static final LegalEntityGroup GROUP_ISSUER_EUR = LegalEntityGroup.of("GOVT2");
   // zero rate curves
   private static final InterpolatedNodalCurve CURVE_ZERO_REPO_EUR =
@@ -123,7 +117,7 @@ public class LegalEntityDiscountingProviderDataSets {
       .legalEntityMap(ImmutableMap.<StandardId, LegalEntityGroup>of(ISSUER_ID_USD, GROUP_ISSUER_USD))
       .repoCurves(ImmutableMap.<Pair<BondGroup, Currency>, DiscountFactors>of(
           Pair.<BondGroup, Currency>of(GROUP_REPO_USD, USD), DSC_FACTORS_ZERO_REPO_USD))
-      .BondMap(ImmutableMap.<List<StandardId>, BondGroup>of(LIST_REPO_USD, GROUP_REPO_USD))
+      .bondMap(ImmutableMap.<StandardId, BondGroup>of(BOND_SECURITY_ID_USD, GROUP_REPO_USD))
       .build();
   /** provider with zero rate curves, EUR */
   public static final LegalEntityDiscountingProvider ISSUER_REPO_ZERO_EUR = LegalEntityDiscountingProvider.builder()
@@ -132,7 +126,7 @@ public class LegalEntityDiscountingProviderDataSets {
       .legalEntityMap(ImmutableMap.<StandardId, LegalEntityGroup>of(ISSUER_ID_EUR, GROUP_ISSUER_EUR))
       .repoCurves(ImmutableMap.<Pair<BondGroup, Currency>, DiscountFactors>of(
           Pair.<BondGroup, Currency>of(GROUP_REPO_EUR, EUR), DSC_FACTORS_ZERO_REPO_EUR))
-      .BondMap(ImmutableMap.<List<StandardId>, BondGroup>of(LIST_REPO_EUR, GROUP_REPO_EUR))
+      .bondMap(ImmutableMap.<StandardId, BondGroup>of(BOND_SECURITY_ID_EUR, GROUP_REPO_EUR))
       .build();
   /** provider with discount factor curve, USD */
   public static final LegalEntityDiscountingProvider ISSUER_REPO_SIMPLE = LegalEntityDiscountingProvider.builder()
@@ -141,6 +135,6 @@ public class LegalEntityDiscountingProviderDataSets {
       .legalEntityMap(ImmutableMap.<StandardId, LegalEntityGroup>of(ISSUER_ID_USD, GROUP_ISSUER_USD))
       .repoCurves(ImmutableMap.<Pair<BondGroup, Currency>, DiscountFactors>of(
           Pair.<BondGroup, Currency>of(GROUP_REPO_USD, USD), DSC_FACTORS_SIMPLE_REPO))
-      .BondMap(ImmutableMap.<List<StandardId>, BondGroup>of(LIST_REPO_USD, GROUP_REPO_USD))
+      .bondMap(ImmutableMap.<StandardId, BondGroup>of(BOND_SECURITY_ID_USD, GROUP_REPO_USD))
       .build();
 }

@@ -55,15 +55,15 @@ public class DiscountingPaymentPricer {
    * <p>
    * The specified discount factors should be for the payment currency, however this is not validated.
    * <p>
-   * The z-spread is a parallel shift applied to continuously compounded rates or periodic compounded rates 
-   * of the discounting curve. 
+   * The z-spread is a parallel shift applied to continuously compounded rates or periodic
+   * compounded rates of the discounting curve. 
    * 
    * @param payment  the payment to price
    * @param discountFactors  the discount factors to price against
    * @param zSpread  the z-spread
-   * @param periodic  If true, the spread is added to periodic compounded rates. If false, the spread is added to 
-   * continuously compounded rates
-   * @param periodPerYear  the number of periods per year
+   * @param periodic  if true, the spread is added to periodic compounded rates,
+   *  if false, the spread is added to continuously compounded rates
+   * @param periodsPerYear  the number of periods per year
    * @return the present value
    */
   public CurrencyAmount presentValue(
@@ -71,11 +71,12 @@ public class DiscountingPaymentPricer {
       DiscountFactors discountFactors,
       double zSpread,
       boolean periodic,
-      int periodPerYear) {
+      int periodsPerYear) {
+
     if (discountFactors.getValuationDate().isAfter(payment.getDate())) {
       return CurrencyAmount.zero(payment.getCurrency());
     }
-    double df = discountFactors.discountFactorWithSpread(payment.getDate(), zSpread, periodic, periodPerYear);
+    double df = discountFactors.discountFactorWithSpread(payment.getDate(), zSpread, periodic, periodsPerYear);
     return payment.getValue().multipliedBy(df);
   }
 
@@ -127,15 +128,15 @@ public class DiscountingPaymentPricer {
    * <p>
    * The specified discount factors should be for the payment currency, however this is not validated.
    * <p>
-   * The z-spread is a parallel shift applied to continuously compounded rates or periodic compounded rates 
-   * of the discounting curve. 
+   * The z-spread is a parallel shift applied to continuously compounded rates or periodic
+   * compounded rates of the discounting curve. 
    * 
    * @param payment  the payment to price
    * @param discountFactors  the discount factors to price against
    * @param zSpread  the z-spread
-   * @param periodic  If true, the spread is added to periodic compounded rates. If false, the spread is added to 
-   * continuously compounded rates
-   * @param periodPerYear  the number of periods per year
+   * @param periodic  if true, the spread is added to periodic compounded rates,
+   *  if false, the spread is added to continuously compounded rates
+   * @param periodsPerYear  the number of periods per year
    * @return the point sensitivity of the present value
    */
   public PointSensitivityBuilder presentValueSensitivity(
@@ -143,12 +144,13 @@ public class DiscountingPaymentPricer {
       DiscountFactors discountFactors,
       double zSpread,
       boolean periodic,
-      int periodPerYear) {
+      int periodsPerYear) {
+
     if (discountFactors.getValuationDate().isAfter(payment.getDate())) {
       return PointSensitivityBuilder.none();
     }
     ZeroRateSensitivity sensi =
-        discountFactors.zeroRatePointSensitivityWithSpread(payment.getDate(), zSpread, periodic, periodPerYear);
+        discountFactors.zeroRatePointSensitivityWithSpread(payment.getDate(), zSpread, periodic, periodsPerYear);
     return sensi.multipliedBy(payment.getAmount());
   }
 
