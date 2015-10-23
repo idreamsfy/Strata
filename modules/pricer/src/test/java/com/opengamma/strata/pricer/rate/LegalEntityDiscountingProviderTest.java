@@ -22,6 +22,7 @@ import org.testng.annotations.Test;
 import com.google.common.collect.ImmutableMap;
 import com.opengamma.strata.basics.currency.Currency;
 import com.opengamma.strata.basics.interpolator.CurveInterpolator;
+import com.opengamma.strata.collect.array.DoubleArray;
 import com.opengamma.strata.collect.id.StandardId;
 import com.opengamma.strata.collect.tuple.Pair;
 import com.opengamma.strata.market.curve.CurveMetadata;
@@ -53,7 +54,7 @@ public class LegalEntityDiscountingProviderTest {
   private static final CurveName NAME_REPO = CurveName.of("TestRepoCurve");
   private static final CurveMetadata METADATA_REPO = Curves.zeroRates(NAME_REPO, ACT_365F);
   private static final InterpolatedNodalCurve CURVE_REPO =
-      InterpolatedNodalCurve.of(METADATA_REPO, new double[] {0, 10}, new double[] {1, 2}, INTERPOLATOR);
+      InterpolatedNodalCurve.of(METADATA_REPO, DoubleArray.of(0, 10), DoubleArray.of(1, 2), INTERPOLATOR);
   private static final DiscountFactors DSC_FACTORS_REPO = ZeroRateDiscountFactors.of(GBP, DATE, CURVE_REPO);
   private static final BondGroup GROUP_REPO_SECURITY = BondGroup.of("ISSUER1 BND 5Y");
   private static final BondGroup GROUP_REPO_ISSUER = BondGroup.of("ISSUER1");
@@ -62,7 +63,7 @@ public class LegalEntityDiscountingProviderTest {
   private static final CurveName NAME_ISSUER = CurveName.of("TestIssuerCurve");
   private static final CurveMetadata METADATA_ISSUER = Curves.zeroRates(NAME_ISSUER, ACT_365F);
   private static final InterpolatedNodalCurve CURVE_ISSUER =
-      InterpolatedNodalCurve.of(METADATA_ISSUER, new double[] {0, 15}, new double[] {1, 2.5}, INTERPOLATOR);
+      InterpolatedNodalCurve.of(METADATA_ISSUER, DoubleArray.of(0, 15), DoubleArray.of(1, 2.5), INTERPOLATOR);
   private static final DiscountFactors DSC_FACTORS_ISSUER = ZeroRateDiscountFactors.of(GBP, DATE, CURVE_ISSUER);
   private static final LegalEntityGroup GROUP_ISSUER = LegalEntityGroup.of("ISSUER1");
   private static final StandardId ID_ISSUER = StandardId.of("OG-Ticker", "Issuer-1");

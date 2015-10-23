@@ -9,6 +9,8 @@ import static com.opengamma.strata.basics.currency.Currency.EUR;
 import static com.opengamma.strata.basics.date.DayCounts.ACT_365F;
 import static com.opengamma.strata.collect.TestHelper.assertThrows;
 import static com.opengamma.strata.collect.TestHelper.date;
+import static com.opengamma.strata.market.value.CompoundedRateType.CONTINUOUS;
+import static com.opengamma.strata.market.value.CompoundedRateType.PERIODIC;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
 
@@ -30,6 +32,7 @@ import com.opengamma.strata.basics.interpolator.CurveInterpolator;
 import com.opengamma.strata.basics.schedule.Frequency;
 import com.opengamma.strata.basics.schedule.PeriodicSchedule;
 import com.opengamma.strata.basics.schedule.StubConvention;
+import com.opengamma.strata.collect.array.DoubleArray;
 import com.opengamma.strata.collect.id.StandardId;
 import com.opengamma.strata.collect.tuple.Pair;
 import com.opengamma.strata.finance.Security;
@@ -108,13 +111,13 @@ public class DiscountingFixedCouponBondProductPricerTest {
   private static final CurveName NAME_REPO = CurveName.of("TestRepoCurve");
   private static final CurveMetadata METADATA_REPO = Curves.zeroRates(NAME_REPO, ACT_365F);
   private static final InterpolatedNodalCurve CURVE_REPO = InterpolatedNodalCurve.of(
-      METADATA_REPO, new double[] {0.1, 2.0, 10.0 }, new double[] {0.05, 0.06, 0.09 }, INTERPOLATOR);
+      METADATA_REPO, DoubleArray.of(0.1, 2.0, 10.0), DoubleArray.of(0.05, 0.06, 0.09), INTERPOLATOR);
   private static final DiscountFactors DSC_FACTORS_REPO = ZeroRateDiscountFactors.of(EUR, VALUATION, CURVE_REPO);
   private static final BondGroup GROUP_REPO = BondGroup.of("GOVT1 BOND1");
   private static final CurveName NAME_ISSUER = CurveName.of("TestIssuerCurve");
   private static final CurveMetadata METADATA_ISSUER = Curves.zeroRates(NAME_ISSUER, ACT_365F);
   private static final InterpolatedNodalCurve CURVE_ISSUER = InterpolatedNodalCurve.of(
-      METADATA_ISSUER, new double[] {0.2, 9.0, 15.0 }, new double[] {0.03, 0.05, 0.13 }, INTERPOLATOR);
+      METADATA_ISSUER, DoubleArray.of(0.2, 9.0, 15.0), DoubleArray.of(0.03, 0.05, 0.13), INTERPOLATOR);
   private static final DiscountFactors DSC_FACTORS_ISSUER = ZeroRateDiscountFactors.of(EUR, VALUATION, CURVE_ISSUER);
   private static final LegalEntityGroup GROUP_ISSUER = LegalEntityGroup.of("GOVT1");
   private static final LegalEntityDiscountingProvider PROVIDER = LegalEntityDiscountingProvider.builder()
@@ -139,7 +142,6 @@ public class DiscountingFixedCouponBondProductPricerTest {
       DiscountingFixedCouponBondPaymentPeriodPricer.DEFAULT;
   private static final RatesFiniteDifferenceSensitivityCalculator FD_CAL = new RatesFiniteDifferenceSensitivityCalculator(EPS);
 
-
   //-------------------------------------------------------------------------
   public void test_presentValue() {
     CurrencyAmount computed = PRICER.presentValue(PRODUCT, PROVIDER);
@@ -157,16 +159,16 @@ public class DiscountingFixedCouponBondProductPricerTest {
   }
 
   public void test_presentValueWithZSpread_continuous() {
-    CurrencyAmount computed = PRICER.presentValueWithZSpread(PRODUCT, PROVIDER, Z_SPREAD, false, 0);
+    CurrencyAmount computed = PRICER.presentValueWithZSpread(PRODUCT, PROVIDER, Z_SPREAD, CONTINUOUS, 0);
     ExpandedFixedCouponBond expanded = PRODUCT.expand();
     CurrencyAmount expected = PRICER_NOMINAL.presentValue(
-        expanded.getNominalPayment(), DSC_FACTORS_ISSUER, Z_SPREAD, false, 0);
+        expanded.getNominalPayment(), DSC_FACTORS_ISSUER, Z_SPREAD, CONTINUOUS, 0);
     int size = expanded.getPeriodicPayments().size();
     double pvcCupon = 0d;
     for (int i = 2; i < size; ++i) {
       FixedCouponBondPaymentPeriod payment = expanded.getPeriodicPayments().get(i);
-      pvcCupon += PRICER_COUPON.presentValueWithSpread(
-          payment, IssuerCurveDiscountFactors.of(DSC_FACTORS_ISSUER, GROUP_ISSUER), Z_SPREAD, false, 0);
+      pvcCupon += PRICER_COUPON.presentValueWithSpread(payment, 
+          IssuerCurveDiscountFactors.of(DSC_FACTORS_ISSUER, GROUP_ISSUER), Z_SPREAD, CONTINUOUS, 0);
     }
     expected = expected.plus(pvcCupon);
     assertEquals(computed.getCurrency(), EUR);
@@ -174,16 +176,17 @@ public class DiscountingFixedCouponBondProductPricerTest {
   }
 
   public void test_presentValueWithZSpread_periodic() {
-    CurrencyAmount computed = PRICER.presentValueWithZSpread(PRODUCT, PROVIDER, Z_SPREAD, true, PERIOD_PER_YEAR);
+    CurrencyAmount computed = PRICER.presentValueWithZSpread(
+        PRODUCT, PROVIDER, Z_SPREAD, PERIODIC, PERIOD_PER_YEAR);
     ExpandedFixedCouponBond expanded = PRODUCT.expand();
     CurrencyAmount expected = PRICER_NOMINAL.presentValue(
-        expanded.getNominalPayment(), DSC_FACTORS_ISSUER, Z_SPREAD, true, PERIOD_PER_YEAR);
+        expanded.getNominalPayment(), DSC_FACTORS_ISSUER, Z_SPREAD, PERIODIC, PERIOD_PER_YEAR);
     int size = expanded.getPeriodicPayments().size();
     double pvcCupon = 0d;
     for (int i = 2; i < size; ++i) {
       FixedCouponBondPaymentPeriod payment = expanded.getPeriodicPayments().get(i);
-      pvcCupon += PRICER_COUPON.presentValueWithSpread(
-          payment, IssuerCurveDiscountFactors.of(DSC_FACTORS_ISSUER, GROUP_ISSUER), Z_SPREAD, true, PERIOD_PER_YEAR);
+      pvcCupon += PRICER_COUPON.presentValueWithSpread(payment,
+          IssuerCurveDiscountFactors.of(DSC_FACTORS_ISSUER, GROUP_ISSUER), Z_SPREAD, PERIODIC, PERIOD_PER_YEAR);
     }
     expected = expected.plus(pvcCupon);
     assertEquals(computed.getCurrency(), EUR);
@@ -206,16 +209,17 @@ public class DiscountingFixedCouponBondProductPricerTest {
   }
 
   public void test_presentValueWithZSpread_continuous_noExcoupon() {
-    CurrencyAmount computed = PRICER.presentValueWithZSpread(PRODUCT_NO_EXCOUPON, PROVIDER, Z_SPREAD, false, 0);
+    CurrencyAmount computed = PRICER.presentValueWithZSpread(
+        PRODUCT_NO_EXCOUPON, PROVIDER, Z_SPREAD, CONTINUOUS, 0);
     ExpandedFixedCouponBond expanded = PRODUCT.expand();
     CurrencyAmount expected = PRICER_NOMINAL.presentValue(
-        expanded.getNominalPayment(), DSC_FACTORS_ISSUER, Z_SPREAD, false, 0);
+        expanded.getNominalPayment(), DSC_FACTORS_ISSUER, Z_SPREAD, CONTINUOUS, 0);
     int size = expanded.getPeriodicPayments().size();
     double pvcCupon = 0d;
     for (int i = 2; i < size; ++i) {
       FixedCouponBondPaymentPeriod payment = expanded.getPeriodicPayments().get(i);
-      pvcCupon += PRICER_COUPON.presentValueWithSpread(
-          payment, IssuerCurveDiscountFactors.of(DSC_FACTORS_ISSUER, GROUP_ISSUER), Z_SPREAD, false, 0);
+      pvcCupon += PRICER_COUPON.presentValueWithSpread(payment,
+          IssuerCurveDiscountFactors.of(DSC_FACTORS_ISSUER, GROUP_ISSUER), Z_SPREAD, CONTINUOUS, 0);
     }
     expected = expected.plus(pvcCupon);
     assertEquals(computed.getCurrency(), EUR);
@@ -223,17 +227,17 @@ public class DiscountingFixedCouponBondProductPricerTest {
   }
 
   public void test_presentValueWithZSpread_periodic_noExcoupon() {
-    CurrencyAmount computed = PRICER.presentValueWithZSpread(PRODUCT_NO_EXCOUPON, PROVIDER, Z_SPREAD, true,
-        PERIOD_PER_YEAR);
+    CurrencyAmount computed = PRICER.presentValueWithZSpread(
+        PRODUCT_NO_EXCOUPON, PROVIDER, Z_SPREAD, PERIODIC, PERIOD_PER_YEAR);
     ExpandedFixedCouponBond expanded = PRODUCT.expand();
     CurrencyAmount expected = PRICER_NOMINAL.presentValue(
-        expanded.getNominalPayment(), DSC_FACTORS_ISSUER, Z_SPREAD, true, PERIOD_PER_YEAR);
+        expanded.getNominalPayment(), DSC_FACTORS_ISSUER, Z_SPREAD, PERIODIC, PERIOD_PER_YEAR);
     int size = expanded.getPeriodicPayments().size();
     double pvcCupon = 0d;
     for (int i = 2; i < size; ++i) {
       FixedCouponBondPaymentPeriod payment = expanded.getPeriodicPayments().get(i);
-      pvcCupon += PRICER_COUPON.presentValueWithSpread(
-          payment, IssuerCurveDiscountFactors.of(DSC_FACTORS_ISSUER, GROUP_ISSUER), Z_SPREAD, true, PERIOD_PER_YEAR);
+      pvcCupon += PRICER_COUPON.presentValueWithSpread(payment, 
+          IssuerCurveDiscountFactors.of(DSC_FACTORS_ISSUER, GROUP_ISSUER), Z_SPREAD, PERIODIC, PERIOD_PER_YEAR);
     }
     expected = expected.plus(pvcCupon);
     assertEquals(computed.getCurrency(), EUR);
@@ -250,16 +254,19 @@ public class DiscountingFixedCouponBondProductPricerTest {
   }
 
   public void test_dirtyPriceFromCurvesWithZSpread_continuous() {
-    double computed = PRICER.dirtyPriceFromCurvesWithZSpread(BOND_SECURITY, PROVIDER, Z_SPREAD, false, 0);
-    CurrencyAmount pv = PRICER.presentValueWithZSpread(PRODUCT, PROVIDER, Z_SPREAD, false, 0);
+    double computed = PRICER.dirtyPriceFromCurvesWithZSpread(
+        BOND_SECURITY, PROVIDER, Z_SPREAD, CONTINUOUS, 0);
+    CurrencyAmount pv = PRICER.presentValueWithZSpread(PRODUCT, PROVIDER, Z_SPREAD, CONTINUOUS, 0);
     LocalDate settlement = DATE_OFFSET.adjust(VALUATION);
     double df = DSC_FACTORS_REPO.discountFactor(settlement);
     assertEquals(computed, pv.getAmount() / df / NOTIONAL);
   }
 
   public void test_dirtyPriceFromCurvesWithZSpread_periodic() {
-    double computed = PRICER.dirtyPriceFromCurvesWithZSpread(BOND_SECURITY, PROVIDER, Z_SPREAD, true, PERIOD_PER_YEAR);
-    CurrencyAmount pv = PRICER.presentValueWithZSpread(PRODUCT, PROVIDER, Z_SPREAD, true, PERIOD_PER_YEAR);
+    double computed = PRICER.dirtyPriceFromCurvesWithZSpread(
+        BOND_SECURITY, PROVIDER, Z_SPREAD, PERIODIC, PERIOD_PER_YEAR);
+    CurrencyAmount pv = PRICER.presentValueWithZSpread(
+        PRODUCT, PROVIDER, Z_SPREAD, PERIODIC, PERIOD_PER_YEAR);
     LocalDate settlement = DATE_OFFSET.adjust(VALUATION);
     double df = DSC_FACTORS_REPO.discountFactor(settlement);
     assertEquals(computed, pv.getAmount() / df / NOTIONAL);
@@ -277,14 +284,18 @@ public class DiscountingFixedCouponBondProductPricerTest {
 
   //-------------------------------------------------------------------------
   public void test_zSpreadFromCurvesAndPV_continuous() {
-    double dirtyPrice = PRICER.dirtyPriceFromCurvesWithZSpread(BOND_SECURITY, PROVIDER, Z_SPREAD, false, 0);
-    double computed = PRICER.zSpreadFromCurvesAndDirtyPrice(BOND_SECURITY, PROVIDER, dirtyPrice, false, 0);
+    double dirtyPrice = PRICER.dirtyPriceFromCurvesWithZSpread(
+        BOND_SECURITY, PROVIDER, Z_SPREAD, CONTINUOUS, 0);
+    double computed = PRICER.zSpreadFromCurvesAndDirtyPrice(
+        BOND_SECURITY, PROVIDER, dirtyPrice, CONTINUOUS, 0);
     assertEquals(computed, Z_SPREAD, TOL);
   }
 
   public void test_zSpreadFromCurvesAndPV_periodic() {
-    double dirtyPrice =  PRICER.dirtyPriceFromCurvesWithZSpread(BOND_SECURITY, PROVIDER, Z_SPREAD, true, PERIOD_PER_YEAR);
-    double computed = PRICER.zSpreadFromCurvesAndDirtyPrice(BOND_SECURITY, PROVIDER, dirtyPrice, true, PERIOD_PER_YEAR);
+    double dirtyPrice = PRICER.dirtyPriceFromCurvesWithZSpread(
+        BOND_SECURITY, PROVIDER, Z_SPREAD, PERIODIC, PERIOD_PER_YEAR);
+    double computed = PRICER.zSpreadFromCurvesAndDirtyPrice(
+        BOND_SECURITY, PROVIDER, dirtyPrice, PERIODIC, PERIOD_PER_YEAR);
     assertEquals(computed, Z_SPREAD, TOL);
   }
 
@@ -297,19 +308,20 @@ public class DiscountingFixedCouponBondProductPricerTest {
   }
 
   public void test_presentValueSensitivityWithZSpread_continuous() {
-    PointSensitivityBuilder point = PRICER.presentValueSensitivityWithZSpread(PRODUCT, PROVIDER, Z_SPREAD, false, 0);
+    PointSensitivityBuilder point = PRICER.presentValueSensitivityWithZSpread(PRODUCT, PROVIDER, Z_SPREAD, CONTINUOUS,
+        0);
     CurveCurrencyParameterSensitivities computed = PROVIDER.curveParameterSensitivity(point.build());
     CurveCurrencyParameterSensitivities expected = FD_CAL.sensitivity(
-        PROVIDER, (p) -> PRICER.presentValueWithZSpread(PRODUCT, (p), Z_SPREAD, false, 0));
+        PROVIDER, (p) -> PRICER.presentValueWithZSpread(PRODUCT, (p), Z_SPREAD, CONTINUOUS, 0));
     assertTrue(computed.equalWithTolerance(expected, 20d * NOTIONAL * EPS));
   }
 
   public void test_presentValueSensitivityWithZSpread_periodic() {
     PointSensitivityBuilder point = PRICER.presentValueSensitivityWithZSpread(
-        PRODUCT, PROVIDER, Z_SPREAD, true, PERIOD_PER_YEAR);
+        PRODUCT, PROVIDER, Z_SPREAD, PERIODIC, PERIOD_PER_YEAR);
     CurveCurrencyParameterSensitivities computed = PROVIDER.curveParameterSensitivity(point.build());
     CurveCurrencyParameterSensitivities expected = FD_CAL.sensitivity(
-        PROVIDER, (p) -> PRICER.presentValueWithZSpread(PRODUCT, (p), Z_SPREAD, true, PERIOD_PER_YEAR));
+        PROVIDER, (p) -> PRICER.presentValueWithZSpread(PRODUCT, (p), Z_SPREAD, PERIODIC, PERIOD_PER_YEAR));
     assertTrue(computed.equalWithTolerance(expected, 20d * NOTIONAL * EPS));
   }
 
@@ -323,19 +335,19 @@ public class DiscountingFixedCouponBondProductPricerTest {
 
   public void test_presentValueSensitivityWithZSpread_continuous_noExcoupon() {
     PointSensitivityBuilder point = PRICER.presentValueSensitivityWithZSpread(
-        PRODUCT_NO_EXCOUPON, PROVIDER, Z_SPREAD, false, 0);
+        PRODUCT_NO_EXCOUPON, PROVIDER, Z_SPREAD, CONTINUOUS, 0);
     CurveCurrencyParameterSensitivities computed = PROVIDER.curveParameterSensitivity(point.build());
     CurveCurrencyParameterSensitivities expected = FD_CAL.sensitivity(
-        PROVIDER, (p) -> PRICER.presentValueWithZSpread(PRODUCT_NO_EXCOUPON, (p), Z_SPREAD, false, 0));
+        PROVIDER, (p) -> PRICER.presentValueWithZSpread(PRODUCT_NO_EXCOUPON, (p), Z_SPREAD, CONTINUOUS, 0));
     assertTrue(computed.equalWithTolerance(expected, 20d * NOTIONAL * EPS));
   }
 
   public void test_presentValueSensitivityWithZSpread_periodic_noExcoupon() {
     PointSensitivityBuilder point = PRICER.presentValueSensitivityWithZSpread(
-        PRODUCT_NO_EXCOUPON, PROVIDER, Z_SPREAD, true, PERIOD_PER_YEAR);
+        PRODUCT_NO_EXCOUPON, PROVIDER, Z_SPREAD, PERIODIC, PERIOD_PER_YEAR);
     CurveCurrencyParameterSensitivities computed = PROVIDER.curveParameterSensitivity(point.build());
     CurveCurrencyParameterSensitivities expected = FD_CAL.sensitivity(PROVIDER,
-        (p) -> PRICER.presentValueWithZSpread(PRODUCT_NO_EXCOUPON, (p), Z_SPREAD, true, PERIOD_PER_YEAR));
+        (p) -> PRICER.presentValueWithZSpread(PRODUCT_NO_EXCOUPON, (p), Z_SPREAD, PERIODIC, PERIOD_PER_YEAR));
     assertTrue(computed.equalWithTolerance(expected, 20d * NOTIONAL * EPS));
   }
 
@@ -348,19 +360,20 @@ public class DiscountingFixedCouponBondProductPricerTest {
   }
 
   public void test_dirtyPriceSensitivityWithZspread_continuous() {
-    PointSensitivityBuilder point = PRICER.dirtyPriceSensitivityWithZspread(BOND_SECURITY, PROVIDER, Z_SPREAD, false, 0);
+    PointSensitivityBuilder point =
+        PRICER.dirtyPriceSensitivityWithZspread(BOND_SECURITY, PROVIDER, Z_SPREAD, CONTINUOUS, 0);
     CurveCurrencyParameterSensitivities computed = PROVIDER.curveParameterSensitivity(point.build());
     CurveCurrencyParameterSensitivities expected = FD_CAL.sensitivity(PROVIDER, (p) ->
-        CurrencyAmount.of(EUR, PRICER.dirtyPriceFromCurvesWithZSpread(BOND_SECURITY, (p), Z_SPREAD, false, 0)));
+        CurrencyAmount.of(EUR, PRICER.dirtyPriceFromCurvesWithZSpread(BOND_SECURITY, (p), Z_SPREAD, CONTINUOUS, 0)));
     assertTrue(computed.equalWithTolerance(expected, NOTIONAL * EPS));
   }
 
   public void test_dirtyPriceSensitivityWithZspread_periodic() {
     PointSensitivityBuilder point = PRICER.dirtyPriceSensitivityWithZspread(
-        BOND_SECURITY, PROVIDER, Z_SPREAD, true, PERIOD_PER_YEAR);
+        BOND_SECURITY, PROVIDER, Z_SPREAD, PERIODIC, PERIOD_PER_YEAR);
     CurveCurrencyParameterSensitivities computed = PROVIDER.curveParameterSensitivity(point.build());
     CurveCurrencyParameterSensitivities expected = FD_CAL.sensitivity(PROVIDER, (p) -> CurrencyAmount.of(
-        EUR, PRICER.dirtyPriceFromCurvesWithZSpread(BOND_SECURITY, (p), Z_SPREAD, true, PERIOD_PER_YEAR)));
+        EUR, PRICER.dirtyPriceFromCurvesWithZSpread(BOND_SECURITY, (p), Z_SPREAD, PERIODIC, PERIOD_PER_YEAR)));
     assertTrue(computed.equalWithTolerance(expected, NOTIONAL * EPS));
   }
 

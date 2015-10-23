@@ -61,12 +61,11 @@ public final class FixedCouponBondTrade
    */
   @PropertyDefinition
   private final long quantity;
-
   /**
    * The upfront fee payment of the bond trade.
    * <p>
    * The payment sign should be compatible with the product quantity, 
-   * i.e. payment is negative for positive quantity and positive for negative quantity.
+   * thus the payment is negative for positive quantity and positive for negative quantity.
    * <p>
    * Typically the date of this payment is the same as the settlement date in {@code tradeInfo}.
    */
@@ -182,7 +181,7 @@ public final class FixedCouponBondTrade
    * Gets the upfront fee payment of the bond trade.
    * <p>
    * The payment sign should be compatible with the product quantity,
-   * i.e. payment is negative for positive quantity and positive for negative quantity.
+   * thus the payment is negative for positive quantity and positive for negative quantity.
    * <p>
    * Typically the date of this payment is the same as the settlement date in {@code tradeInfo}.
    * @return the value of the property, not null
@@ -518,7 +517,7 @@ public final class FixedCouponBondTrade
      * Sets the upfront fee payment of the bond trade.
      * <p>
      * The payment sign should be compatible with the product quantity,
-     * i.e. payment is negative for positive quantity and positive for negative quantity.
+     * thus the payment is negative for positive quantity and positive for negative quantity.
      * <p>
      * Typically the date of this payment is the same as the settlement date in {@code tradeInfo}.
      * @param payment  the new value, not null

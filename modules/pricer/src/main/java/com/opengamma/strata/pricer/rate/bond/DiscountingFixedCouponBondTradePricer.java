@@ -19,6 +19,7 @@ import com.opengamma.strata.finance.rate.bond.FixedCouponBondTrade;
 import com.opengamma.strata.market.sensitivity.PointSensitivityBuilder;
 import com.opengamma.strata.market.sensitivity.RepoCurveZeroRateSensitivity;
 import com.opengamma.strata.market.sensitivity.ZeroRateSensitivity;
+import com.opengamma.strata.market.value.CompoundedRateType;
 import com.opengamma.strata.market.value.IssuerCurveDiscountFactors;
 import com.opengamma.strata.market.value.RepoCurveDiscountFactors;
 import com.opengamma.strata.pricer.DiscountingPaymentPricer;
@@ -35,7 +36,9 @@ public class DiscountingFixedCouponBondTradePricer {
    * Default implementation.
    */
   public static final DiscountingFixedCouponBondTradePricer DEFAULT = new DiscountingFixedCouponBondTradePricer(
-      DiscountingFixedCouponBondProductPricer.DEFAULT, DiscountingPaymentPricer.DEFAULT);
+      DiscountingFixedCouponBondProductPricer.DEFAULT,
+      DiscountingPaymentPricer.DEFAULT);
+
   /**
    * Pricer for {@link FixedCouponBond}.
    */
@@ -44,14 +47,17 @@ public class DiscountingFixedCouponBondTradePricer {
    * Pricer for {@link Payment}.
    */
   private final DiscountingPaymentPricer paymentPricer;
+
   /**
    * Creates an instance.
    * 
    * @param productPricer  the pricer for {@link FixedCouponBond}
    * @param paymentPricer  the pricer for {@link Payment}
   */
-  public DiscountingFixedCouponBondTradePricer(DiscountingFixedCouponBondProductPricer productPricer,
+  public DiscountingFixedCouponBondTradePricer(
+      DiscountingFixedCouponBondProductPricer productPricer,
       DiscountingPaymentPricer paymentPricer) {
+
     this.productPricer = ArgChecker.notNull(productPricer, "productPricer");
     this.paymentPricer = ArgChecker.notNull(paymentPricer, "paymentPricer");
   }
@@ -89,8 +95,7 @@ public class DiscountingFixedCouponBondTradePricer {
    * @param trade  the trade to price
    * @param provider  the rates provider
    * @param zSpread  the z-spread
-   * @param periodic  if true, the spread is added to periodic compounded rates,
-   *  if false, the spread is added to continuously compounded rates
+   * @param compoundedRateType  the compounded rate type
    * @param periodsPerYear  the number of periods per year
    * @return the present value of the fixed coupon bond trade
    */
@@ -98,11 +103,12 @@ public class DiscountingFixedCouponBondTradePricer {
       FixedCouponBondTrade trade,
       LegalEntityDiscountingProvider provider,
       double zSpread,
-      boolean periodic,
+      CompoundedRateType compoundedRateType,
       int periodsPerYear) {
+
     LocalDate settlementDate = trade.getTradeInfo().getSettlementDate().get();
     CurrencyAmount pvProduct = productPricer.presentValueWithZSpread(
-        trade.getProduct(), provider, zSpread, periodic, periodsPerYear, settlementDate);
+        trade.getProduct(), provider, zSpread, compoundedRateType, periodsPerYear, settlementDate);
     return presentValueFromProductPresentValue(trade, provider, pvProduct);
   }
 
@@ -133,6 +139,7 @@ public class DiscountingFixedCouponBondTradePricer {
       FixedCouponBondTrade trade,
       LegalEntityDiscountingProvider provider,
       double cleanPrice) {
+
     Security<FixedCouponBond> security = trade.getSecurity();
     FixedCouponBond product = security.getProduct();
     LocalDate standardSettlementDate = product.getSettlementDateOffset().adjust(provider.getValuationDate());
@@ -162,7 +169,8 @@ public class DiscountingFixedCouponBondTradePricer {
   }
 
   /**
-   * Calculates the present value of the fixed coupon bond trade with z-spread from the clean price of the underlying product.
+   * Calculates the present value of the fixed coupon bond trade with z-spread from the
+   * clean price of the underlying product.
    * <p>
    * The present value of the trade is the value on the valuation date.
    * The result is expressed using the payment currency of the bond.
@@ -176,8 +184,7 @@ public class DiscountingFixedCouponBondTradePricer {
    * @param provider  the rates provider
    * @param cleanPrice  the clean price
    * @param zSpread  the z-spread
-   * @param periodic  if true, the spread is added to periodic compounded rates,
-   *  if false, the spread is added to continuously compounded rates
+   * @param compoundedRateType  the compounded rate type
    * @param periodsPerYear  the number of periods per year
    * @return the present value of the fixed coupon bond trade
    */
@@ -186,8 +193,9 @@ public class DiscountingFixedCouponBondTradePricer {
       LegalEntityDiscountingProvider provider,
       double cleanPrice,
       double zSpread,
-      boolean periodic,
+      CompoundedRateType compoundedRateType,
       int periodsPerYear) {
+
     Security<FixedCouponBond> security = trade.getSecurity();
     FixedCouponBond product = security.getProduct();
     LocalDate standardSettlementDate = product.getSettlementDateOffset().adjust(provider.getValuationDate());
@@ -209,10 +217,10 @@ public class DiscountingFixedCouponBondTradePricer {
     double pvDiff = 0d;
     if (standardSettlementDate.isAfter(tradeSettlementDate)) {
       pvDiff = productPricer.presentValueCouponWithZSpread(
-          expanded, discountFactors, tradeSettlementDate, standardSettlementDate, zSpread, periodic, periodsPerYear, exCoupon);
+          expanded, discountFactors, tradeSettlementDate, standardSettlementDate, zSpread, compoundedRateType, periodsPerYear, exCoupon);
     } else {
       pvDiff = -productPricer.presentValueCouponWithZSpread(
-          expanded, discountFactors, standardSettlementDate, tradeSettlementDate, zSpread, periodic, periodsPerYear, exCoupon);
+          expanded, discountFactors, standardSettlementDate, tradeSettlementDate, zSpread, compoundedRateType, periodsPerYear, exCoupon);
     }
     return presentValueFromProductPresentValue(trade, provider, CurrencyAmount.of(currency, pvStandard + pvDiff));
   }
@@ -233,6 +241,7 @@ public class DiscountingFixedCouponBondTradePricer {
   public PointSensitivityBuilder presentValueSensitivity(
       FixedCouponBondTrade trade,
       LegalEntityDiscountingProvider provider) {
+
     LocalDate settlementDate = trade.getTradeInfo().getSettlementDate().get();
     PointSensitivityBuilder sensiProduct = productPricer.presentValueSensitivity(
         trade.getProduct(), provider, settlementDate);
@@ -253,8 +262,7 @@ public class DiscountingFixedCouponBondTradePricer {
    * @param trade  the trade to price
    * @param provider  the rates provider
    * @param zSpread  the z-spread
-   * @param periodic  if true, the spread is added to periodic compounded rates,
-   *  if false, the spread is added to continuously compounded rates
+   * @param compoundedRateType  the compounded rate type
    * @param periodsPerYear  the number of periods per year
    * @return the present value curve sensitivity of the trade
    */
@@ -262,11 +270,12 @@ public class DiscountingFixedCouponBondTradePricer {
       FixedCouponBondTrade trade,
       LegalEntityDiscountingProvider provider,
       double zSpread,
-      boolean periodic,
+      CompoundedRateType compoundedRateType,
       int periodsPerYear) {
+
     LocalDate settlementDate = trade.getTradeInfo().getSettlementDate().get();
     PointSensitivityBuilder sensiProduct = productPricer.presentValueSensitivityWithZSpread(
-        trade.getProduct(), provider, zSpread, periodic, periodsPerYear, settlementDate);
+        trade.getProduct(), provider, zSpread, compoundedRateType, periodsPerYear, settlementDate);
     return presnetValueSensitivityFromProductPresentValueSensitivity(trade, provider, sensiProduct);
   }
 
@@ -274,6 +283,7 @@ public class DiscountingFixedCouponBondTradePricer {
       FixedCouponBondTrade trade,
       LegalEntityDiscountingProvider provider,
       PointSensitivityBuilder productPresnetValueSensitivity) {
+
     PointSensitivityBuilder sensiProduct = productPresnetValueSensitivity.multipliedBy(trade.getQuantity());
     PointSensitivityBuilder sensiPayment = presentValueSensitivityPayment(trade, provider);
     return sensiProduct.combinedWith(sensiPayment);
@@ -287,8 +297,10 @@ public class DiscountingFixedCouponBondTradePricer {
     return paymentPricer.presentValue(trade.getPayment(), discountFactors.getDiscountFactors());
   }
 
-  private PointSensitivityBuilder presentValueSensitivityPayment(FixedCouponBondTrade trade,
+  private PointSensitivityBuilder presentValueSensitivityPayment(
+      FixedCouponBondTrade trade,
       LegalEntityDiscountingProvider provider) {
+
     FixedCouponBond product = trade.getProduct();
     RepoCurveDiscountFactors discountFactors = provider.repoCurveDiscountFactors(
         product.getLegalEntityId(), trade.getSecurity().getStandardId(), product.getCurrency());

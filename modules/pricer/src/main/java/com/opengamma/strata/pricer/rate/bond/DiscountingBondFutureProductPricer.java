@@ -13,6 +13,7 @@ import com.opengamma.strata.finance.rate.bond.BondFuture;
 import com.opengamma.strata.finance.rate.bond.FixedCouponBond;
 import com.opengamma.strata.market.sensitivity.PointSensitivities;
 import com.opengamma.strata.market.sensitivity.PointSensitivityBuilder;
+import com.opengamma.strata.market.value.CompoundedRateType;
 import com.opengamma.strata.pricer.rate.LegalEntityDiscountingProvider;
 
 /**
@@ -76,8 +77,7 @@ public final class DiscountingBondFutureProductPricer extends AbstractBondFuture
    * @param future  the future to price
    * @param provider  the rates provider
    * @param zSpread  the z-spread
-   * @param periodic  If true, the spread is added to periodic compounded rates. If false, the spread is added to 
-   * continuously compounded rates
+   * @param compoundedRateType  the compounded rate type
    * @param periodPerYear  the number of periods per year
    * @return the price of the product, in decimal form
    */
@@ -85,7 +85,7 @@ public final class DiscountingBondFutureProductPricer extends AbstractBondFuture
       BondFuture future,
       LegalEntityDiscountingProvider provider,
       double zSpread,
-      boolean periodic,
+      CompoundedRateType compoundedRateType,
       int periodPerYear) {
     ImmutableList<Security<FixedCouponBond>> bondSecurity = future.getBondSecurityBasket();
     int size = bondSecurity.size();
@@ -93,7 +93,7 @@ public final class DiscountingBondFutureProductPricer extends AbstractBondFuture
     for (int i = 0; i < size; ++i) {
       Security<FixedCouponBond> bond = bondSecurity.get(i);
       double dirtyPrice = bondPricer.dirtyPriceFromCurvesWithZSpread(
-          bond, provider, zSpread, periodic, periodPerYear, future.getLastDeliveryDate());
+          bond, provider, zSpread, compoundedRateType, periodPerYear, future.getLastDeliveryDate());
       priceBonds[i] = bondPricer.cleanPriceFromDirtyPrice(
           bond.getProduct(), future.getLastDeliveryDate(), dirtyPrice) / future.getConversionFactor().get(i);
     }
@@ -146,8 +146,7 @@ public final class DiscountingBondFutureProductPricer extends AbstractBondFuture
    * @param future  the future to price
    * @param provider  the rates provider
    * @param zSpread  the z-spread
-   * @param periodic  If true, the spread is added to periodic compounded rates. If false, the spread is added to 
-   * continuously compounded rates
+   * @param compoundedRateType  the compounded rate type
    * @param periodPerYear  the number of periods per year
    * @return the price curve sensitivity of the product
    */
@@ -155,7 +154,7 @@ public final class DiscountingBondFutureProductPricer extends AbstractBondFuture
       BondFuture future,
       LegalEntityDiscountingProvider provider,
       double zSpread,
-      boolean periodic,
+      CompoundedRateType compoundedRateType,
       int periodPerYear) {
     ImmutableList<Security<FixedCouponBond>> bondSecurity = future.getBondSecurityBasket();
     int size = bondSecurity.size();
@@ -165,7 +164,7 @@ public final class DiscountingBondFutureProductPricer extends AbstractBondFuture
     for (int i = 0; i < size; i++) {
       Security<FixedCouponBond> bond = bondSecurity.get(i);
       double dirtyPrice = bondPricer.dirtyPriceFromCurvesWithZSpread(
-          bond, provider, zSpread, periodic, periodPerYear, future.getLastDeliveryDate());
+          bond, provider, zSpread, compoundedRateType, periodPerYear, future.getLastDeliveryDate());
       priceBonds[i] = bondPricer.cleanPriceFromDirtyPrice(
           bond.getProduct(), future.getLastDeliveryDate(), dirtyPrice) / future.getConversionFactor().get(i);
       if (priceBonds[i] < priceMin) {
@@ -174,7 +173,7 @@ public final class DiscountingBondFutureProductPricer extends AbstractBondFuture
       }
     }
     PointSensitivityBuilder pointSensi = bondPricer.dirtyPriceSensitivityWithZspread(
-        bondSecurity.get(indexCTD), provider, zSpread, periodic, periodPerYear, future.getLastDeliveryDate());
+        bondSecurity.get(indexCTD), provider, zSpread, compoundedRateType, periodPerYear, future.getLastDeliveryDate());
     return pointSensi.multipliedBy(1d / future.getConversionFactor().get(indexCTD)).build();
   }
 }

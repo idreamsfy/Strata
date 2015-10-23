@@ -28,6 +28,7 @@ import org.joda.beans.impl.direct.DirectMetaPropertyMap;
 import com.google.common.primitives.Doubles;
 import com.opengamma.strata.basics.date.DayCount;
 import com.opengamma.strata.collect.ArgChecker;
+import com.opengamma.strata.collect.array.DoubleArray;
 import com.opengamma.strata.collect.id.StandardId;
 import com.opengamma.strata.collect.tuple.DoublesPair;
 import com.opengamma.strata.market.option.LogMoneynessStrike;
@@ -122,7 +123,7 @@ public final class BlackVolatilityExpLogMoneynessBondFutureProvider
     Map<DoublesPair, Double> result = parameters.zValueParameterSensitivity(expirationTime, logMoneyness);
     SurfaceCurrencyParameterSensitivity parameterSensi = SurfaceCurrencyParameterSensitivity.of(
         updateSurfaceMetadata(parameters.getMetadata(), result.keySet()), point.getCurrency(),
-        Doubles.toArray(result.values()));
+        DoubleArray.copyOf(Doubles.toArray(result.values())));
     return parameterSensi.multipliedBy(point.getSensitivity());
   }
 

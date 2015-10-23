@@ -54,6 +54,7 @@ import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.io.ByteSource;
 import com.opengamma.strata.basics.PayReceive;
+import com.opengamma.strata.basics.Trade;
 import com.opengamma.strata.basics.currency.CurrencyAmount;
 import com.opengamma.strata.basics.currency.CurrencyPair;
 import com.opengamma.strata.basics.currency.FxRate;
@@ -72,7 +73,6 @@ import com.opengamma.strata.basics.value.ValueSchedule;
 import com.opengamma.strata.basics.value.ValueStep;
 import com.opengamma.strata.collect.io.ResourceLocator;
 import com.opengamma.strata.collect.io.XmlElement;
-import com.opengamma.strata.finance.Trade;
 import com.opengamma.strata.finance.fx.FxNdf;
 import com.opengamma.strata.finance.fx.FxNdfTrade;
 import com.opengamma.strata.finance.fx.FxSingle;
@@ -682,10 +682,11 @@ public class FpmlDocumentParserTest {
     RateCalculationSwapLeg payLeg = RateCalculationSwapLeg.builder()
         .payReceive(PAY)
         .accrualSchedule(PeriodicSchedule.builder()
-            .startDate(date(2000, 3, 5))
+            .startDate(date(2000, 4, 5))
             .firstRegularStartDate(date(2000, 10, 5))
             .lastRegularEndDate(date(2004, 10, 5))
             .endDate(date(2005, 1, 5))
+            .overrideStartDate(AdjustableDate.of(date(2000, 3, 5), BusinessDayAdjustment.NONE))
             .startDateBusinessDayAdjustment(BusinessDayAdjustment.NONE)
             .businessDayAdjustment(BusinessDayAdjustment.of(FOLLOWING, EUTA))
             .frequency(Frequency.P6M)
@@ -708,10 +709,11 @@ public class FpmlDocumentParserTest {
     RateCalculationSwapLeg recLeg = RateCalculationSwapLeg.builder()
         .payReceive(RECEIVE)
         .accrualSchedule(PeriodicSchedule.builder()
-            .startDate(date(2000, 3, 5))
+            .startDate(date(2000, 4, 5))
             .firstRegularStartDate(date(2000, 10, 5))
             .lastRegularEndDate(date(2004, 10, 5))
             .endDate(date(2005, 1, 5))
+            .overrideStartDate(AdjustableDate.of(date(2000, 3, 5), BusinessDayAdjustment.NONE))
             .startDateBusinessDayAdjustment(BusinessDayAdjustment.NONE)
             .businessDayAdjustment(BusinessDayAdjustment.of(FOLLOWING, EUTA))
             .frequency(Frequency.P12M)

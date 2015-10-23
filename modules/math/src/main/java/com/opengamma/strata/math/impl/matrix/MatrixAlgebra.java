@@ -6,6 +6,9 @@
 package com.opengamma.strata.math.impl.matrix;
 
 import com.opengamma.strata.collect.ArgChecker;
+import com.opengamma.strata.collect.array.DoubleArray;
+import com.opengamma.strata.collect.array.DoubleMatrix;
+import com.opengamma.strata.collect.array.Matrix;
 
 /**
  * Parent class for matrix algebra operations. Basic operations (add, subtract, scale) are implemented in this class.
@@ -19,38 +22,22 @@ public abstract class MatrixAlgebra {
    * @return The sum of the two matrices
    * @throws IllegalArgumentException If the matrices are not of the same type, if the matrices are not the same shape.
    */
-  public Matrix<?> add(final Matrix<?> m1, final Matrix<?> m2) {
+  public Matrix add(Matrix m1, Matrix m2) {
     ArgChecker.notNull(m1, "m1");
     ArgChecker.notNull(m2, "m2");
-    if (m1 instanceof DoubleMatrix1D) {
-      if (m2 instanceof DoubleMatrix1D) {
-        final double[] x1 = ((DoubleMatrix1D) m1).getData();
-        final double[] x2 = ((DoubleMatrix1D) m2).getData();
-        final int n = x1.length;
-        ArgChecker.isTrue(n == x2.length, "Can only add matrices of the same shape");
-        final double[] sum = new double[n];
-        for (int i = 0; i < n; i++) {
-          sum[i] = x1[i] + x2[i];
-        }
-        return new DoubleMatrix1D(sum);
+    if (m1 instanceof DoubleArray) {
+      if (m2 instanceof DoubleArray) {
+        DoubleArray array1 = (DoubleArray) m1;
+        DoubleArray array2 = (DoubleArray) m2;
+        return array1.plus(array2);
       }
       throw new IllegalArgumentException("Tried to add a " + m1.getClass() + " and " + m2.getClass());
-    } else if (m1 instanceof DoubleMatrix2D) {
-      if (m2 instanceof DoubleMatrix2D) {
 
-        final double[][] x1 = ((DoubleMatrix2D) m1).getData();
-        final double[][] x2 = ((DoubleMatrix2D) m2).getData();
-        final int n = x1.length;
-        final int m = x1[0].length;
-        ArgChecker.isTrue(n == x2.length, "Can only add matrices of the same shape");
-        final double[][] sum = new double[n][x1[0].length];
-        for (int i = 0; i < n; i++) {
-          ArgChecker.isTrue(m == x2[i].length, "Can only add matrices of the same shape");
-          for (int j = 0; j < m; j++) {
-            sum[i][j] = x1[i][j] + x2[i][j];
-          }
-        }
-        return new DoubleMatrix2D(sum);
+    } else if (m1 instanceof DoubleMatrix) {
+      if (m2 instanceof DoubleMatrix) {
+        DoubleMatrix matrix1 = (DoubleMatrix) m1;
+        DoubleMatrix matrix2 = (DoubleMatrix) m2;
+        return matrix1.plus(matrix2);
       }
       throw new IllegalArgumentException("Tried to add a " + m1.getClass() + " and " + m2.getClass());
     }
@@ -60,15 +47,15 @@ public abstract class MatrixAlgebra {
   /**
    * Returns the quotient of two matrices $C = \frac{A}{B} = AB^{-1}$, where
    * $B^{-1}$ is the pseudo-inverse of $B$ i.e. $BB^{-1} = \mathbb{1}$.
-   * @param m1 The numerator matrix, not null. This matrix must be a {@link DoubleMatrix2D}.
-   * @param m2 The denominator, not null. This matrix must be a {@link DoubleMatrix2D}.
+   * @param m1 The numerator matrix, not null. This matrix must be a {@link DoubleMatrix}.
+   * @param m2 The denominator, not null. This matrix must be a {@link DoubleMatrix}.
    * @return The result
    */
-  public Matrix<?> divide(final Matrix<?> m1, final Matrix<?> m2) {
+  public Matrix divide(Matrix m1, Matrix m2) {
     ArgChecker.notNull(m1, "m1");
     ArgChecker.notNull(m2, "m2");
-    ArgChecker.isTrue(m1 instanceof DoubleMatrix2D, "Can only divide a 2D matrix");
-    ArgChecker.isTrue(m2 instanceof DoubleMatrix2D, "Can only perform division with a 2D matrix");
+    ArgChecker.isTrue(m1 instanceof DoubleMatrix, "Can only divide a 2D matrix");
+    ArgChecker.isTrue(m2 instanceof DoubleMatrix, "Can only perform division with a 2D matrix");
     return multiply(m1, getInverse(m2));
   }
 
@@ -98,38 +85,38 @@ public abstract class MatrixAlgebra {
    * \end{pmatrix}
    * \end{align*}
    * $$
-   * @param m1 The first matrix, not null. This matrix must be a {@link DoubleMatrix2D}.
-   * @param m2 The second matrix, not null. This matrix must be a {@link DoubleMatrix2D}.
+   * @param m1 The first matrix, not null. This matrix must be a {@link DoubleMatrix}.
+   * @param m2 The second matrix, not null. This matrix must be a {@link DoubleMatrix}.
    * @return The Kronecker product
    */
-  public Matrix<?> kroneckerProduct(final Matrix<?> m1, final Matrix<?> m2) {
+  public Matrix kroneckerProduct(Matrix m1, Matrix m2) {
     ArgChecker.notNull(m1, "m1");
     ArgChecker.notNull(m2, "m2");
-    if (m1 instanceof DoubleMatrix2D && m2 instanceof DoubleMatrix2D) {
-      final double[][] a = ((DoubleMatrix2D) m1).getData();
-      final double[][] b = ((DoubleMatrix2D) m2).getData();
-      final int aRows = a.length;
-      final int aCols = a[0].length;
-      final int bRows = b.length;
-      final int bCols = b[0].length;
-      final int rRows = aRows * bRows;
-      final int rCols = aCols * bCols;
-      final double[][] res = new double[rRows][rCols];
+    if (m1 instanceof DoubleMatrix && m2 instanceof DoubleMatrix) {
+      DoubleMatrix matrix1 = (DoubleMatrix) m1;
+      DoubleMatrix matrix2 = (DoubleMatrix) m2;
+      int aRows = matrix1.rowCount();
+      int aCols = matrix1.columnCount();
+      int bRows = matrix2.rowCount();
+      int bCols = matrix2.columnCount();
+      int rRows = aRows * bRows;
+      int rCols = aCols * bCols;
+      double[][] res = new double[rRows][rCols];
       for (int i = 0; i < aRows; i++) {
         for (int j = 0; j < aCols; j++) {
-          final double t = a[i][j];
+          double t = matrix1.get(i, j);
           if (t != 0.0) {
             for (int k = 0; k < bRows; k++) {
               for (int l = 0; l < bCols; l++) {
-                res[i * bRows + k][j * bCols + l] = t * b[k][l];
+                res[i * bRows + k][j * bCols + l] = t * matrix2.get(k, l);
               }
             }
           }
         }
       }
-      return new DoubleMatrix2D(res);
+      return DoubleMatrix.ofUnsafe(res);
     }
-    throw new IllegalArgumentException("Can only calculate the Kronecker product of two DoubleMatrix2D.");
+    throw new IllegalArgumentException("Can only calculate the Kronecker product of two DoubleMatrix.");
   }
 
   /**
@@ -138,7 +125,7 @@ public abstract class MatrixAlgebra {
    * @param m2 The second matrix, not null.
    * @return The product of the two matrices.
    */
-  public abstract Matrix<?> multiply(final Matrix<?> m1, final Matrix<?> m2);
+  public abstract Matrix multiply(Matrix m1, Matrix m2);
 
   /**
    * Scale a vector or matrix by a given amount, i.e. each element is multiplied by the scale.
@@ -146,26 +133,13 @@ public abstract class MatrixAlgebra {
    * @param scale The scale
    * @return the scaled vector or matrix
    */
-  public Matrix<?> scale(final Matrix<?> m, final double scale) {
+  public Matrix scale(Matrix m, double scale) {
     ArgChecker.notNull(m, "m");
-    if (m instanceof DoubleMatrix1D) {
-      final double[] x = ((DoubleMatrix1D) m).getData();
-      final int n = x.length;
-      final double[] scaled = new double[n];
-      for (int i = 0; i < n; i++) {
-        scaled[i] = x[i] * scale;
-      }
-      return new DoubleMatrix1D(scaled);
-    } else if (m instanceof DoubleMatrix2D) {
-      final double[][] x = ((DoubleMatrix2D) m).getData();
-      final int n = x.length;
-      final double[][] scaled = new double[n][x[0].length];
-      for (int i = 0; i < n; i++) {
-        for (int j = 0; j < x[0].length; j++) {
-          scaled[i][j] = x[i][j] * scale;
-        }
-      }
-      return new DoubleMatrix2D(scaled);
+    if (m instanceof DoubleArray) {
+      return ((DoubleArray) m).multipliedBy(scale);
+
+    } else if (m instanceof DoubleMatrix) {
+      return ((DoubleMatrix) m).multipliedBy(scale);
     }
     throw new UnsupportedOperationException();
   }
@@ -177,37 +151,21 @@ public abstract class MatrixAlgebra {
    * @return The second matrix subtracted from the first
    * @throws IllegalArgumentException If the matrices are not of the same type, if the matrices are not the same shape.
    */
-  public Matrix<?> subtract(final Matrix<?> m1, final Matrix<?> m2) {
+  public Matrix subtract(Matrix m1, Matrix m2) {
     ArgChecker.notNull(m1, "m1");
     ArgChecker.notNull(m2, "m2");
-    if (m1 instanceof DoubleMatrix1D) {
-      if (m2 instanceof DoubleMatrix1D) {
-        final double[] x1 = ((DoubleMatrix1D) m1).getData();
-        final double[] x2 = ((DoubleMatrix1D) m2).getData();
-        final int n = x1.length;
-        ArgChecker.isTrue(n == x2.length, "Can only subtract matrices of the same shape");
-        final double[] sum = new double[n];
-        for (int i = 0; i < n; i++) {
-          sum[i] = x1[i] - x2[i];
-        }
-        return new DoubleMatrix1D(sum);
+    if (m1 instanceof DoubleArray) {
+      if (m2 instanceof DoubleArray) {
+        DoubleArray array1 = (DoubleArray) m1;
+        DoubleArray array2 = (DoubleArray) m2;
+        return array1.minus(array2);
       }
       throw new IllegalArgumentException("Tried to subtract a " + m1.getClass() + " and " + m2.getClass());
-    } else if (m1 instanceof DoubleMatrix2D) {
-      if (m2 instanceof DoubleMatrix2D) {
-        final double[][] x1 = ((DoubleMatrix2D) m1).getData();
-        final double[][] x2 = ((DoubleMatrix2D) m2).getData();
-        final int n = x1.length;
-        final int m = x1[0].length;
-        ArgChecker.isTrue(n == x2.length, "Can only subtract matrices of the same shape");
-        final double[][] sum = new double[n][x1[0].length];
-        for (int i = 0; i < n; i++) {
-          ArgChecker.isTrue(m == x2[i].length, "Can only subtract matrices of the same shape");
-          for (int j = 0; j < m; j++) {
-            sum[i][j] = x1[i][j] - x2[i][j];
-          }
-        }
-        return new DoubleMatrix2D(sum);
+    } else if (m1 instanceof DoubleMatrix) {
+      if (m2 instanceof DoubleMatrix) {
+        DoubleMatrix matrix1 = (DoubleMatrix) m1;
+        DoubleMatrix matrix2 = (DoubleMatrix) m2;
+        return matrix1.minus(matrix2);
       }
       throw new IllegalArgumentException("Tried to subtract a " + m1.getClass() + " and " + m2.getClass());
     }
@@ -219,21 +177,21 @@ public abstract class MatrixAlgebra {
    * @param m A matrix, not null
    * @return The condition number of the matrix
    */
-  public abstract double getCondition(final Matrix<?> m);
+  public abstract double getCondition(Matrix m);
 
   /**
    * Returns the determinant of the matrix.
    * @param m A matrix, not null
    * @return The determinant of the matrix
    */
-  public abstract double getDeterminant(final Matrix<?> m);
+  public abstract double getDeterminant(Matrix m);
 
   /**
    * Returns the inverse (or pseudo-inverse) of the matrix.
    * @param m A matrix, not null
    * @return The inverse matrix
    */
-  public abstract DoubleMatrix2D getInverse(final Matrix<?> m);
+  public abstract DoubleMatrix getInverse(Matrix m);
 
   /**
    * Returns the inner (or dot) product.
@@ -242,7 +200,7 @@ public abstract class MatrixAlgebra {
    * @return The scalar dot product
    * @exception IllegalArgumentException If the vectors are not the same size
    */
-  public abstract double getInnerProduct(final Matrix<?> m1, final Matrix<?> m2);
+  public abstract double getInnerProduct(Matrix m1, Matrix m2);
 
   /**
    * Returns the outer product.
@@ -251,7 +209,7 @@ public abstract class MatrixAlgebra {
    * @return The outer product
    * @exception IllegalArgumentException If the vectors are not the same size
    */
-  public abstract DoubleMatrix2D getOuterProduct(final Matrix<?> m1, final Matrix<?> m2);
+  public abstract DoubleMatrix getOuterProduct(Matrix m1, Matrix m2);
 
   /**
    * For a vector, returns the <a href="http://mathworld.wolfram.com/L1-Norm.html">$L_1$ norm</a>
@@ -261,7 +219,7 @@ public abstract class MatrixAlgebra {
    * @param m A vector or matrix, not null
    * @return The $L_1$ norm
    */
-  public abstract double getNorm1(final Matrix<?> m);
+  public abstract double getNorm1(Matrix m);
 
   /**
    * For a vector, returns <a href="http://mathworld.wolfram.com/L2-Norm.html">$L_2$ norm</a> (also known as the
@@ -271,7 +229,7 @@ public abstract class MatrixAlgebra {
    * @param m A vector or matrix, not null
    * @return the norm
    */
-  public abstract double getNorm2(final Matrix<?> m);
+  public abstract double getNorm2(Matrix m);
 
   /**
    * For a vector, returns the <a href="http://mathworld.wolfram.com/L-Infinity-Norm.html">$L_\infty$ norm</a>.
@@ -281,7 +239,7 @@ public abstract class MatrixAlgebra {
    * @param m a vector or a matrix, not null
    * @return the norm
    */
-  public abstract double getNormInfinity(final Matrix<?> m);
+  public abstract double getNormInfinity(Matrix m);
 
   /**
    * Returns a matrix raised to an integer power, e.g. $\mathbf{A}^3 = \mathbf{A}\mathbf{A}\mathbf{A}$.
@@ -289,7 +247,7 @@ public abstract class MatrixAlgebra {
    * @param p An integer power
    * @return The result
    */
-  public abstract DoubleMatrix2D getPower(final Matrix<?> m, final int p);
+  public abstract DoubleMatrix getPower(Matrix m, int p);
 
   /**
    * Returns a matrix raised to a power, $\mathbf{A}^3 = \mathbf{A}\mathbf{A}\mathbf{A}$.
@@ -297,52 +255,50 @@ public abstract class MatrixAlgebra {
    * @param p The power
    * @return The result
    */
-  public abstract DoubleMatrix2D getPower(Matrix<?> m, double p);
+  public abstract DoubleMatrix getPower(Matrix m, double p);
 
   /**
    * Returns the trace (i.e. sum of diagonal elements) of a matrix.
    * @param m A matrix, not null. The matrix must be square.
    * @return The trace
    */
-  public abstract double getTrace(final Matrix<?> m);
+  public abstract double getTrace(Matrix m);
 
   /**
    * Returns the transpose of a matrix.
    * @param m A matrix, not null
    * @return The transpose matrix
    */
-  public abstract DoubleMatrix2D getTranspose(final Matrix<?> m);
+  public abstract DoubleMatrix getTranspose(Matrix m);
 
   /**
    * Compute $A^T A$, where A is a matrix
    * @param a The matrix
    * @return The result of $A^T A$
    */
-  public DoubleMatrix2D matrixTransposeMultiplyMatrix(DoubleMatrix2D a) {
+  public DoubleMatrix matrixTransposeMultiplyMatrix(DoubleMatrix a) {
     ArgChecker.notNull(a, "a");
-    final int n = a.getNumberOfRows();
-    final int m = a.getNumberOfColumns();
+    int n = a.rowCount();
+    int m = a.columnCount();
 
-    DoubleMatrix2D res = new DoubleMatrix2D(m, m);
-    double[][] data = res.getData();
-    double[][] aData = a.getData();
-
+    double[][] data = new double[m][m];
     for (int i = 0; i < m; i++) {
-      double sum = 0.0;
+      double sum = 0d;
       for (int k = 0; k < n; k++) {
-        sum += aData[k][i] * aData[k][i];
+        sum += a.get(k, i) * a.get(k, i);
       }
       data[i][i] = sum;
 
       for (int j = i + 1; j < m; j++) {
-        sum = 0.0;
+        sum = 0d;
         for (int k = 0; k < n; k++) {
-          sum += aData[k][i] * aData[k][j];
+          sum += a.get(k, i) * a.get(k, j);
         }
         data[i][j] = sum;
         data[j][i] = sum;
       }
     }
-    return res;
+    return DoubleMatrix.ofUnsafe(data);
   }
+
 }

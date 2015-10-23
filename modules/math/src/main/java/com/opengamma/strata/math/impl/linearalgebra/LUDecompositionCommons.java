@@ -9,7 +9,7 @@ import org.apache.commons.math3.linear.LUDecomposition;
 import org.apache.commons.math3.linear.RealMatrix;
 
 import com.opengamma.strata.collect.ArgChecker;
-import com.opengamma.strata.math.impl.matrix.DoubleMatrix2D;
+import com.opengamma.strata.collect.array.DoubleMatrix;
 import com.opengamma.strata.math.impl.util.CommonsMathWrapper;
 
 /**
@@ -18,14 +18,11 @@ import com.opengamma.strata.math.impl.util.CommonsMathWrapper;
  */
 public class LUDecompositionCommons extends Decomposition<LUDecompositionResult> {
 
-  /**
-   * {@inheritDoc}
-   */
   @Override
-  public LUDecompositionResult evaluate(final DoubleMatrix2D x) {
+  public LUDecompositionResult evaluate(DoubleMatrix x) {
     ArgChecker.notNull(x, "x");
-    final RealMatrix temp = CommonsMathWrapper.wrap(x);
-    final LUDecomposition lu = new LUDecomposition(temp);
+    RealMatrix temp = CommonsMathWrapper.wrap(x);
+    LUDecomposition lu = new LUDecomposition(temp);
     return new LUDecompositionCommonsResult(lu);
   }
 

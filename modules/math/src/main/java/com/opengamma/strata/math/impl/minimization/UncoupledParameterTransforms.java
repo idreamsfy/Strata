@@ -10,8 +10,8 @@ import java.util.BitSet;
 import java.util.Objects;
 
 import com.opengamma.strata.collect.ArgChecker;
-import com.opengamma.strata.math.impl.matrix.DoubleMatrix1D;
-import com.opengamma.strata.math.impl.matrix.DoubleMatrix2D;
+import com.opengamma.strata.collect.array.DoubleArray;
+import com.opengamma.strata.collect.array.DoubleMatrix;
 
 /**
  * For a set of <i>n</i> function parameters, this takes <i>n</i> ParameterLimitsTransform (which can be the NullTransform which does NOT transform the parameter) which transform
@@ -21,7 +21,8 @@ import com.opengamma.strata.math.impl.matrix.DoubleMatrix2D;
  */
 // TODO not tested
 public class UncoupledParameterTransforms implements NonLinearParameterTransforms {
-  private final DoubleMatrix1D _startValues;
+
+  private final DoubleArray _startValues;
   private final ParameterLimitsTransform[] _transforms;
   private final boolean[] _freeParameters;
   private final int _nMP;
@@ -34,11 +35,11 @@ public class UncoupledParameterTransforms implements NonLinearParameterTransform
    * a constrained function parameter (e.g. must be between -1 and 1) to a unconstrained fit parameter.
    * @param fixed BitSet with an element set to <b>true</b> if that parameter is fixed
    */
-  public UncoupledParameterTransforms(final DoubleMatrix1D startValues, final ParameterLimitsTransform[] transforms, final BitSet fixed) {
+  public UncoupledParameterTransforms(DoubleArray startValues, ParameterLimitsTransform[] transforms, BitSet fixed) {
     ArgChecker.notNull(startValues, "null start values");
     ArgChecker.notEmpty(transforms, "must specify transforms");
     ArgChecker.notNull(fixed, "must specify what is fixed (even if none)");
-    _nMP = startValues.getNumberOfElements();
+    _nMP = startValues.size();
     ArgChecker.isTrue(_nMP == transforms.length, "Have {}-dimensional start value but {} transforms", _nMP, transforms.length);
     _freeParameters = new boolean[_nMP];
     for (int i = 0; i < _nMP; i++) {
@@ -48,7 +49,7 @@ public class UncoupledParameterTransforms implements NonLinearParameterTransform
         _freeParameters[i] = true;
       }
     }
-    final int count = fixed.cardinality();
+    int count = fixed.cardinality();
     ArgChecker.isTrue(count < _nMP, "all parameters are fixed");
     _nFP = _nMP - count;
     _startValues = startValues;
@@ -80,17 +81,17 @@ public class UncoupledParameterTransforms implements NonLinearParameterTransform
    * @return The fitting parameters
    */
   @Override
-  public DoubleMatrix1D transform(final DoubleMatrix1D functionParameters) {
+  public DoubleArray transform(DoubleArray functionParameters) {
     ArgChecker.notNull(functionParameters, "function parameters");
-    ArgChecker.isTrue(functionParameters.getNumberOfElements() == _nMP, "functionParameters wrong dimension");
-    final double[] fittingParameter = new double[_nFP];
+    ArgChecker.isTrue(functionParameters.size() == _nMP, "functionParameters wrong dimension");
+    double[] fittingParameter = new double[_nFP];
     for (int i = 0, j = 0; i < _nMP; i++) {
       if (_freeParameters[i]) {
-        fittingParameter[j] = _transforms[i].transform(functionParameters.getEntry(i));
+        fittingParameter[j] = _transforms[i].transform(functionParameters.get(i));
         j++;
       }
     }
-    return new DoubleMatrix1D(fittingParameter);
+    return DoubleArray.copyOf(fittingParameter);
   }
 
   /**
@@ -99,19 +100,19 @@ public class UncoupledParameterTransforms implements NonLinearParameterTransform
    * @return The function parameters
    */
   @Override
-  public DoubleMatrix1D inverseTransform(final DoubleMatrix1D fittingParameters) {
+  public DoubleArray inverseTransform(DoubleArray fittingParameters) {
     ArgChecker.notNull(fittingParameters, "fitting parameters");
-    ArgChecker.isTrue(fittingParameters.getNumberOfElements() == _nFP, "fittingParameter wrong dimension");
-    final double[] modelParameter = new double[_nMP];
+    ArgChecker.isTrue(fittingParameters.size() == _nFP, "fittingParameter wrong dimension");
+    double[] modelParameter = new double[_nMP];
     for (int i = 0, j = 0; i < _nMP; i++) {
       if (_freeParameters[i]) {
-        modelParameter[i] = _transforms[i].inverseTransform(fittingParameters.getEntry(j));
+        modelParameter[i] = _transforms[i].inverseTransform(fittingParameters.get(j));
         j++;
       } else {
-        modelParameter[i] = _startValues.getEntry(i);
+        modelParameter[i] = _startValues.get(i);
       }
     }
-    return new DoubleMatrix1D(modelParameter);
+    return DoubleArray.copyOf(modelParameter);
   }
 
   /**
@@ -122,17 +123,17 @@ public class UncoupledParameterTransforms implements NonLinearParameterTransform
    */
   // TODO not tested
   @Override
-  public DoubleMatrix2D jacobian(final DoubleMatrix1D functionParameters) {
+  public DoubleMatrix jacobian(DoubleArray functionParameters) {
     ArgChecker.notNull(functionParameters, "function parameters");
-    ArgChecker.isTrue(functionParameters.getNumberOfElements() == _nMP, "functionParameters wrong dimension");
-    final double[][] jac = new double[_nFP][_nMP];
+    ArgChecker.isTrue(functionParameters.size() == _nMP, "functionParameters wrong dimension");
+    double[][] jac = new double[_nFP][_nMP];
     for (int i = 0, j = 0; i < _nMP; i++) {
       if (_freeParameters[i]) {
-        jac[j][i] = _transforms[i].transformGradient(functionParameters.getEntry(i));
+        jac[j][i] = _transforms[i].transformGradient(functionParameters.get(i));
         j++;
       }
     }
-    return new DoubleMatrix2D(jac);
+    return DoubleMatrix.copyOf(jac);
   }
 
   /**
@@ -145,12 +146,12 @@ public class UncoupledParameterTransforms implements NonLinearParameterTransform
 
   @SuppressWarnings("deprecation")
   @Override
-  public DoubleMatrix2D inverseJacobian(final DoubleMatrix1D fittingParameters) {
+  public DoubleMatrix inverseJacobian(DoubleArray fittingParameters) {
     ArgChecker.notNull(fittingParameters, "fitting parameters");
-    ArgChecker.isTrue(fittingParameters.getNumberOfElements() == _nFP, "fitting parameters wrong dimension");
-    final double[][] jac = new double[_nMP][_nFP];
-    final int[] p = new int[_nMP];
-    final int[] q = new int[_nMP];
+    ArgChecker.isTrue(fittingParameters.size() == _nFP, "fitting parameters wrong dimension");
+    double[][] jac = new double[_nMP][_nFP];
+    int[] p = new int[_nMP];
+    int[] q = new int[_nMP];
     int t = 0;
     for (int i = 0; i < _nMP; i++) {
       if (_freeParameters[i]) {
@@ -163,14 +164,14 @@ public class UncoupledParameterTransforms implements NonLinearParameterTransform
     for (int i = 0; i < t; i++) {
       pderef = p[i];
       qderef = q[i];
-      jac[pderef][qderef] = _transforms[pderef].inverseTransformGradient(fittingParameters.getEntry(qderef));
+      jac[pderef][qderef] = _transforms[pderef].inverseTransformGradient(fittingParameters.get(qderef));
     }
-    return new DoubleMatrix2D(jac);
+    return DoubleMatrix.copyOf(jac);
   }
 
   @Override
   public int hashCode() {
-    final int prime = 31;
+    int prime = 31;
     int result = 1;
     result = prime * result + Arrays.hashCode(_freeParameters);
     result = prime * result + _startValues.hashCode();
@@ -179,7 +180,7 @@ public class UncoupledParameterTransforms implements NonLinearParameterTransform
   }
 
   @Override
-  public boolean equals(final Object obj) {
+  public boolean equals(Object obj) {
     if (this == obj) {
       return true;
     }
@@ -189,7 +190,7 @@ public class UncoupledParameterTransforms implements NonLinearParameterTransform
     if (getClass() != obj.getClass()) {
       return false;
     }
-    final UncoupledParameterTransforms other = (UncoupledParameterTransforms) obj;
+    UncoupledParameterTransforms other = (UncoupledParameterTransforms) obj;
     if (!Arrays.equals(_freeParameters, other._freeParameters)) {
       return false;
     }

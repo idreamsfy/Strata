@@ -27,6 +27,7 @@ import java.util.Map;
 
 import org.testng.annotations.Test;
 
+import com.opengamma.strata.collect.array.DoubleArray;
 import com.opengamma.strata.collect.id.StandardId;
 import com.opengamma.strata.collect.tuple.DoublesPair;
 import com.opengamma.strata.market.option.LogMoneynessStrike;
@@ -54,20 +55,20 @@ public class BlackVolatilityExpLogMoneynessBondFutureProviderTest {
       CombinedInterpolatorExtrapolatorFactory.getInterpolator(Interpolator1DFactory.LINEAR,
           Interpolator1DFactory.FLAT_EXTRAPOLATOR, Interpolator1DFactory.FLAT_EXTRAPOLATOR);
   private static final GridInterpolator2D INTERPOLATOR_2D = new GridInterpolator2D(LINEAR_FLAT, LINEAR_FLAT);
-  private static final double[] TIME =
-      new double[] {0.25, 0.50, 1.00, 0.25, 0.50, 1.00, 0.25, 0.50, 1.00, 0.25, 0.50, 1.00 };
-  private static final double[] MONEYNESS =
-      new double[] {-0.02, -0.02, -0.02, -0.01, -0.01, -0.01, 0.00, 0.00, 0.00, 0.01, 0.01, 0.01 };
-  private static final double[] VOL =
-      new double[] {0.01, 0.011, 0.012, 0.011, 0.012, 0.013, 0.012, 0.013, 0.014, 0.010, 0.012, 0.014 };
+  private static final DoubleArray TIME =
+      DoubleArray.of(0.25, 0.50, 1.00, 0.25, 0.50, 1.00, 0.25, 0.50, 1.00, 0.25, 0.50, 1.00);
+  private static final DoubleArray MONEYNESS =
+      DoubleArray.of(-0.02, -0.02, -0.02, -0.01, -0.01, -0.01, 0.00, 0.00, 0.00, 0.01, 0.01, 0.01);
+  private static final DoubleArray VOL =
+      DoubleArray.of(0.01, 0.011, 0.012, 0.011, 0.012, 0.013, 0.012, 0.013, 0.014, 0.010, 0.012, 0.014);
   private static final SurfaceMetadata METADATA_WITH_PARAM;
   private static final SurfaceMetadata METADATA;
   static {
     List<GenericVolatilitySurfaceYearFractionMetadata> list = new ArrayList<GenericVolatilitySurfaceYearFractionMetadata>();
-    int nData = TIME.length;
+    int nData = TIME.size();
     for (int i = 0; i < nData; ++i) {
       GenericVolatilitySurfaceYearFractionMetadata parameterMetadata = GenericVolatilitySurfaceYearFractionMetadata.of(
-          TIME[i], LogMoneynessStrike.of(MONEYNESS[i]));
+          TIME.get(i), LogMoneynessStrike.of(MONEYNESS.get(i)));
       list.add(parameterMetadata);
     }
     METADATA_WITH_PARAM = DefaultSurfaceMetadata.builder()
@@ -133,21 +134,21 @@ public class BlackVolatilityExpLogMoneynessBondFutureProviderTest {
 
   public void test_volatility_sensitivity() {
     double eps = 1.0e-6;
-    int nData = TIME.length;
+    int nData = TIME.size();
     for (int i = 0; i < NB_TEST; i++) {
       BondFutureOptionSensitivity point = BondFutureOptionSensitivity.of(FUTURE_SECURITY_ID, TEST_OPTION_EXPIRY[i],
           TEST_FUTURE_EXPIRY[i], TEST_STRIKE_PRICE[i], TEST_FUTURE_PRICE[i], USD, TEST_SENSITIVITY[i]);
       SurfaceCurrencyParameterSensitivity sensi = PROVIDER_WITH_PARAM.surfaceCurrencyParameterSensitivity(point);
       Map<DoublesPair, Double> map = new HashMap<DoublesPair, Double>();
       for (int j = 0; j < nData; ++j) {
-        double[] volDataUp = Arrays.copyOf(VOL, nData);
-        double[] volDataDw = Arrays.copyOf(VOL, nData);
+        double[] volDataUp = Arrays.copyOf(VOL.toArray(), nData);
+        double[] volDataDw = Arrays.copyOf(VOL.toArray(), nData);
         volDataUp[j] += eps;
         volDataDw[j] -= eps;
-      InterpolatedNodalSurface paramUp =
-            InterpolatedNodalSurface.of(METADATA_WITH_PARAM, TIME, MONEYNESS, volDataUp, INTERPOLATOR_2D);
-      InterpolatedNodalSurface paramDw =
-            InterpolatedNodalSurface.of(METADATA_WITH_PARAM, TIME, MONEYNESS, volDataDw, INTERPOLATOR_2D);
+        InterpolatedNodalSurface paramUp = InterpolatedNodalSurface.of(
+            METADATA_WITH_PARAM, TIME, MONEYNESS, DoubleArray.copyOf(volDataUp), INTERPOLATOR_2D);
+        InterpolatedNodalSurface paramDw = InterpolatedNodalSurface.of(
+            METADATA_WITH_PARAM, TIME, MONEYNESS, DoubleArray.copyOf(volDataDw), INTERPOLATOR_2D);
       BlackVolatilityExpLogMoneynessBondFutureProvider provUp = BlackVolatilityExpLogMoneynessBondFutureProvider.of(
           paramUp, FUTURE_SECURITY_ID, ACT_365F, VALUATION_DATE_TIME);
       BlackVolatilityExpLogMoneynessBondFutureProvider provDw = BlackVolatilityExpLogMoneynessBondFutureProvider.of(
@@ -157,11 +158,11 @@ public class BlackVolatilityExpLogMoneynessBondFutureProviderTest {
       double volDw = provDw.getVolatility(
           TEST_OPTION_EXPIRY[i], TEST_FUTURE_EXPIRY[i], TEST_STRIKE_PRICE[i], TEST_FUTURE_PRICE[i]);
         double fd = 0.5 * (volUp - volDw) / eps;
-        map.put(DoublesPair.of(TIME[j], MONEYNESS[j]), fd);
+        map.put(DoublesPair.of(TIME.get(j), MONEYNESS.get(j)), fd);
       }
       SurfaceCurrencyParameterSensitivity sensiFromNoMetadata = PROVIDER.surfaceCurrencyParameterSensitivity(point);
       List<SurfaceParameterMetadata> list = sensi.getMetadata().getParameterMetadata().get();
-      double[] computed = sensi.getSensitivity();
+      double[] computed = sensi.getSensitivity().toArray();
       assertEquals(computed.length, nData);
       for (int j = 0; j < list.size(); ++j) {
         GenericVolatilitySurfaceYearFractionMetadata metadata =

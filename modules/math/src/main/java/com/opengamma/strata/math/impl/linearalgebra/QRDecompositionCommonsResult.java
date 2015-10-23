@@ -10,28 +10,28 @@ import org.apache.commons.math3.linear.DecompositionSolver;
 import org.apache.commons.math3.linear.QRDecomposition;
 
 import com.opengamma.strata.collect.ArgChecker;
-import com.opengamma.strata.math.impl.matrix.DoubleMatrix1D;
-import com.opengamma.strata.math.impl.matrix.DoubleMatrix2D;
-import com.opengamma.strata.math.impl.matrix.DoubleMatrixUtils;
+import com.opengamma.strata.collect.array.DoubleArray;
+import com.opengamma.strata.collect.array.DoubleMatrix;
 import com.opengamma.strata.math.impl.util.CommonsMathWrapper;
 
 /**
  * Wrapper for results of the Commons implementation of QR Decomposition ({@link QRDecompositionCommons}).
  */
 public class QRDecompositionCommonsResult implements QRDecompositionResult {
-  private final DoubleMatrix2D _q;
-  private final DoubleMatrix2D _r;
-  private final DoubleMatrix2D _qTranspose;
+
+  private final DoubleMatrix _q;
+  private final DoubleMatrix _r;
+  private final DoubleMatrix _qTranspose;
   private final DecompositionSolver _solver;
 
   /**
    * @param qr The result of the QR decomposition, not null
    */
-  public QRDecompositionCommonsResult(final QRDecomposition qr) {
+  public QRDecompositionCommonsResult(QRDecomposition qr) {
     ArgChecker.notNull(qr, "qr");
     _q = CommonsMathWrapper.unwrap(qr.getQ());
     _r = CommonsMathWrapper.unwrap(qr.getR());
-    _qTranspose = DoubleMatrixUtils.getTranspose(_q);
+    _qTranspose = _q.transpose();
     _solver = qr.getSolver();
   }
 
@@ -39,7 +39,7 @@ public class QRDecompositionCommonsResult implements QRDecompositionResult {
    * {@inheritDoc}
    */
   @Override
-  public DoubleMatrix2D getQ() {
+  public DoubleMatrix getQ() {
     return _q;
   }
 
@@ -47,7 +47,7 @@ public class QRDecompositionCommonsResult implements QRDecompositionResult {
    * {@inheritDoc}
    */
   @Override
-  public DoubleMatrix2D getQT() {
+  public DoubleMatrix getQT() {
     return _qTranspose;
   }
 
@@ -55,7 +55,7 @@ public class QRDecompositionCommonsResult implements QRDecompositionResult {
    * {@inheritDoc}
    */
   @Override
-  public DoubleMatrix2D getR() {
+  public DoubleMatrix getR() {
     return _r;
   }
 
@@ -63,7 +63,7 @@ public class QRDecompositionCommonsResult implements QRDecompositionResult {
    * {@inheritDoc}
    */
   @Override
-  public DoubleMatrix1D solve(final DoubleMatrix1D b) {
+  public DoubleArray solve(DoubleArray b) {
     ArgChecker.notNull(b, "b");
     return CommonsMathWrapper.unwrap(_solver.solve(CommonsMathWrapper.wrap(b)));
   }
@@ -72,7 +72,7 @@ public class QRDecompositionCommonsResult implements QRDecompositionResult {
    * {@inheritDoc}
    */
   @Override
-  public double[] solve(final double[] b) {
+  public double[] solve(double[] b) {
     ArgChecker.notNull(b, "b");
     return _solver.solve(new ArrayRealVector(b)).toArray();
   }
@@ -81,7 +81,7 @@ public class QRDecompositionCommonsResult implements QRDecompositionResult {
    * {@inheritDoc}
    */
   @Override
-  public DoubleMatrix2D solve(final DoubleMatrix2D b) {
+  public DoubleMatrix solve(DoubleMatrix b) {
     ArgChecker.notNull(b, "b");
     return CommonsMathWrapper.unwrap(_solver.solve(CommonsMathWrapper.wrap(b)));
   }

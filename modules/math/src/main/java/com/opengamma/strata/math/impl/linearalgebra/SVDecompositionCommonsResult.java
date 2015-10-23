@@ -10,29 +10,30 @@ import org.apache.commons.math3.linear.DecompositionSolver;
 import org.apache.commons.math3.linear.SingularValueDecomposition;
 
 import com.opengamma.strata.collect.ArgChecker;
-import com.opengamma.strata.math.impl.matrix.DoubleMatrix1D;
-import com.opengamma.strata.math.impl.matrix.DoubleMatrix2D;
+import com.opengamma.strata.collect.array.DoubleArray;
+import com.opengamma.strata.collect.array.DoubleMatrix;
 import com.opengamma.strata.math.impl.util.CommonsMathWrapper;
 
 /**
  * Wrapper for results of the Commons implementation of singular value decomposition {@link SVDecompositionCommons}
  */
 public class SVDecompositionCommonsResult implements SVDecompositionResult {
+
   private final double _condition;
   private final double _norm;
   private final int _rank;
-  private final DoubleMatrix2D _s;
+  private final DoubleMatrix _s;
   private final double[] _singularValues;
-  private final DoubleMatrix2D _u;
-  private final DoubleMatrix2D _v;
-  private final DoubleMatrix2D _uTranspose;
-  private final DoubleMatrix2D _vTranspose;
+  private final DoubleMatrix _u;
+  private final DoubleMatrix _v;
+  private final DoubleMatrix _uTranspose;
+  private final DoubleMatrix _vTranspose;
   private final DecompositionSolver _solver;
 
   /**
    * @param svd The result of the SV decomposition, not null
    */
-  public SVDecompositionCommonsResult(final SingularValueDecomposition svd) {
+  public SVDecompositionCommonsResult(SingularValueDecomposition svd) {
     ArgChecker.notNull(svd, "svd");
     _condition = svd.getConditionNumber();
     _norm = svd.getNorm();
@@ -74,7 +75,7 @@ public class SVDecompositionCommonsResult implements SVDecompositionResult {
    * {@inheritDoc}
    */
   @Override
-  public DoubleMatrix2D getS() {
+  public DoubleMatrix getS() {
     return _s;
   }
 
@@ -90,7 +91,7 @@ public class SVDecompositionCommonsResult implements SVDecompositionResult {
    * {@inheritDoc}
    */
   @Override
-  public DoubleMatrix2D getU() {
+  public DoubleMatrix getU() {
     return _u;
   }
 
@@ -98,7 +99,7 @@ public class SVDecompositionCommonsResult implements SVDecompositionResult {
    * {@inheritDoc}
    */
   @Override
-  public DoubleMatrix2D getUT() {
+  public DoubleMatrix getUT() {
     return _uTranspose;
   }
 
@@ -106,7 +107,7 @@ public class SVDecompositionCommonsResult implements SVDecompositionResult {
    * {@inheritDoc}
    */
   @Override
-  public DoubleMatrix2D getV() {
+  public DoubleMatrix getV() {
     return _v;
   }
 
@@ -114,7 +115,7 @@ public class SVDecompositionCommonsResult implements SVDecompositionResult {
    * {@inheritDoc}
    */
   @Override
-  public DoubleMatrix2D getVT() {
+  public DoubleMatrix getVT() {
     return _vTranspose;
   }
 
@@ -122,7 +123,7 @@ public class SVDecompositionCommonsResult implements SVDecompositionResult {
    * {@inheritDoc}
    */
   @Override
-  public DoubleMatrix1D solve(final DoubleMatrix1D b) {
+  public DoubleArray solve(DoubleArray b) {
     ArgChecker.notNull(b, "b");
     return CommonsMathWrapper.unwrap(_solver.solve(CommonsMathWrapper.wrap(b)));
   }
@@ -131,7 +132,7 @@ public class SVDecompositionCommonsResult implements SVDecompositionResult {
    * {@inheritDoc}
    */
   @Override
-  public double[] solve(final double[] b) {
+  public double[] solve(double[] b) {
     ArgChecker.notNull(b, "b");
     return _solver.solve(new ArrayRealVector(b)).toArray();
   }
@@ -140,7 +141,7 @@ public class SVDecompositionCommonsResult implements SVDecompositionResult {
    * {@inheritDoc}
    */
   @Override
-  public DoubleMatrix2D solve(final DoubleMatrix2D b) {
+  public DoubleMatrix solve(DoubleMatrix b) {
     ArgChecker.notNull(b, "b");
     return CommonsMathWrapper.unwrap(_solver.solve(CommonsMathWrapper.wrap(b)));
   }

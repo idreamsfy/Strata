@@ -12,6 +12,7 @@ import static org.testng.Assert.assertTrue;
 import org.testng.annotations.Test;
 
 import com.opengamma.strata.basics.currency.CurrencyAmount;
+import com.opengamma.strata.collect.array.DoubleArray;
 import com.opengamma.strata.finance.SecurityLink;
 import com.opengamma.strata.finance.rate.bond.BondFuture;
 import com.opengamma.strata.finance.rate.bond.FixedCouponBond;
@@ -19,6 +20,7 @@ import com.opengamma.strata.market.curve.CurveMetadata;
 import com.opengamma.strata.market.sensitivity.CurveCurrencyParameterSensitivities;
 import com.opengamma.strata.market.sensitivity.CurveCurrencyParameterSensitivity;
 import com.opengamma.strata.market.sensitivity.PointSensitivities;
+import com.opengamma.strata.market.value.CompoundedRateType;
 import com.opengamma.strata.pricer.datasets.LegalEntityDiscountingProviderDataSets;
 import com.opengamma.strata.pricer.rate.LegalEntityDiscountingProvider;
 import com.opengamma.strata.pricer.sensitivity.RatesFiniteDifferenceSensitivityCalculator;
@@ -56,18 +58,19 @@ public class DiscountingBondFutureProductPricerTest {
   }
 
   public void test_priceWithZSpread_continuous() {
-    double computed = FUTURE_PRICER.priceWithZSpread(FUTURE_PRODUCT, PROVIDER, Z_SPREAD, false, 0);
-    double dirtyPrice = BOND_PRICER.dirtyPriceFromCurvesWithZSpread(
-        BOND_SECURITY_LINK[0].resolvedTarget(), PROVIDER, Z_SPREAD, false, 0, FUTURE_PRODUCT.getLastDeliveryDate());
+    double computed = FUTURE_PRICER.priceWithZSpread(FUTURE_PRODUCT, PROVIDER, Z_SPREAD, CompoundedRateType.CONTINUOUS, 0);
+    double dirtyPrice = BOND_PRICER.dirtyPriceFromCurvesWithZSpread(BOND_SECURITY_LINK[0].resolvedTarget(), 
+        PROVIDER, Z_SPREAD, CompoundedRateType.CONTINUOUS, 0, FUTURE_PRODUCT.getLastDeliveryDate());
     double expected = BOND_PRICER.cleanPriceFromDirtyPrice(BOND_SECURITY_LINK[0].resolvedTarget().getProduct(),
         FUTURE_PRODUCT.getLastDeliveryDate(), dirtyPrice) / CONVERSION_FACTOR[0];
     assertEquals(computed, expected, TOL);
   }
 
   public void test_priceWithZSpread_periodic() {
-    double computed = FUTURE_PRICER.priceWithZSpread(FUTURE_PRODUCT, PROVIDER, Z_SPREAD, true, PERIOD_PER_YEAR);
+    double computed = FUTURE_PRICER.priceWithZSpread(
+        FUTURE_PRODUCT, PROVIDER, Z_SPREAD, CompoundedRateType.PERIODIC, PERIOD_PER_YEAR);
     double dirtyPrice = BOND_PRICER.dirtyPriceFromCurvesWithZSpread(BOND_SECURITY_LINK[0].resolvedTarget(),
-        PROVIDER, Z_SPREAD, true, PERIOD_PER_YEAR, FUTURE_PRODUCT.getLastDeliveryDate());
+        PROVIDER, Z_SPREAD, CompoundedRateType.PERIODIC, PERIOD_PER_YEAR, FUTURE_PRODUCT.getLastDeliveryDate());
     double expected = BOND_PRICER.cleanPriceFromDirtyPrice(BOND_SECURITY_LINK[0].resolvedTarget().getProduct(),
         FUTURE_PRODUCT.getLastDeliveryDate(), dirtyPrice) / CONVERSION_FACTOR[0];
     assertEquals(computed, expected, TOL);
@@ -84,19 +87,19 @@ public class DiscountingBondFutureProductPricerTest {
 
   public void test_priceSensitivityWithZSpread_continuous() {
     PointSensitivities point = FUTURE_PRICER.priceSensitivityWithZSpread(
-        FUTURE_PRODUCT, PROVIDER, Z_SPREAD, false, 0);
+        FUTURE_PRODUCT, PROVIDER, Z_SPREAD, CompoundedRateType.CONTINUOUS, 0);
     CurveCurrencyParameterSensitivities computed = PROVIDER.curveParameterSensitivity(point);
-    CurveCurrencyParameterSensitivities expected = FD_CAL.sensitivity(PROVIDER,
-        (p) -> CurrencyAmount.of(USD, FUTURE_PRICER.priceWithZSpread(FUTURE_PRODUCT, (p), Z_SPREAD, false, 0)));
+    CurveCurrencyParameterSensitivities expected = FD_CAL.sensitivity(PROVIDER, (p) -> CurrencyAmount.of(USD,
+        FUTURE_PRICER.priceWithZSpread(FUTURE_PRODUCT, (p), Z_SPREAD, CompoundedRateType.CONTINUOUS, 0)));
     assertTrue(computed.equalWithTolerance(expected, EPS * 10.0));
   }
 
   public void test_priceSensitivityWithZSpread_periodic() {
     PointSensitivities point = FUTURE_PRICER.priceSensitivityWithZSpread(
-        FUTURE_PRODUCT, PROVIDER, Z_SPREAD, true, PERIOD_PER_YEAR);
+        FUTURE_PRODUCT, PROVIDER, Z_SPREAD, CompoundedRateType.PERIODIC, PERIOD_PER_YEAR);
     CurveCurrencyParameterSensitivities computed = PROVIDER.curveParameterSensitivity(point);
     CurveCurrencyParameterSensitivities expected = FD_CAL.sensitivity(PROVIDER, (p) -> CurrencyAmount.of(
-        USD, FUTURE_PRICER.priceWithZSpread(FUTURE_PRODUCT, (p), Z_SPREAD, true, PERIOD_PER_YEAR)));
+        USD, FUTURE_PRICER.priceWithZSpread(FUTURE_PRODUCT, (p), Z_SPREAD, CompoundedRateType.PERIODIC, PERIOD_PER_YEAR)));
     assertTrue(computed.equalWithTolerance(expected, EPS * 10.0));
   }
 
@@ -107,9 +110,9 @@ public class DiscountingBondFutureProductPricerTest {
     assertEquals(price, 1.2106928633440506, TOL);
     PointSensitivities point = FUTURE_PRICER.priceSensitivity(FUTURE_PRODUCT, PROVIDER);
     CurveCurrencyParameterSensitivities sensiNew = PROVIDER.curveParameterSensitivity(point);
-    double[] sensiIssuer = new double[] {-3.940585873921608E-4, -0.004161527192990392, -0.014331606019672717,
-      -1.0229665443857998, -4.220553063715371, 0.0 };
-    double[] sensiRepo = new double[] {0.14752541809405412, 0.20907575809356016, 0.0, 0.0, 0.0, 0.0 };
+    DoubleArray sensiIssuer = DoubleArray.of(-3.940585873921608E-4, -0.004161527192990392, -0.014331606019672717,
+        -1.0229665443857998, -4.220553063715371, 0.0);
+    DoubleArray sensiRepo = DoubleArray.of(0.14752541809405412, 0.20907575809356016, 0.0, 0.0, 0.0, 0.0);
     CurveCurrencyParameterSensitivities sensiOld = CurveCurrencyParameterSensitivities
         .of(CurveCurrencyParameterSensitivity.of(METADATA_ISSUER, USD, sensiIssuer));
     sensiOld = sensiOld.combinedWith(CurveCurrencyParameterSensitivity.of(METADATA_REPO, USD, sensiRepo));
@@ -117,20 +120,21 @@ public class DiscountingBondFutureProductPricerTest {
   }
 
   public void regression_withZSpread_continuous() {
-    double price = FUTURE_PRICER.priceWithZSpread(FUTURE_PRODUCT, PROVIDER, Z_SPREAD, false, 0);
+    double price = FUTURE_PRICER.priceWithZSpread(FUTURE_PRODUCT, PROVIDER, Z_SPREAD, CompoundedRateType.CONTINUOUS, 0);
     assertEquals(price, 1.1718691843665354, TOL);
    // curve parameter sensitivity is not supported for continuous z-spread in 2.x. 
   }
 
   public void regression_withZSpread_periodic() {
-    double price = FUTURE_PRICER.priceWithZSpread(FUTURE_PRODUCT, PROVIDER, Z_SPREAD, true, PERIOD_PER_YEAR);
+    double price = FUTURE_PRICER.priceWithZSpread(
+        FUTURE_PRODUCT, PROVIDER, Z_SPREAD, CompoundedRateType.PERIODIC, PERIOD_PER_YEAR);
     assertEquals(price, 1.1720190529653407, TOL);
-    PointSensitivities point =
-        FUTURE_PRICER.priceSensitivityWithZSpread(FUTURE_PRODUCT, PROVIDER, Z_SPREAD, true, PERIOD_PER_YEAR);
+    PointSensitivities point = FUTURE_PRICER.priceSensitivityWithZSpread(
+        FUTURE_PRODUCT, PROVIDER, Z_SPREAD, CompoundedRateType.PERIODIC, PERIOD_PER_YEAR);
     CurveCurrencyParameterSensitivities sensiNew = PROVIDER.curveParameterSensitivity(point);
-    double[] sensiIssuer = new double[] {-3.9201229100932256E-4, -0.0041367134351306374, -0.014173323438217467,
-      -0.9886444827927878, -4.07533109609094, 0.0 };
-    double[] sensiRepo = new double[] {0.1428352116441475, 0.20242871054203687, 0.0, 0.0, 0.0, 0.0 };
+    DoubleArray sensiIssuer = DoubleArray.of(-3.9201229100932256E-4, -0.0041367134351306374, -0.014173323438217467,
+        -0.9886444827927878, -4.07533109609094, 0.0);
+    DoubleArray sensiRepo = DoubleArray.of(0.1428352116441475, 0.20242871054203687, 0.0, 0.0, 0.0, 0.0);
     CurveCurrencyParameterSensitivities sensiOld = CurveCurrencyParameterSensitivities
         .of(CurveCurrencyParameterSensitivity.of(METADATA_ISSUER, USD, sensiIssuer));
     sensiOld = sensiOld.combinedWith(CurveCurrencyParameterSensitivity.of(METADATA_REPO, USD, sensiRepo));

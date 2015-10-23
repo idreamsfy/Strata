@@ -8,39 +8,40 @@ package com.opengamma.strata.math.impl.statistics.leastsquare;
 import java.util.Objects;
 
 import com.opengamma.strata.collect.ArgChecker;
-import com.opengamma.strata.math.impl.matrix.DoubleMatrix1D;
-import com.opengamma.strata.math.impl.matrix.DoubleMatrix2D;
+import com.opengamma.strata.collect.array.DoubleArray;
+import com.opengamma.strata.collect.array.DoubleMatrix;
 
 /**
  * Container for the results of a least square (minimum chi-square) fit, where some model (with a set of parameters), is calibrated
  * to a data set.
  */
 public class LeastSquareResults {
-  @Override
-  public String toString() {
-    return "LeastSquareResults [chiSq=" + _chiSq + ", fit parameters=" + _parameters.toString() + ", covariance=" + _covariance.toString() + "]";
-  }
 
   private final double _chiSq;
-  private final DoubleMatrix1D _parameters;
-  private final DoubleMatrix2D _covariance;
-  private final DoubleMatrix2D _inverseJacobian;
+  private final DoubleArray _parameters;
+  private final DoubleMatrix _covariance;
+  private final DoubleMatrix _inverseJacobian;
 
   public LeastSquareResults(LeastSquareResults from) {
     this(from._chiSq, from._parameters, from._covariance, from._inverseJacobian);
   }
 
-  public LeastSquareResults(final double chiSq, final DoubleMatrix1D parameters, final DoubleMatrix2D covariance) {
+  public LeastSquareResults(double chiSq, DoubleArray parameters, DoubleMatrix covariance) {
     this(chiSq, parameters, covariance, null);
   }
 
-  public LeastSquareResults(final double chiSq, final DoubleMatrix1D parameters, final DoubleMatrix2D covariance, final DoubleMatrix2D inverseJacobian) {
+  public LeastSquareResults(
+      double chiSq,
+      DoubleArray parameters,
+      DoubleMatrix covariance,
+      DoubleMatrix inverseJacobian) {
+
     ArgChecker.isTrue(chiSq >= 0, "chi square < 0");
     ArgChecker.notNull(parameters, "parameters");
     ArgChecker.notNull(covariance, "covariance");
-    final int n = parameters.getNumberOfElements();
-    ArgChecker.isTrue(covariance.getNumberOfColumns() == n, "covariance matrix not square");
-    ArgChecker.isTrue(covariance.getNumberOfRows() == n, "covariance matrix wrong size");
+    int n = parameters.size();
+    ArgChecker.isTrue(covariance.columnCount() == n, "covariance matrix not square");
+    ArgChecker.isTrue(covariance.rowCount() == n, "covariance matrix wrong size");
     //TODO test size of inverse Jacobian
     _chiSq = chiSq;
     _parameters = parameters;
@@ -60,26 +61,29 @@ public class LeastSquareResults {
    * Gets the value of the fitting parameters, when the chi-squared is minimised
    * @return the parameters
    */
-  public DoubleMatrix1D getFitParameters() {
+  public DoubleArray getFitParameters() {
     return _parameters;
   }
 
   /**
-   * Gets the estimated covariance matrix of the standard errors in the fitting parameters. <b>Note</b> only in the case of
-   * normally distributed errors, does this have any meaning full mathematical interpretation (See NR third edition, p812-816)
+   * Gets the estimated covariance matrix of the standard errors in the fitting parameters.
+   * <b>Note</b> only in the case of normally distributed errors, does this have any meaning
+   * full mathematical interpretation (See NR third edition, p812-816)
    * @return the formal covariance matrix
    */
-  public DoubleMatrix2D getCovariance() {
+  public DoubleMatrix getCovariance() {
     return _covariance;
   }
 
   /**
-   * This a matrix where the i,jth element is the (infinitesimal) sensitivity of the ith fitting parameter to the jth data
-   * point (NOT the model point), when the fitting parameter are such that the chi-squared is minimised. So it is a type of (inverse)
-   * Jacobian, but should not be confused with the model jacobian (sensitivity of model data points, to parameters) or its inverse.
+   * This a matrix where the i,jth element is the (infinitesimal) sensitivity of the ith fitting
+   * parameter to the jth data point (NOT the model point), when the fitting parameter are such
+   * that the chi-squared is minimised. So it is a type of (inverse) Jacobian, but should not be
+   * confused with the model jacobian (sensitivity of model data points, to parameters) or its inverse.
+   * 
    * @return a matrix
    */
-  public DoubleMatrix2D getFittingParameterSensitivityToData() {
+  public DoubleMatrix getFittingParameterSensitivityToData() {
     if (_inverseJacobian == null) {
       throw new UnsupportedOperationException("The inverse Jacobian was not set");
     }
@@ -88,7 +92,7 @@ public class LeastSquareResults {
 
   @Override
   public int hashCode() {
-    final int prime = 31;
+    int prime = 31;
     int result = 1;
     long temp;
     temp = Double.doubleToLongBits(_chiSq);
@@ -100,7 +104,7 @@ public class LeastSquareResults {
   }
 
   @Override
-  public boolean equals(final Object obj) {
+  public boolean equals(Object obj) {
     if (this == obj) {
       return true;
     }
@@ -110,7 +114,7 @@ public class LeastSquareResults {
     if (getClass() != obj.getClass()) {
       return false;
     }
-    final LeastSquareResults other = (LeastSquareResults) obj;
+    LeastSquareResults other = (LeastSquareResults) obj;
     if (Double.doubleToLongBits(_chiSq) != Double.doubleToLongBits(other._chiSq)) {
       return false;
     }
@@ -121,6 +125,12 @@ public class LeastSquareResults {
       return false;
     }
     return Objects.equals(_parameters, other._parameters);
+  }
+
+  @Override
+  public String toString() {
+    return "LeastSquareResults [chiSq=" + _chiSq + ", fit parameters=" + _parameters.toString() +
+        ", covariance=" + _covariance.toString() + "]";
   }
 
 }

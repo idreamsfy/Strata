@@ -10,8 +10,8 @@ import org.apache.commons.math3.linear.DecompositionSolver;
 import org.apache.commons.math3.linear.LUDecomposition;
 
 import com.opengamma.strata.collect.ArgChecker;
-import com.opengamma.strata.math.impl.matrix.DoubleMatrix1D;
-import com.opengamma.strata.math.impl.matrix.DoubleMatrix2D;
+import com.opengamma.strata.collect.array.DoubleArray;
+import com.opengamma.strata.collect.array.DoubleMatrix;
 import com.opengamma.strata.math.impl.util.CommonsMathWrapper;
 
 /**
@@ -19,16 +19,16 @@ import com.opengamma.strata.math.impl.util.CommonsMathWrapper;
  */
 public class LUDecompositionCommonsResult implements LUDecompositionResult {
   private final double _determinant;
-  private final DoubleMatrix2D _l;
-  private final DoubleMatrix2D _p;
+  private final DoubleMatrix _l;
+  private final DoubleMatrix _p;
   private final int[] _pivot;
   private final DecompositionSolver _solver;
-  private final DoubleMatrix2D _u;
+  private final DoubleMatrix _u;
 
   /**
    * @param lu The result of the LU decomposition, not null. $\mathbf{L}$ cannot be singular.
    */
-  public LUDecompositionCommonsResult(final LUDecomposition lu) {
+  public LUDecompositionCommonsResult(LUDecomposition lu) {
     ArgChecker.notNull(lu, "LU decomposition");
     ArgChecker.notNull(lu.getL(), "Matrix is singular; could not perform LU decomposition");
     _determinant = lu.getDeterminant();
@@ -51,7 +51,7 @@ public class LUDecompositionCommonsResult implements LUDecompositionResult {
    * {@inheritDoc}
    */
   @Override
-  public DoubleMatrix2D getL() {
+  public DoubleMatrix getL() {
     return _l;
   }
 
@@ -59,7 +59,7 @@ public class LUDecompositionCommonsResult implements LUDecompositionResult {
    * {@inheritDoc}
    */
   @Override
-  public DoubleMatrix2D getP() {
+  public DoubleMatrix getP() {
     return _p;
   }
 
@@ -75,7 +75,7 @@ public class LUDecompositionCommonsResult implements LUDecompositionResult {
    * {@inheritDoc}
    */
   @Override
-  public DoubleMatrix2D getU() {
+  public DoubleMatrix getU() {
     return _u;
   }
 
@@ -83,7 +83,7 @@ public class LUDecompositionCommonsResult implements LUDecompositionResult {
    * {@inheritDoc}
    */
   @Override
-  public DoubleMatrix1D solve(final DoubleMatrix1D b) {
+  public DoubleArray solve(DoubleArray b) {
     ArgChecker.notNull(b, "b");
     return CommonsMathWrapper.unwrap(_solver.solve(CommonsMathWrapper.wrap(b)));
   }
@@ -92,7 +92,7 @@ public class LUDecompositionCommonsResult implements LUDecompositionResult {
    * {@inheritDoc}
    */
   @Override
-  public double[] solve(final double[] b) {
+  public double[] solve(double[] b) {
     ArgChecker.notNull(b, "b");
     return _solver.solve(new ArrayRealVector(b)).toArray();
   }
@@ -101,7 +101,7 @@ public class LUDecompositionCommonsResult implements LUDecompositionResult {
    * {@inheritDoc}
    */
   @Override
-  public DoubleMatrix2D solve(final DoubleMatrix2D b) {
+  public DoubleMatrix solve(DoubleMatrix b) {
     ArgChecker.notNull(b, "b");
     return CommonsMathWrapper.unwrap(_solver.solve(CommonsMathWrapper.wrap(b)));
   }

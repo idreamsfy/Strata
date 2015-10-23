@@ -6,8 +6,8 @@
 package com.opengamma.strata.math.impl.statistics.leastsquare;
 
 import com.opengamma.strata.collect.ArgChecker;
-import com.opengamma.strata.math.impl.matrix.DoubleMatrix1D;
-import com.opengamma.strata.math.impl.matrix.DoubleMatrix2D;
+import com.opengamma.strata.collect.array.DoubleArray;
+import com.opengamma.strata.collect.array.DoubleMatrix;
 import com.opengamma.strata.math.impl.matrix.MatrixAlgebra;
 import com.opengamma.strata.math.impl.matrix.OGMatrixAlgebra;
 import com.opengamma.strata.math.impl.minimization.NonLinearParameterTransforms;
@@ -21,24 +21,24 @@ public class LeastSquareResultsWithTransform extends LeastSquareResults {
   private static final MatrixAlgebra MA = new OGMatrixAlgebra();
 
   private final NonLinearParameterTransforms _transform;
-  private final DoubleMatrix1D _modelParameters;
-  private DoubleMatrix2D _inverseJacobianModelPararms;
+  private final DoubleArray _modelParameters;
+  private DoubleMatrix _inverseJacobianModelPararms;
 
-  public LeastSquareResultsWithTransform(final LeastSquareResults transformedFitResult) {
+  public LeastSquareResultsWithTransform(LeastSquareResults transformedFitResult) {
     super(transformedFitResult);
     _transform = null;
     _modelParameters = transformedFitResult.getFitParameters();
     _inverseJacobianModelPararms = getFittingParameterSensitivityToData();
   }
 
-  public LeastSquareResultsWithTransform(final LeastSquareResults transformedFitResult, final NonLinearParameterTransforms transform) {
+  public LeastSquareResultsWithTransform(LeastSquareResults transformedFitResult, NonLinearParameterTransforms transform) {
     super(transformedFitResult);
     ArgChecker.notNull(transform, "null transform");
     _transform = transform;
     _modelParameters = transform.inverseTransform(getFitParameters());
   }
 
-  public DoubleMatrix1D getModelParameters() {
+  public DoubleArray getModelParameters() {
     return _modelParameters;
   }
 
@@ -48,7 +48,7 @@ public class LeastSquareResultsWithTransform extends LeastSquareResults {
    * Jacobian, but should not be confused with the model jacobian (sensitivity of model data points, to parameters) or its inverse.
    * @return a matrix
    */
-  public DoubleMatrix2D getModelParameterSensitivityToData() {
+  public DoubleMatrix getModelParameterSensitivityToData() {
     if (_inverseJacobianModelPararms == null) {
       setModelParameterSensitivityToData();
     }
@@ -56,13 +56,13 @@ public class LeastSquareResultsWithTransform extends LeastSquareResults {
   }
 
   private void setModelParameterSensitivityToData() {
-    DoubleMatrix2D invJac = _transform.inverseJacobian(getFitParameters());
-    _inverseJacobianModelPararms = (DoubleMatrix2D) MA.multiply(invJac, getFittingParameterSensitivityToData());
+    DoubleMatrix invJac = _transform.inverseJacobian(getFitParameters());
+    _inverseJacobianModelPararms = (DoubleMatrix) MA.multiply(invJac, getFittingParameterSensitivityToData());
   }
 
   @Override
   public int hashCode() {
-    final int prime = 31;
+    int prime = 31;
     int result = super.hashCode();
     result = prime * result + ((_inverseJacobianModelPararms == null) ? 0 : _inverseJacobianModelPararms.hashCode());
     result = prime * result + ((_modelParameters == null) ? 0 : _modelParameters.hashCode());
@@ -108,7 +108,8 @@ public class LeastSquareResultsWithTransform extends LeastSquareResults {
 
   @Override
   public String toString() {
-    return "LeastSquareResults [chiSq=" + getChiSq() + ", fit parameters=" + getFitParameters().toString() + ", model parameters= " + getModelParameters().toString() + ", covariance="
+    return "LeastSquareResults [chiSq=" + getChiSq() + ", fit parameters=" + getFitParameters().toString() +
+        ", model parameters= " + getModelParameters().toString() + ", covariance="
         + getCovariance().toString() + "]";
   }
 

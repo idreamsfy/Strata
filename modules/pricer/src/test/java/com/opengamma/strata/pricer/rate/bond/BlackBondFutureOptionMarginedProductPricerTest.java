@@ -23,6 +23,7 @@ import java.util.function.Function;
 import org.testng.annotations.Test;
 
 import com.opengamma.strata.basics.currency.CurrencyAmount;
+import com.opengamma.strata.collect.array.DoubleArray;
 import com.opengamma.strata.collect.id.StandardId;
 import com.opengamma.strata.finance.rate.bond.BondFutureOption;
 import com.opengamma.strata.market.option.LogMoneynessStrike;
@@ -62,17 +63,17 @@ public class BlackBondFutureOptionMarginedProductPricerTest {
       CombinedInterpolatorExtrapolatorFactory.getInterpolator(Interpolator1DFactory.LINEAR,
           Interpolator1DFactory.FLAT_EXTRAPOLATOR, Interpolator1DFactory.FLAT_EXTRAPOLATOR);
   private static final GridInterpolator2D INTERPOLATOR_2D = new GridInterpolator2D(LINEAR_FLAT, LINEAR_FLAT);
-  private static final double[] TIME = new double[] {0.20, 0.20, 0.20, 0.20, 0.20, 0.45, 0.45, 0.45, 0.45, 0.45 };
-  private static final double[] MONEYNESS =
-      new double[] {-0.050, -0.005, 0.000, 0.005, 0.050, -0.050, -0.005, 0.000, 0.005, 0.050 };
-  private static final double[] VOL = new double[] {0.50, 0.49, 0.47, 0.48, 0.51, 0.45, 0.44, 0.42, 0.43, 0.46 };
+  private static final DoubleArray TIME = DoubleArray.of(0.20, 0.20, 0.20, 0.20, 0.20, 0.45, 0.45, 0.45, 0.45, 0.45);
+  private static final DoubleArray MONEYNESS =
+      DoubleArray.of(-0.050, -0.005, 0.000, 0.005, 0.050, -0.050, -0.005, 0.000, 0.005, 0.050);
+  private static final DoubleArray VOL = DoubleArray.of(0.50, 0.49, 0.47, 0.48, 0.51, 0.45, 0.44, 0.42, 0.43, 0.46);
   private static final SurfaceMetadata METADATA;
   static {
     List<GenericVolatilitySurfaceYearFractionMetadata> list = new ArrayList<GenericVolatilitySurfaceYearFractionMetadata>();
-    int nData = TIME.length;
+    int nData = TIME.size();
     for (int i = 0; i < nData; ++i) {
       GenericVolatilitySurfaceYearFractionMetadata parameterMetadata = GenericVolatilitySurfaceYearFractionMetadata.of(
-          TIME[i], LogMoneynessStrike.of(MONEYNESS[i]));
+          TIME.get(i), LogMoneynessStrike.of(MONEYNESS.get(i)));
       list.add(parameterMetadata);
     }
     METADATA = DefaultSurfaceMetadata.builder()
@@ -270,15 +271,17 @@ public class BlackBondFutureOptionMarginedProductPricerTest {
       SurfaceCurrencyParameterSensitivity computed,
       Function<BlackVolatilityBondFutureProvider, Double> valueFn) {
     List<SurfaceParameterMetadata> list = computed.getMetadata().getParameterMetadata().get();
-    int nVol = VOL.length;
+    int nVol = VOL.size();
     assertEquals(list.size(), nVol);
     for (int i = 0; i < nVol; ++i) {
-      double[] volUp = Arrays.copyOf(VOL, nVol);
-      double[] volDw = Arrays.copyOf(VOL, nVol);
+      double[] volUp = Arrays.copyOf(VOL.toArray(), nVol);
+      double[] volDw = Arrays.copyOf(VOL.toArray(), nVol);
       volUp[i] += EPS;
       volDw[i] -= EPS;
-      InterpolatedNodalSurface sfUp = InterpolatedNodalSurface.of(METADATA, TIME, MONEYNESS, volUp, INTERPOLATOR_2D);
-      InterpolatedNodalSurface sfDw = InterpolatedNodalSurface.of(METADATA, TIME, MONEYNESS, volDw, INTERPOLATOR_2D);
+      InterpolatedNodalSurface sfUp = InterpolatedNodalSurface.of(
+          METADATA, TIME, MONEYNESS, DoubleArray.copyOf(volUp), INTERPOLATOR_2D);
+      InterpolatedNodalSurface sfDw = InterpolatedNodalSurface.of(
+          METADATA, TIME, MONEYNESS, DoubleArray.copyOf(volDw), INTERPOLATOR_2D);
       BlackVolatilityExpLogMoneynessBondFutureProvider provUp =
           BlackVolatilityExpLogMoneynessBondFutureProvider.of(sfUp, FUTURE_SECURITY_ID, ACT_365F, VALUATION_DATE_TIME);
       BlackVolatilityExpLogMoneynessBondFutureProvider provDw =
@@ -287,12 +290,12 @@ public class BlackBondFutureOptionMarginedProductPricerTest {
       int index = -1;
       for (int j = 0; j < nVol; ++j) {
         GenericVolatilitySurfaceYearFractionMetadata meta = (GenericVolatilitySurfaceYearFractionMetadata) list.get(j);
-        if (meta.getYearFraction() == TIME[i] && meta.getStrike().getValue() == MONEYNESS[i]) {
+        if (meta.getYearFraction() == TIME.get(i) && meta.getStrike().getValue() == MONEYNESS.get(i)) {
           index = j;
           continue;
         }
       }
-      assertEquals(computed.getSensitivity()[index], expected, EPS);
+      assertEquals(computed.getSensitivity().get(index), expected, EPS);
     }
   }
 

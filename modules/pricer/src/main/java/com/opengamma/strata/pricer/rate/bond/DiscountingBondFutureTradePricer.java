@@ -10,6 +10,7 @@ import com.opengamma.strata.collect.ArgChecker;
 import com.opengamma.strata.finance.rate.bond.BondFuture;
 import com.opengamma.strata.finance.rate.bond.BondFutureTrade;
 import com.opengamma.strata.market.sensitivity.PointSensitivities;
+import com.opengamma.strata.market.value.CompoundedRateType;
 import com.opengamma.strata.pricer.rate.LegalEntityDiscountingProvider;
 
 /**
@@ -70,8 +71,7 @@ public final class DiscountingBondFutureTradePricer extends AbstractBondFutureTr
    * @param trade  the trade to price
    * @param provider  the rates provider
    * @param zSpread  the z-spread
-   * @param periodic  If true, the spread is added to periodic compounded rates. If false, the spread is added to 
-   * continuously compounded rates
+   * @param compoundedRateType  the compounded rate type
    * @param periodPerYear  the number of periods per year
    * @return the price of the trade, in decimal form
    */
@@ -79,9 +79,10 @@ public final class DiscountingBondFutureTradePricer extends AbstractBondFutureTr
       BondFutureTrade trade,
       LegalEntityDiscountingProvider provider,
       double zSpread,
-      boolean periodic,
+      CompoundedRateType compoundedRateType,
       int periodPerYear) {
-    return productPricer.priceWithZSpread(trade.getSecurity().getProduct(), provider, zSpread, periodic, periodPerYear);
+    return productPricer.priceWithZSpread(
+        trade.getSecurity().getProduct(), provider, zSpread, compoundedRateType, periodPerYear);
   }
 
   /**
@@ -114,8 +115,7 @@ public final class DiscountingBondFutureTradePricer extends AbstractBondFutureTr
    * @param referencePrice  the price with respect to which the margining should be done. The reference price is
    *   the trade date before any margining has taken place and the price used for the last margining otherwise.
    * @param zSpread  the z-spread
-   * @param periodic  If true, the spread is added to periodic compounded rates. If false, the spread is added to 
-   * continuously compounded rates
+   * @param compoundedRateType  the compounded rate type
    * @param periodPerYear  the number of periods per year
    * @return the present value
    */
@@ -124,9 +124,9 @@ public final class DiscountingBondFutureTradePricer extends AbstractBondFutureTr
       LegalEntityDiscountingProvider provider,
       double referencePrice,
       double zSpread,
-      boolean periodic,
+      CompoundedRateType compoundedRateType,
       int periodPerYear) {
-    double price = priceWithZSpread(trade, provider, zSpread, periodic, periodPerYear);
+    double price = priceWithZSpread(trade, provider, zSpread, compoundedRateType, periodPerYear);
     return presentValue(trade, price, referencePrice);
   }
 
@@ -159,8 +159,7 @@ public final class DiscountingBondFutureTradePricer extends AbstractBondFutureTr
    * @param trade  the trade to price
    * @param provider  the rates provider
    * @param zSpread  the z-spread
-   * @param periodic  If true, the spread is added to periodic compounded rates. If false, the spread is added to 
-   * continuously compounded rates
+   * @param compoundedRateType  the compounded rate type
    * @param periodPerYear  the number of periods per year
    * @return the present value curve sensitivity of the trade
    */
@@ -168,11 +167,11 @@ public final class DiscountingBondFutureTradePricer extends AbstractBondFutureTr
       BondFutureTrade trade,
       LegalEntityDiscountingProvider provider,
       double zSpread,
-      boolean periodic,
+      CompoundedRateType compoundedRateType,
       int periodPerYear) {
     BondFuture product = trade.getSecurity().getProduct();
     PointSensitivities priceSensi =
-        productPricer.priceSensitivityWithZSpread(product, provider, zSpread, periodic, periodPerYear);
+        productPricer.priceSensitivityWithZSpread(product, provider, zSpread, compoundedRateType, periodPerYear);
     PointSensitivities marginIndexSensi = productPricer.marginIndexSensitivity(product, priceSensi);
     return marginIndexSensi.multipliedBy(trade.getQuantity());
   }
@@ -208,8 +207,7 @@ public final class DiscountingBondFutureTradePricer extends AbstractBondFutureTr
    * @param referencePrice  the price with respect to which the margining should be done. The reference price is
    *   the trade date before any margining has taken place and the price used for the last margining otherwise.
    * @param zSpread  the z-spread
-   * @param periodic  If true, the spread is added to periodic compounded rates. If false, the spread is added to 
-   * continuously compounded rates
+   * @param compoundedRateType  the compounded rate type
    * @param periodPerYear  the number of periods per year
    * @return the par spread.
    */
@@ -218,9 +216,9 @@ public final class DiscountingBondFutureTradePricer extends AbstractBondFutureTr
       LegalEntityDiscountingProvider provider,
       double referencePrice,
       double zSpread,
-      boolean periodic,
+      CompoundedRateType compoundedRateType,
       int periodPerYear) {
-    return priceWithZSpread(trade, provider, zSpread, periodic, periodPerYear) - referencePrice;
+    return priceWithZSpread(trade, provider, zSpread, compoundedRateType, periodPerYear) - referencePrice;
   }
 
   /**
@@ -249,8 +247,7 @@ public final class DiscountingBondFutureTradePricer extends AbstractBondFutureTr
    * @param trade  the trade to price
    * @param provider  the rates provider
    * @param zSpread  the z-spread
-   * @param periodic  If true, the spread is added to periodic compounded rates. If false, the spread is added to 
-   * continuously compounded rates
+   * @param compoundedRateType  the compounded rate type
    * @param periodPerYear  the number of periods per year
    * @return the par spread curve sensitivity of the trade
    */
@@ -258,10 +255,10 @@ public final class DiscountingBondFutureTradePricer extends AbstractBondFutureTr
       BondFutureTrade trade,
       LegalEntityDiscountingProvider provider,
       double zSpread,
-      boolean periodic,
+      CompoundedRateType compoundedRateType,
       int periodPerYear) {
     return productPricer.priceSensitivityWithZSpread(
-        trade.getSecurity().getProduct(), provider, zSpread, periodic, periodPerYear);
+        trade.getSecurity().getProduct(), provider, zSpread, compoundedRateType, periodPerYear);
   }
 
 }

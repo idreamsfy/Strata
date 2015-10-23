@@ -9,7 +9,7 @@ import org.apache.commons.math3.linear.QRDecomposition;
 import org.apache.commons.math3.linear.RealMatrix;
 
 import com.opengamma.strata.collect.ArgChecker;
-import com.opengamma.strata.math.impl.matrix.DoubleMatrix2D;
+import com.opengamma.strata.collect.array.DoubleMatrix;
 import com.opengamma.strata.math.impl.util.CommonsMathWrapper;
 
 /**
@@ -18,14 +18,11 @@ import com.opengamma.strata.math.impl.util.CommonsMathWrapper;
  */
 public class QRDecompositionCommons extends Decomposition<QRDecompositionResult> {
 
-  /**
-   * {@inheritDoc}
-   */
   @Override
-  public QRDecompositionResult evaluate(final DoubleMatrix2D x) {
+  public QRDecompositionResult evaluate(DoubleMatrix x) {
     ArgChecker.notNull(x, "x");
-    final RealMatrix temp = CommonsMathWrapper.wrap(x);
-    final QRDecomposition qr = new QRDecomposition(temp);
+    RealMatrix temp = CommonsMathWrapper.wrap(x);
+    QRDecomposition qr = new QRDecomposition(temp);
     return new QRDecompositionCommonsResult(qr);
   }
 

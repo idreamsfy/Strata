@@ -9,6 +9,7 @@ import java.time.LocalDate;
 import com.google.common.collect.ImmutableMap;
 import com.opengamma.strata.basics.currency.Currency;
 import com.opengamma.strata.basics.interpolator.CurveInterpolator;
+import com.opengamma.strata.collect.array.DoubleArray;
 import com.opengamma.strata.collect.id.StandardId;
 import com.opengamma.strata.collect.tuple.Pair;
 import com.opengamma.strata.market.curve.CurveMetadata;
@@ -36,21 +37,21 @@ public class LegalEntityDiscountingProviderDataSets {
   private static final CurveName NAME_REPO_USD = CurveName.of("TestRepoCurve");
   private static final CurveName NAME_ISSUER_USD = CurveName.of("TestIssuerCurve");
   /** time data for repo rate curve */
-  public static final double[] REPO_TIME_USD = new double[] {0.0, 0.5, 1.0, 2.0, 5.0, 10.0 };
+  public static final DoubleArray REPO_TIME_USD = DoubleArray.of(0.0, 0.5, 1.0, 2.0, 5.0, 10.0);
   /** zero rate data for repo rate curve */
-  public static final double[] REPO_RATE_USD = new double[] {0.0120, 0.0120, 0.0120, 0.0140, 0.0140, 0.0140 };
+  public static final DoubleArray REPO_RATE_USD = DoubleArray.of(0.0120, 0.0120, 0.0120, 0.0140, 0.0140, 0.0140);
   /** discount factor data for repo rate curve */
-  public static final double[] REPO_FACTOR_USD = new double[] {1.0, 0.9940, 0.9881, 0.9724, 0.9324, 0.8694 };
+  public static final DoubleArray REPO_FACTOR_USD = DoubleArray.of(1.0, 0.9940, 0.9881, 0.9724, 0.9324, 0.8694);
   /** meta data of repo zero rate curve*/
   public static final CurveMetadata META_ZERO_REPO_USD = Curves.zeroRates(NAME_REPO_USD, ACT_ACT_ISDA);
   /** meta data of repo discount factor curve */
   public static final CurveMetadata META_SIMPLE_REPO_USD = Curves.discountFactors(NAME_REPO_USD, ACT_ACT_ISDA);
   /** time data for issuer curve */
-  public static final double[] ISSUER_TIME_USD = new double[] {0.0, 0.5, 1.0, 2.0, 5.0, 10.0 };
+  public static final DoubleArray ISSUER_TIME_USD = DoubleArray.of(0.0, 0.5, 1.0, 2.0, 5.0, 10.0);
   /** zero rate data for issuer curve */
-  public static final double[] ISSUER_RATE_USD = new double[] {0.0100, 0.0100, 0.0100, 0.0120, 0.0120, 0.0120 };
+  public static final DoubleArray ISSUER_RATE_USD = DoubleArray.of(0.0100, 0.0100, 0.0100, 0.0120, 0.0120, 0.0120);
   /** discount factor data for issuer curve */
-  public static final double[] ISSUER_FACTOR_USD = new double[] {1.0, 0.9950, 0.9900, 0.9763, 0.9418, 0.8869 };
+  public static final DoubleArray ISSUER_FACTOR_USD = DoubleArray.of(1.0, 0.9950, 0.9900, 0.9763, 0.9418, 0.8869);
   /** meta data of issuer zero rate curve*/
   public static final CurveMetadata META_ZERO_ISSUER_USD = Curves.zeroRates(NAME_ISSUER_USD, ACT_ACT_ISDA);
   /** meta data of issuer discount factor curve */
@@ -83,17 +84,17 @@ public class LegalEntityDiscountingProviderDataSets {
   private static final CurveName NAME_REPO_EUR = CurveName.of("TestRepoCurve2");
   private static final CurveName NAME_ISSUER_EUR = CurveName.of("TestIssuerCurve2");
   /** time data for repo rate curve */
-  public static final double[] REPO_TIME_EUR = new double[] {0.0, 0.5, 1.0, 2.0, 5.0, 10.0 };
+  public static final DoubleArray REPO_TIME_EUR = DoubleArray.of(0.0, 0.5, 1.0, 2.0, 5.0, 10.0);
   /** zero rate data for repo rate curve */
-  public static final double[] REPO_RATE_EUR = new double[] {0.0150, 0.0125, 0.0150, 0.0175, 0.0150, 0.0150 };
+  public static final DoubleArray REPO_RATE_EUR = DoubleArray.of(0.0150, 0.0125, 0.0150, 0.0175, 0.0150, 0.0150);
   /** meta data of repo zero rate curve*/
   public static final CurveMetadata META_ZERO_REPO_EUR = Curves.zeroRates(NAME_REPO_EUR, ACT_ACT_ISDA);
   /** meta data of repo discount factor curve */
   public static final CurveMetadata META_SIMPLE_REPO_EUR = Curves.discountFactors(NAME_REPO_EUR, ACT_ACT_ISDA);
   /** time data for issuer curve */
-  public static final double[] ISSUER_TIME_EUR = new double[] {0.0, 0.5, 1.0, 2.0, 5.0, 10.0 };
+  public static final DoubleArray ISSUER_TIME_EUR = DoubleArray.of(0.0, 0.5, 1.0, 2.0, 5.0, 10.0);
   /** zero rate data for issuer curve */
-  public static final double[] ISSUER_RATE_EUR = new double[] {0.0250, 0.0225, 0.0250, 0.0275, 0.0250, 0.0250 };
+  public static final DoubleArray ISSUER_RATE_EUR = DoubleArray.of(0.0250, 0.0225, 0.0250, 0.0275, 0.0250, 0.0250);
   /** meta data of issuer zero rate curve*/
   public static final CurveMetadata META_ZERO_ISSUER_EUR = Curves.zeroRates(NAME_ISSUER_EUR, ACT_ACT_ISDA);
   /** meta data of issuer discount factor curve */

@@ -10,24 +10,25 @@ import org.apache.commons.math3.linear.CholeskyDecomposition;
 import org.apache.commons.math3.linear.DecompositionSolver;
 
 import com.opengamma.strata.collect.ArgChecker;
-import com.opengamma.strata.math.impl.matrix.DoubleMatrix1D;
-import com.opengamma.strata.math.impl.matrix.DoubleMatrix2D;
+import com.opengamma.strata.collect.array.DoubleArray;
+import com.opengamma.strata.collect.array.DoubleMatrix;
 import com.opengamma.strata.math.impl.util.CommonsMathWrapper;
 
 /**
  * Wrapper for results of the Commons implementation of Cholesky decomposition ({@link CholeskyDecompositionCommons})
  */
 public class CholeskyDecompositionCommonsResult implements CholeskyDecompositionResult {
+
   private final double _determinant;
-  private final DoubleMatrix2D _l;
-  private final DoubleMatrix2D _lt;
+  private final DoubleMatrix _l;
+  private final DoubleMatrix _lt;
   private final DecompositionSolver _solver;
 
   /**
    * Constructor.
    * @param ch The result of the Cholesky decomposition.
    */
-  public CholeskyDecompositionCommonsResult(final CholeskyDecomposition ch) {
+  public CholeskyDecompositionCommonsResult(CholeskyDecomposition ch) {
     ArgChecker.notNull(ch, "Cholesky decomposition");
     _determinant = ch.getDeterminant();
     _l = CommonsMathWrapper.unwrap(ch.getL());
@@ -39,7 +40,7 @@ public class CholeskyDecompositionCommonsResult implements CholeskyDecomposition
    * {@inheritDoc}
    */
   @Override
-  public DoubleMatrix1D solve(DoubleMatrix1D b) {
+  public DoubleArray solve(DoubleArray b) {
     ArgChecker.notNull(b, "b");
     return CommonsMathWrapper.unwrap(_solver.solve(CommonsMathWrapper.wrap(b)));
   }
@@ -57,18 +58,18 @@ public class CholeskyDecompositionCommonsResult implements CholeskyDecomposition
    * {@inheritDoc}
    */
   @Override
-  public DoubleMatrix2D solve(DoubleMatrix2D b) {
+  public DoubleMatrix solve(DoubleMatrix b) {
     ArgChecker.notNull(b, "b");
     return CommonsMathWrapper.unwrap(_solver.solve(CommonsMathWrapper.wrap(b)));
   }
 
   @Override
-  public DoubleMatrix2D getL() {
+  public DoubleMatrix getL() {
     return _l;
   }
 
   @Override
-  public DoubleMatrix2D getLT() {
+  public DoubleMatrix getLT() {
     return _lt;
   }
 

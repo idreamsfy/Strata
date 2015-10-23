@@ -12,6 +12,7 @@ import java.util.Optional;
 
 import com.google.common.collect.ImmutableList;
 import com.opengamma.strata.basics.PayReceive;
+import com.opengamma.strata.basics.Trade;
 import com.opengamma.strata.basics.date.AdjustableDate;
 import com.opengamma.strata.basics.date.BusinessDayAdjustment;
 import com.opengamma.strata.basics.date.DaysAdjustment;
@@ -28,7 +29,6 @@ import com.opengamma.strata.basics.value.ValueSchedule;
 import com.opengamma.strata.basics.value.ValueStep;
 import com.opengamma.strata.collect.Messages;
 import com.opengamma.strata.collect.io.XmlElement;
-import com.opengamma.strata.finance.Trade;
 import com.opengamma.strata.finance.TradeInfo;
 import com.opengamma.strata.finance.loader.FpmlDocument;
 import com.opengamma.strata.finance.loader.FpmlParseException;
@@ -190,13 +190,9 @@ final class SwapFpmlTradeParser
     if (!bda.equals(endDate.getAdjustment())) {
       accrualScheduleBuilder.endDateBusinessDayAdjustment(endDate.getAdjustment());
     }
-    // first date (overwrites the start date)
+    // first period start date
     calcPeriodDatesEl.findChild("firstPeriodStartDate").ifPresent(el -> {
-      AdjustableDate actualStartDate = document.parseAdjustableDate(el);
-      accrualScheduleBuilder.startDate(actualStartDate.getUnadjusted());
-      if (!bda.equals(actualStartDate.getAdjustment())) {
-        accrualScheduleBuilder.startDateBusinessDayAdjustment(actualStartDate.getAdjustment());
-      }
+      accrualScheduleBuilder.overrideStartDate(document.parseAdjustableDate(el));
     });
     // first regular date
     calcPeriodDatesEl.findChild("firstRegularPeriodStartDate").ifPresent(el -> {
