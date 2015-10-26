@@ -135,6 +135,7 @@ public class DiscountingFixedCouponBondProductPricer {
       FixedCouponBond product,
       LegalEntityDiscountingProvider provider,
       double zSpread,
+
       CompoundedRateType compoundedRateType,
       int periodsPerYear) {
 
@@ -427,6 +428,7 @@ public class DiscountingFixedCouponBondProductPricer {
       Security<FixedCouponBond> security,
       LegalEntityDiscountingProvider provider,
       LocalDate referenceDate) {
+
     FixedCouponBond product = security.getProduct();
     StandardId securityId = security.getStandardId();
     StandardId legalEntityId = product.getLegalEntityId();

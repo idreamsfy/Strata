@@ -1,3 +1,8 @@
+/**
+ * Copyright (C) 2015 - present by OpenGamma Inc. and the OpenGamma group of companies
+ *
+ * Please see distribution for license.
+ */
 package com.opengamma.strata.pricer.datasets;
 
 import static com.opengamma.strata.basics.currency.Currency.EUR;
@@ -28,6 +33,7 @@ import com.opengamma.strata.pricer.rate.LegalEntityDiscountingProvider;
  * LegalEntityDiscountingProvider data sets for testing.
  */
 public class LegalEntityDiscountingProviderDataSets {
+
   private static final CurveInterpolator INTERPOLATOR = Interpolator1DFactory.LINEAR_INSTANCE;
 
   //  =====     issuer curve + repo curve in USD      =====     

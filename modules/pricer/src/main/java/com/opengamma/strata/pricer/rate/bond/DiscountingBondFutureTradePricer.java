@@ -81,8 +81,8 @@ public final class DiscountingBondFutureTradePricer extends AbstractBondFutureTr
       double zSpread,
       CompoundedRateType compoundedRateType,
       int periodPerYear) {
-    return productPricer.priceWithZSpread(
-        trade.getSecurity().getProduct(), provider, zSpread, compoundedRateType, periodPerYear);
+
+    return productPricer.priceWithZSpread(trade.getSecurity().getProduct(), provider, zSpread, compoundedRateType, periodPerYear);
   }
 
   /**
