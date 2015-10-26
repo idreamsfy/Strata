@@ -68,6 +68,7 @@ public final class BlackBondFutureOptionMarginedProductPricer extends BondFuture
       BondFutureOption futureOption,
       LegalEntityDiscountingProvider ratesProvider,
       BlackVolatilityBondFutureProvider volatilityProvider) {
+
     double futurePrice = futurePrice(futureOption, ratesProvider);
     return price(futureOption, ratesProvider, volatilityProvider, futurePrice);
   }
@@ -89,6 +90,7 @@ public final class BlackBondFutureOptionMarginedProductPricer extends BondFuture
       LegalEntityDiscountingProvider ratesProvider,
       BlackVolatilityBondFutureProvider volatilityProvider,
       double futurePrice) {
+
     ArgChecker.isTrue(futureOption.getPremiumStyle().equals(FutureOptionPremiumStyle.DAILY_MARGIN),
         "Premium style should be DAILY_MARGIN");
     ArgChecker.isTrue(futureOption.getUnderlyingLink().getStandardId().equals(volatilityProvider.getFutureSecurityId()),
@@ -108,6 +110,7 @@ public final class BlackBondFutureOptionMarginedProductPricer extends BondFuture
       BondFutureOption futureOption,
       LegalEntityDiscountingProvider ratesProvider,
       BondFutureProvider volatilityProvider) {
+
     ArgChecker.isTrue(volatilityProvider instanceof BlackVolatilityBondFutureProvider,
         "Provider must be of type BlackVolatilityBondFutureProvider");
     return price(futureOption, ratesProvider, (BlackVolatilityBondFutureProvider) volatilityProvider);
@@ -131,6 +134,7 @@ public final class BlackBondFutureOptionMarginedProductPricer extends BondFuture
       BondFutureOption futureOption,
       LegalEntityDiscountingProvider ratesProvider,
       BlackVolatilityBondFutureProvider volatilityProvider) {
+
     double futurePrice = futurePrice(futureOption, ratesProvider);
     return deltaStickyStrike(futureOption, ratesProvider, volatilityProvider, futurePrice);
   }
@@ -152,6 +156,7 @@ public final class BlackBondFutureOptionMarginedProductPricer extends BondFuture
       LegalEntityDiscountingProvider ratesProvider,
       BlackVolatilityBondFutureProvider volatilityProvider,
       double futurePrice) {
+
     ArgChecker.isTrue(futureOption.getPremiumStyle().equals(FutureOptionPremiumStyle.DAILY_MARGIN),
         "Premium style should be DAILY_MARGIN");
     ArgChecker.isTrue(futureOption.getUnderlyingLink().getStandardId().equals(volatilityProvider.getFutureSecurityId()),
@@ -184,6 +189,7 @@ public final class BlackBondFutureOptionMarginedProductPricer extends BondFuture
       BondFutureOption futureOption,
       LegalEntityDiscountingProvider ratesProvider,
       BlackVolatilityBondFutureProvider volatilityProvider) {
+
     double futurePrice = futurePrice(futureOption, ratesProvider);
     return gammaStickyStrike(futureOption, ratesProvider, volatilityProvider, futurePrice);
   }
@@ -205,6 +211,7 @@ public final class BlackBondFutureOptionMarginedProductPricer extends BondFuture
       LegalEntityDiscountingProvider ratesProvider,
       BlackVolatilityBondFutureProvider volatilityProvider,
       double futurePrice) {
+
     ArgChecker.isTrue(futureOption.getPremiumStyle().equals(FutureOptionPremiumStyle.DAILY_MARGIN),
         "Premium style should be DAILY_MARGIN");
     ArgChecker.isTrue(futureOption.getUnderlyingLink().getStandardId().equals(volatilityProvider.getFutureSecurityId()),
@@ -236,6 +243,7 @@ public final class BlackBondFutureOptionMarginedProductPricer extends BondFuture
       BondFutureOption futureOption,
       LegalEntityDiscountingProvider ratesProvider,
       BlackVolatilityBondFutureProvider volatilityProvider) {
+
     double futurePrice = futurePrice(futureOption, ratesProvider);
     return theta(futureOption, ratesProvider, volatilityProvider, futurePrice);
   }
@@ -257,6 +265,7 @@ public final class BlackBondFutureOptionMarginedProductPricer extends BondFuture
       LegalEntityDiscountingProvider ratesProvider,
       BlackVolatilityBondFutureProvider volatilityProvider,
       double futurePrice) {
+
     ArgChecker.isTrue(futureOption.getPremiumStyle().equals(FutureOptionPremiumStyle.DAILY_MARGIN),
         "Premium style should be DAILY_MARGIN");
     ArgChecker.isTrue(futureOption.getUnderlyingLink().getStandardId().equals(volatilityProvider.getFutureSecurityId()),
@@ -288,6 +297,7 @@ public final class BlackBondFutureOptionMarginedProductPricer extends BondFuture
       BondFutureOption futureOption,
       LegalEntityDiscountingProvider ratesProvider,
       BlackVolatilityBondFutureProvider volatilityProvider) {
+
     ArgChecker.isTrue(futureOption.getPremiumStyle().equals(FutureOptionPremiumStyle.DAILY_MARGIN),
         "Premium style should be DAILY_MARGIN");
     double futurePrice = futurePrice(futureOption, ratesProvider);
@@ -311,6 +321,7 @@ public final class BlackBondFutureOptionMarginedProductPricer extends BondFuture
       LegalEntityDiscountingProvider ratesProvider,
       BlackVolatilityBondFutureProvider volatilityProvider,
       double futurePrice) {
+
     double delta = deltaStickyStrike(futureOption, ratesProvider, volatilityProvider, futurePrice);
     PointSensitivities futurePriceSensitivity =
         futurePricer.priceSensitivity(futureOption.getUnderlying(), ratesProvider);
@@ -322,6 +333,7 @@ public final class BlackBondFutureOptionMarginedProductPricer extends BondFuture
       BondFutureOption futureOption,
       LegalEntityDiscountingProvider ratesProvider,
       BondFutureProvider volatilityProvider) {
+
     ArgChecker.isTrue(volatilityProvider instanceof BlackVolatilityBondFutureProvider,
         "Provider must be of type BlackVolatilityBondFutureProvider");
     return priceSensitivityStickyStrike(
@@ -343,6 +355,7 @@ public final class BlackBondFutureOptionMarginedProductPricer extends BondFuture
       BondFutureOption futureOption,
       LegalEntityDiscountingProvider ratesProvider,
       BlackVolatilityBondFutureProvider volatilityProvider) {
+
     double futurePrice = futurePrice(futureOption, ratesProvider);
     return priceSensitivityBlackVolatility(futureOption, ratesProvider, volatilityProvider, futurePrice);
   }
@@ -362,6 +375,7 @@ public final class BlackBondFutureOptionMarginedProductPricer extends BondFuture
       LegalEntityDiscountingProvider ratesProvider,
       BlackVolatilityBondFutureProvider volatilityProvider,
       double futurePrice) {
+
     ArgChecker.isTrue(futureOption.getPremiumStyle().equals(FutureOptionPremiumStyle.DAILY_MARGIN),
         "Premium style should be DAILY_MARGIN");
     ArgChecker.isTrue(futureOption.getUnderlyingLink().getStandardId().equals(volatilityProvider.getFutureSecurityId()),

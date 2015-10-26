@@ -66,6 +66,7 @@ public final class BlackBondFutureOptionMarginedTradePricer extends BondFutureOp
       BlackVolatilityBondFutureProvider volatilityProvider,
       double futurePrice,
       double lastClosingPrice) {
+
     double optionPrice = getProductPricer().price(trade.getProduct(), ratesProvider, volatilityProvider, futurePrice);
     return presentValue(trade, ratesProvider.getValuationDate(), optionPrice, lastClosingPrice);
   }
@@ -88,6 +89,7 @@ public final class BlackBondFutureOptionMarginedTradePricer extends BondFutureOp
       BondFutureOptionTrade futureOptionTrade,
       LegalEntityDiscountingProvider ratesProvider,
       BlackVolatilityBondFutureProvider volatilityProvider) {
+
     BondFuture future = futureOptionTrade.getProduct().getUnderlying();
     double futurePrice = futureOptionPricer.getFuturePricer().price(future, ratesProvider);
     return presentValueSensitivityBlackVolatility(futureOptionTrade, ratesProvider, volatilityProvider, futurePrice);
@@ -111,6 +113,7 @@ public final class BlackBondFutureOptionMarginedTradePricer extends BondFutureOp
       LegalEntityDiscountingProvider ratesProvider,
       BlackVolatilityBondFutureProvider volatilityProvider,
       double futurePrice) {
+
     BondFutureOption product = futureOptionTrade.getProduct();
     BondFutureOptionSensitivity priceSensitivity =
         futureOptionPricer.priceSensitivityBlackVolatility(product, ratesProvider, volatilityProvider, futurePrice);
