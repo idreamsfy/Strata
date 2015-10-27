@@ -126,7 +126,6 @@ public final class BondDataSets {
 
   //      =====     Fixed coupon bonds, bond future, EUR   =====      
   // bond basket
-  private static final StandardId BOND_SECURITY_ID_EUR = StandardId.of("OG-Ticker", "GOVT2-BONDS");
   private static final StandardId ISSUER_ID_EUR = StandardId.of("OG-Ticker", "GOVT2");
   private static final YieldConvention YIELD_CONVENTION_EUR = YieldConvention.GERMAN_BONDS;
   /** Notional of underlying bond */
@@ -142,6 +141,8 @@ public final class BondDataSets {
   private static final LocalDate[] START_DATE_EUR = new LocalDate[] {
     LocalDate.of(2013, 1, 4), LocalDate.of(2013, 7, 4), LocalDate.of(2013, 2, 22) };
   private static final Period[] BOND_TENOR_EUR = new Period[] {Period.ofYears(6), Period.ofYears(6), Period.ofYears(6) };
+  private static final StandardId[] BOND_SECURITY_ID_EUR = new StandardId[] {StandardId.of("OG-Ticker", "GOVT2-BOND1"),
+    StandardId.of("OG-Ticker", "GOVT2-BOND2"), StandardId.of("OG-Ticker", "GOVT2-BOND3") };
   @SuppressWarnings("unchecked")
   private static final SecurityLink<FixedCouponBond>[] SECURITY_LINK_EUR = new SecurityLink[NB_BOND_EUR];
   private static final FixedCouponBond[] BOND_PRODUCT_EUR = new FixedCouponBond[NB_BOND_EUR];
@@ -162,7 +163,7 @@ public final class BondDataSets {
           .exCouponPeriod(EX_COUPON_EUR)
           .build();
       BOND_PRODUCT_EUR[i] = product;
-      Security<FixedCouponBond> bondSecurity = UnitSecurity.builder(product).standardId(BOND_SECURITY_ID_EUR).build();
+      Security<FixedCouponBond> bondSecurity = UnitSecurity.builder(product).standardId(BOND_SECURITY_ID_EUR[i]).build();
       SECURITY_LINK_EUR[i] = SecurityLink.resolved(bondSecurity);
     }
   }
