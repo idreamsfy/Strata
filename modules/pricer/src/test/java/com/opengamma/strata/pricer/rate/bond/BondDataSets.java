@@ -8,6 +8,7 @@ package com.opengamma.strata.pricer.rate.bond;
 import static com.opengamma.strata.basics.PutCall.CALL;
 import static com.opengamma.strata.basics.currency.Currency.EUR;
 import static com.opengamma.strata.basics.currency.Currency.USD;
+import static com.opengamma.strata.basics.date.BusinessDayConventions.FOLLOWING;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -15,7 +16,6 @@ import java.time.Period;
 import java.time.ZoneId;
 
 import com.opengamma.strata.basics.date.BusinessDayAdjustment;
-import com.opengamma.strata.basics.date.BusinessDayConventions;
 import com.opengamma.strata.basics.date.DayCount;
 import com.opengamma.strata.basics.date.DayCounts;
 import com.opengamma.strata.basics.date.DaysAdjustment;
@@ -41,9 +41,9 @@ import com.opengamma.strata.finance.rate.bond.YieldConvention;
  * Data sets of bond, bond future and bond future option. 
  */
 public final class BondDataSets {
+
   //      =====     Fixed coupon bonds, bond future, USD   =====      
   // Fixed coupon bonds
-  private static final StandardId BOND_SECURITY_ID_USD = StandardId.of("OG-Ticker", "GOVT1-BONDS"); // same repo curve for all bonds
   private static final StandardId ISSUER_ID_USD = StandardId.of("OG-Ticker", "GOVT1");
   private static final YieldConvention YIELD_CONVENTION_USD = YieldConvention.US_STREET;
   /** Notional of underlying bond */
@@ -52,7 +52,7 @@ public final class BondDataSets {
   private static final DaysAdjustment SETTLEMENT_DAYS_USD = DaysAdjustment.ofBusinessDays(1, CALENDAR_USD);
   private static final DayCount DAY_COUNT_USD = DayCounts.ACT_ACT_ICMA;
   private static final BusinessDayAdjustment BUSINESS_ADJUST_USD =
-      BusinessDayAdjustment.of(BusinessDayConventions.FOLLOWING, CALENDAR_USD);
+      BusinessDayAdjustment.of(FOLLOWING, CALENDAR_USD);
   private static final DaysAdjustment EX_COUPON_USD = DaysAdjustment.NONE;
   private static final int NB_BOND_USD = 7;
   private static final double[] RATE_USD = new double[] {0.01375, 0.02125, 0.0200, 0.02125, 0.0225, 0.0200, 0.0175 };
@@ -61,6 +61,10 @@ public final class BondDataSets {
     LocalDate.of(2011, 4, 30), LocalDate.of(2011, 5, 31) };
   private static final Period[] BOND_TENOR_USD = new Period[] {Period.ofYears(5), Period.ofYears(5), Period.ofYears(5),
     Period.ofYears(8), Period.ofYears(5), Period.ofYears(5), Period.ofYears(5) };
+  private static final StandardId[] BOND_SECURITY_ID = new StandardId[] {StandardId.of("OG-Ticker", "GOVT1-BOND1"),
+    StandardId.of("OG-Ticker", "GOVT1-BOND2"), StandardId.of("OG-Ticker", "GOVT1-BOND3"),
+    StandardId.of("OG-Ticker", "GOVT1-BOND4"), StandardId.of("OG-Ticker", "GOVT1-BOND5"),
+    StandardId.of("OG-Ticker", "GOVT1-BOND6"), StandardId.of("OG-Ticker", "GOVT1-BOND7") };
   /** Security link of underlying bond */
   @SuppressWarnings("unchecked")
   public static final SecurityLink<FixedCouponBond>[] BOND_SECURITY_LINK_USD = new SecurityLink[NB_BOND_USD];
@@ -82,10 +86,11 @@ public final class BondDataSets {
           .exCouponPeriod(EX_COUPON_USD)
           .build();
       BOND_PRODUCT_USD[i] = product;
-      Security<FixedCouponBond> bondSecurity = UnitSecurity.builder(product).standardId(BOND_SECURITY_ID_USD).build();
+      Security<FixedCouponBond> bondSecurity = UnitSecurity.builder(product).standardId(BOND_SECURITY_ID[i]).build();
       BOND_SECURITY_LINK_USD[i] = SecurityLink.resolved(bondSecurity);
     }
   }
+
   // Bond future 
   /** Conversion factors */
   public static final Double[] CONVERSION_FACTOR_USD = new Double[] {.8317, .8565, .8493, .8516, .8540, .8417, .8292 };
@@ -130,7 +135,7 @@ public final class BondDataSets {
   private static final DaysAdjustment SETTLEMENT_DAYS_EUR = DaysAdjustment.ofBusinessDays(3, CALENDAR_EUR);
   private static final DayCount DAY_COUNT_EUR = DayCounts.ACT_ACT_ICMA;
   private static final BusinessDayAdjustment BUSINESS_ADJUST_EUR =
-      BusinessDayAdjustment.of(BusinessDayConventions.FOLLOWING, CALENDAR_EUR);
+      BusinessDayAdjustment.of(FOLLOWING, CALENDAR_EUR);
   private static final DaysAdjustment EX_COUPON_EUR = DaysAdjustment.NONE;
   private static final int NB_BOND_EUR = 3;
   private static final double[] RATE_EUR = new double[] {0.0375, 0.0350, 0.0100 };

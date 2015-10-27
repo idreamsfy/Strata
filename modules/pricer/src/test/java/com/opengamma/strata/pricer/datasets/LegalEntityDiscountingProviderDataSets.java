@@ -38,7 +38,6 @@ public class LegalEntityDiscountingProviderDataSets {
 
   //  =====     issuer curve + repo curve in USD      =====     
   private static final LocalDate VALUATION_USD = LocalDate.of(2011, 6, 20);
-  private static final StandardId BOND_SECURITY_ID_USD = StandardId.of("OG-Ticker", "GOVT1-BONDS");
   private static final StandardId ISSUER_ID_USD = StandardId.of("OG-Ticker", "GOVT1");
   private static final CurveName NAME_REPO_USD = CurveName.of("TestRepoCurve");
   private static final CurveName NAME_ISSUER_USD = CurveName.of("TestIssuerCurve");
@@ -124,7 +123,7 @@ public class LegalEntityDiscountingProviderDataSets {
       .legalEntityMap(ImmutableMap.<StandardId, LegalEntityGroup>of(ISSUER_ID_USD, GROUP_ISSUER_USD))
       .repoCurves(ImmutableMap.<Pair<BondGroup, Currency>, DiscountFactors>of(
           Pair.<BondGroup, Currency>of(GROUP_REPO_USD, USD), DSC_FACTORS_ZERO_REPO_USD))
-      .bondMap(ImmutableMap.<StandardId, BondGroup>of(BOND_SECURITY_ID_USD, GROUP_REPO_USD))
+      .bondMap(ImmutableMap.<StandardId, BondGroup>of(ISSUER_ID_USD, GROUP_REPO_USD))
       .build();
   /** provider with zero rate curves, EUR */
   public static final LegalEntityDiscountingProvider ISSUER_REPO_ZERO_EUR = LegalEntityDiscountingProvider.builder()
@@ -142,6 +141,6 @@ public class LegalEntityDiscountingProviderDataSets {
       .legalEntityMap(ImmutableMap.<StandardId, LegalEntityGroup>of(ISSUER_ID_USD, GROUP_ISSUER_USD))
       .repoCurves(ImmutableMap.<Pair<BondGroup, Currency>, DiscountFactors>of(
           Pair.<BondGroup, Currency>of(GROUP_REPO_USD, USD), DSC_FACTORS_SIMPLE_REPO))
-      .bondMap(ImmutableMap.<StandardId, BondGroup>of(BOND_SECURITY_ID_USD, GROUP_REPO_USD))
+      .bondMap(ImmutableMap.<StandardId, BondGroup>of(ISSUER_ID_USD, GROUP_REPO_USD))
       .build();
 }
