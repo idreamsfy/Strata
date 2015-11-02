@@ -76,7 +76,7 @@ public final class ImmutableRatesProvider
   /**
    * The matrix of foreign exchange rates, defaulted to an empty matrix.
    */
-  @PropertyDefinition(validate = "notNull", get = "private")
+  @PropertyDefinition(validate = "notNull")
   private final FxMatrix fxMatrix;
   /**
    * The discount curves, defaulted to an empty map.
@@ -281,7 +281,7 @@ public final class ImmutableRatesProvider
    * Gets the matrix of foreign exchange rates, defaulted to an empty matrix.
    * @return the value of the property, not null
    */
-  private FxMatrix getFxMatrix() {
+  public FxMatrix getFxMatrix() {
     return fxMatrix;
   }
 

@@ -16,12 +16,12 @@ import org.joda.beans.PropertyDefinition;
 
 import com.google.common.collect.ImmutableSet;
 import com.opengamma.strata.basics.BuySell;
-import com.opengamma.strata.basics.Trade;
 import com.opengamma.strata.basics.date.BusinessDayAdjustment;
 import com.opengamma.strata.basics.date.Tenor;
 import com.opengamma.strata.basics.market.ObservableKey;
 import com.opengamma.strata.basics.market.ObservableValues;
 import com.opengamma.strata.finance.fx.FxSwapTemplate;
+import com.opengamma.strata.finance.fx.FxSwapTrade;
 import com.opengamma.strata.market.curve.DatedCurveParameterMetadata;
 import com.opengamma.strata.market.curve.TenorCurveNodeMetadata;
 import com.opengamma.strata.market.value.ValueType;
@@ -60,6 +60,22 @@ public final class FxSwapCurveNode
   @PropertyDefinition(validate = "notNull")
   private final ObservableKey fxPtsKey;
   
+  /**
+   * Returns a curve node for a Fx Swap using the specified instrument template and keys.
+   *
+   * @param template  the template used for building the instrument for the node
+   * @param fxNearKey  the key identifying the FX rate for the near date used when building the instrument for the node
+   * @param fxPtsKey  the key identifying the FX points between the near date and the far date
+   * @return a node whose instrument is built from the template using a market rate
+   */
+  public static FxSwapCurveNode of(FxSwapTemplate template, ObservableKey fxNearKey, ObservableKey fxPtsKey) {
+    return FxSwapCurveNode.builder()
+        .template(template)
+        .fxNearKey(fxNearKey)
+        .fxPtsKey(fxPtsKey)
+        .build();
+  }
+  
   @Override
   public Set<ObservableKey> requirements() {
     return ImmutableSet.of(fxNearKey, fxPtsKey);
@@ -74,7 +90,7 @@ public final class FxSwapCurveNode
   }
   
   @Override
-  public Trade trade(LocalDate valuationDate, ObservableValues marketData) {
+  public FxSwapTrade trade(LocalDate valuationDate, ObservableValues marketData) {
     double fxNearRate = marketData.getValue(fxNearKey);
     double fxPts = marketData.getValue(fxPtsKey);
     return template.toTrade(valuationDate, BuySell.BUY, 1d, fxNearRate, fxPts);
