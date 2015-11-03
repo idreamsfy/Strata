@@ -16,12 +16,11 @@ import org.joda.beans.PropertyDefinition;
 
 import com.google.common.collect.ImmutableSet;
 import com.opengamma.strata.basics.BuySell;
-import com.opengamma.strata.basics.date.BusinessDayAdjustment;
 import com.opengamma.strata.basics.date.Tenor;
 import com.opengamma.strata.basics.market.ObservableKey;
 import com.opengamma.strata.basics.market.ObservableValues;
-import com.opengamma.strata.finance.fx.FxSwapTemplate;
 import com.opengamma.strata.finance.fx.FxSwapTrade;
+import com.opengamma.strata.finance.fx.type.FxSwapTemplate;
 import com.opengamma.strata.market.curve.DatedCurveParameterMetadata;
 import com.opengamma.strata.market.curve.TenorCurveNodeMetadata;
 import com.opengamma.strata.market.value.ValueType;
@@ -83,9 +82,8 @@ public final class FxSwapCurveNode
   
   @Override
   public DatedCurveParameterMetadata metadata(LocalDate valuationDate) {
-    BusinessDayAdjustment bda = template.getConvention().getBusinessDayAdjustment();
-    LocalDate spotValue = template.getConvention().getSpotDateOffset().adjust(valuationDate);
-    LocalDate farDate = bda.adjust(spotValue.plus(template.getPeriodToFar()));
+    FxSwapTrade trade = template.toTrade(valuationDate, BuySell.BUY, 1.0, 1.0, 0.0);
+    LocalDate farDate = trade.getProduct().getFarLeg().getPaymentDate();
     return TenorCurveNodeMetadata.of(farDate, Tenor.of(template.getPeriodToFar()));
   }
   

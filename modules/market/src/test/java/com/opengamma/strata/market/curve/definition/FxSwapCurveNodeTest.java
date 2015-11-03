@@ -33,9 +33,9 @@ import com.opengamma.strata.basics.market.ImmutableObservableValues;
 import com.opengamma.strata.basics.market.ObservableKey;
 import com.opengamma.strata.basics.market.ObservableValues;
 import com.opengamma.strata.collect.id.StandardId;
-import com.opengamma.strata.finance.fx.FxSwapConvention;
-import com.opengamma.strata.finance.fx.FxSwapTemplate;
 import com.opengamma.strata.finance.fx.FxSwapTrade;
+import com.opengamma.strata.finance.fx.type.FxSwapTemplate;
+import com.opengamma.strata.finance.fx.type.ImmutableFxSwapConvention;
 import com.opengamma.strata.market.curve.CurveParameterMetadata;
 import com.opengamma.strata.market.curve.TenorCurveNodeMetadata;
 import com.opengamma.strata.market.key.QuoteKey;
@@ -50,7 +50,7 @@ public class FxSwapCurveNodeTest {
   private static final CurrencyPair EUR_USD = CurrencyPair.of(Currency.EUR, Currency.USD);
   private static final HolidayCalendar EUTA_USNY = EUTA.combineWith(USNY);
   private static final DaysAdjustment PLUS_TWO_DAYS = DaysAdjustment.ofBusinessDays(2, EUTA_USNY);
-  private static final FxSwapConvention CONVENTION = FxSwapConvention.of(EUR_USD, PLUS_TWO_DAYS);
+  private static final ImmutableFxSwapConvention CONVENTION = ImmutableFxSwapConvention.of(EUR_USD, PLUS_TWO_DAYS);
   private static final Period NEAR_PERIOD = Period.ofMonths(3);
   private static final Period FAR_PERIOD = Period.ofMonths(6);
   private static final FxSwapTemplate TEMPLATE = FxSwapTemplate.of(NEAR_PERIOD, FAR_PERIOD, CONVENTION);
@@ -117,8 +117,8 @@ public class FxSwapCurveNodeTest {
   public void test_metadata() {
     FxSwapCurveNode node = FxSwapCurveNode.of(TEMPLATE, QUOTE_KEY_NEAR, QUOTE_KEY_PTS);
     LocalDate valuationDate = LocalDate.of(2015, 1, 22);
-    LocalDate endDate = TEMPLATE.getConvention().getBusinessDayAdjustment()
-        .adjust(TEMPLATE.getConvention().getSpotDateOffset().adjust(valuationDate).plus(FAR_PERIOD));
+    LocalDate endDate = CONVENTION.getBusinessDayAdjustment()
+        .adjust(CONVENTION.getSpotDateOffset().adjust(valuationDate).plus(FAR_PERIOD));
     CurveParameterMetadata metadata = node.metadata(valuationDate);
     assertEquals(((TenorCurveNodeMetadata) metadata).getDate(), endDate);
     assertEquals(((TenorCurveNodeMetadata) metadata).getTenor(), Tenor.of(FAR_PERIOD));

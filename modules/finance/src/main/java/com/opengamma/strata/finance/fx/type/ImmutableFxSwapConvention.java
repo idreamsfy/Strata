@@ -3,13 +3,12 @@
  *
  * Please see distribution for license.
  */
-package com.opengamma.strata.finance.fx;
+package com.opengamma.strata.finance.fx.type;
 
 import static com.opengamma.strata.basics.date.BusinessDayConventions.MODIFIED_FOLLOWING;
 
 import java.io.Serializable;
 import java.time.LocalDate;
-import java.time.Period;
 import java.util.Set;
 
 import org.joda.beans.BeanDefinition;
@@ -23,8 +22,9 @@ import com.opengamma.strata.basics.currency.CurrencyPair;
 import com.opengamma.strata.basics.date.BusinessDayAdjustment;
 import com.opengamma.strata.basics.date.DaysAdjustment;
 import com.opengamma.strata.collect.ArgChecker;
-import com.opengamma.strata.finance.TradeConvention;
 import com.opengamma.strata.finance.TradeInfo;
+import com.opengamma.strata.finance.fx.FxSwap;
+import com.opengamma.strata.finance.fx.FxSwapTrade;
 
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -52,14 +52,21 @@ import org.joda.beans.impl.direct.DirectMetaPropertyMap;
  * The period between the spot date and the start/end date is specified by {@link FxSwapTemplate}, not by this convention.
  */
 @BeanDefinition
-public final class FxSwapConvention
-    implements TradeConvention, ImmutableBean, Serializable {
+public final class ImmutableFxSwapConvention
+    implements FxSwapConvention, ImmutableBean, Serializable {
   
   /**
    * The currency pair associated to the convention.
    */
   @PropertyDefinition(validate = "notNull")
   private final CurrencyPair currencyPair;  
+  /**
+   * The convention name, such as 'EUR-USD', optional with defaulting getter.
+   * <p>
+   * This will default to the name of the currency pair if not specified.
+   */
+  @PropertyDefinition(get = "field")
+  private final String name;
   /**
    * The offset of the spot value date from the trade date, optional with defaulting getter.
    * <p>
@@ -88,10 +95,10 @@ public final class FxSwapConvention
    * @param spotDateOffset  the spot date offset 
    * @return the convention
    */
-  public static FxSwapConvention of(
+  public static ImmutableFxSwapConvention of(
       CurrencyPair currencyPair, 
       DaysAdjustment spotDateOffset) {
-    return FxSwapConvention.builder()
+    return ImmutableFxSwapConvention.builder()
         .currencyPair(currencyPair)
         .spotDateOffset(spotDateOffset)
         .build();
@@ -104,15 +111,22 @@ public final class FxSwapConvention
    * @param spotDateOffset  the spot date offset 
    * @return the convention
    */
-  public static FxSwapConvention of(
+  public static ImmutableFxSwapConvention of(
+      String name,
       CurrencyPair currencyPair, 
       DaysAdjustment spotDateOffset, 
       BusinessDayAdjustment businessDayAdjustment) {
-    return FxSwapConvention.builder()
+    return ImmutableFxSwapConvention.builder()
+        .name(name)
         .currencyPair(currencyPair)
         .spotDateOffset(spotDateOffset)
         .businessDayAdjustment(businessDayAdjustment)
         .build();
+  }
+
+  @Override
+  public String getName() {
+    return name != null ? name : currencyPair.toString();
   }
 
   /**
@@ -131,63 +145,9 @@ public final class FxSwapConvention
     return businessDayAdjustment != null ?
         businessDayAdjustment : BusinessDayAdjustment.of(MODIFIED_FOLLOWING, spotDateOffset.getCalendar());
   }
-  
-
 
   //-------------------------------------------------------------------------
-  /**
-   * Creates a trade based on this convention.
-   * <p>
-   * This returns a trade based on the specified periods.
-   * For example, a '3M x 6M' FX swap has a period from spot to the start date of 3 months and
-   * a period from spot to the end date of 6 months
-   * <p>
-   * The notional is unsigned, with buy/sell determining the direction of the trade.
-   * If buying the FX Swap, the amount in the first currency of the pair is received in the near leg and paid in the 
-   * far leg, while the second currency is paid in the near leg and received in the far leg.
-   * 
-   * @param tradeDate  the date of the trade
-   * @param periodToNear  the period between the spot date and the near date
-   * @param periodToFar  the period between the spot date and the far date
-   * @param buySell  the buy/sell flag
-   * @param notional  the notional amount, in the first currency of the currency pair
-   * @param nearFxRate  the FX rate for the near leg
-   * @param forwardPoints  the FX points to be added to the FX rate at the far leg
-   * @return the trade
-   */
-  public FxSwapTrade toTrade(
-      LocalDate tradeDate,
-      Period periodToNear,
-      Period periodToFar,
-      BuySell buySell,
-      double notional,
-      double nearFxRate,
-      double forwardPoints) {
-
-    BusinessDayAdjustment bda = getBusinessDayAdjustment();
-    LocalDate spotValue = getSpotDateOffset().adjust(tradeDate);
-    LocalDate startDate = bda.adjust(spotValue.plus(periodToNear));
-    LocalDate endDate = bda.adjust(spotValue.plus(periodToFar));
-    return toTrade(tradeDate, startDate, endDate, buySell, notional, nearFxRate, forwardPoints);
-  }
-
-  /**
-   * Creates a trade based on this convention.
-   * <p>
-   * This returns a trade based on the specified dates.
-   * The notional is unsigned, with buy/sell determining the direction of the trade.
-   * If buying the FX Swap, the amount in the first currency of the pair is received in the near leg and paid in the 
-   * far leg, while the second currency is paid in the near leg and received in the far leg.
-   * 
-   * @param tradeDate  the date of the trade
-   * @param startDate  the start date
-   * @param endDate  the end date
-   * @param buySell  the buy/sell flag
-   * @param notional  the notional amount, in the payment currency of the template
-   * @param nearFxRate  the FX rate for the near leg
-   * @param forwardPoints  the FX points to be added to the FX rate at the far leg
-   * @return the trade
-   */
+  @Override
   public FxSwapTrade toTrade(
       LocalDate tradeDate,
       LocalDate startDate,
@@ -199,25 +159,32 @@ public final class FxSwapConvention
 
     ArgChecker.inOrderOrEqual(tradeDate, startDate, "tradeDate", "startDate");
     double amount1 = notional * (buySell.equals(BuySell.BUY) ? 1.0 : -1.0);
+    LocalDate startDateAdjusted = getBusinessDayAdjustment().adjust(startDate);
+    LocalDate endDateAdjusted = getBusinessDayAdjustment().adjust(endDate);
     return FxSwapTrade.builder()
         .tradeInfo(TradeInfo.builder()
             .tradeDate(tradeDate).build())
-        .product(FxSwap.ofForwardPoints(CurrencyAmount.of(currencyPair.getBase(), amount1), 
-                    currencyPair.getCounter(), nearFxRate, forwardPoints, startDate, endDate) ).build();
+        .product(FxSwap.ofForwardPoints(CurrencyAmount.of(currencyPair.getBase(), amount1),
+            currencyPair.getCounter(), nearFxRate, forwardPoints, startDateAdjusted, endDateAdjusted)).build();
+  }
+
+  @Override
+  public LocalDate calculateSpotDateFromTradeDate(LocalDate tradeDate) {
+    return getSpotDateOffset().adjust(tradeDate);
   }
 
   //------------------------- AUTOGENERATED START -------------------------
   ///CLOVER:OFF
   /**
-   * The meta-bean for {@code FxSwapConvention}.
+   * The meta-bean for {@code ImmutableFxSwapConvention}.
    * @return the meta-bean, not null
    */
-  public static FxSwapConvention.Meta meta() {
-    return FxSwapConvention.Meta.INSTANCE;
+  public static ImmutableFxSwapConvention.Meta meta() {
+    return ImmutableFxSwapConvention.Meta.INSTANCE;
   }
 
   static {
-    JodaBeanUtils.registerMetaBean(FxSwapConvention.Meta.INSTANCE);
+    JodaBeanUtils.registerMetaBean(ImmutableFxSwapConvention.Meta.INSTANCE);
   }
 
   /**
@@ -229,24 +196,26 @@ public final class FxSwapConvention
    * Returns a builder used to create an instance of the bean.
    * @return the builder, not null
    */
-  public static FxSwapConvention.Builder builder() {
-    return new FxSwapConvention.Builder();
+  public static ImmutableFxSwapConvention.Builder builder() {
+    return new ImmutableFxSwapConvention.Builder();
   }
 
-  private FxSwapConvention(
+  private ImmutableFxSwapConvention(
       CurrencyPair currencyPair,
+      String name,
       DaysAdjustment spotDateOffset,
       BusinessDayAdjustment businessDayAdjustment) {
     JodaBeanUtils.notNull(currencyPair, "currencyPair");
     JodaBeanUtils.notNull(spotDateOffset, "spotDateOffset");
     this.currencyPair = currencyPair;
+    this.name = name;
     this.spotDateOffset = spotDateOffset;
     this.businessDayAdjustment = businessDayAdjustment;
   }
 
   @Override
-  public FxSwapConvention.Meta metaBean() {
-    return FxSwapConvention.Meta.INSTANCE;
+  public ImmutableFxSwapConvention.Meta metaBean() {
+    return ImmutableFxSwapConvention.Meta.INSTANCE;
   }
 
   @Override
@@ -295,8 +264,9 @@ public final class FxSwapConvention
       return true;
     }
     if (obj != null && obj.getClass() == this.getClass()) {
-      FxSwapConvention other = (FxSwapConvention) obj;
+      ImmutableFxSwapConvention other = (ImmutableFxSwapConvention) obj;
       return JodaBeanUtils.equal(getCurrencyPair(), other.getCurrencyPair()) &&
+          JodaBeanUtils.equal(name, other.name) &&
           JodaBeanUtils.equal(getSpotDateOffset(), other.getSpotDateOffset()) &&
           JodaBeanUtils.equal(businessDayAdjustment, other.businessDayAdjustment);
     }
@@ -307,6 +277,7 @@ public final class FxSwapConvention
   public int hashCode() {
     int hash = getClass().hashCode();
     hash = hash * 31 + JodaBeanUtils.hashCode(getCurrencyPair());
+    hash = hash * 31 + JodaBeanUtils.hashCode(name);
     hash = hash * 31 + JodaBeanUtils.hashCode(getSpotDateOffset());
     hash = hash * 31 + JodaBeanUtils.hashCode(businessDayAdjustment);
     return hash;
@@ -314,9 +285,10 @@ public final class FxSwapConvention
 
   @Override
   public String toString() {
-    StringBuilder buf = new StringBuilder(128);
-    buf.append("FxSwapConvention{");
+    StringBuilder buf = new StringBuilder(160);
+    buf.append("ImmutableFxSwapConvention{");
     buf.append("currencyPair").append('=').append(getCurrencyPair()).append(',').append(' ');
+    buf.append("name").append('=').append(name).append(',').append(' ');
     buf.append("spotDateOffset").append('=').append(getSpotDateOffset()).append(',').append(' ');
     buf.append("businessDayAdjustment").append('=').append(JodaBeanUtils.toString(businessDayAdjustment));
     buf.append('}');
@@ -325,7 +297,7 @@ public final class FxSwapConvention
 
   //-----------------------------------------------------------------------
   /**
-   * The meta-bean for {@code FxSwapConvention}.
+   * The meta-bean for {@code ImmutableFxSwapConvention}.
    */
   public static final class Meta extends DirectMetaBean {
     /**
@@ -337,23 +309,29 @@ public final class FxSwapConvention
      * The meta-property for the {@code currencyPair} property.
      */
     private final MetaProperty<CurrencyPair> currencyPair = DirectMetaProperty.ofImmutable(
-        this, "currencyPair", FxSwapConvention.class, CurrencyPair.class);
+        this, "currencyPair", ImmutableFxSwapConvention.class, CurrencyPair.class);
+    /**
+     * The meta-property for the {@code name} property.
+     */
+    private final MetaProperty<String> name = DirectMetaProperty.ofImmutable(
+        this, "name", ImmutableFxSwapConvention.class, String.class);
     /**
      * The meta-property for the {@code spotDateOffset} property.
      */
     private final MetaProperty<DaysAdjustment> spotDateOffset = DirectMetaProperty.ofImmutable(
-        this, "spotDateOffset", FxSwapConvention.class, DaysAdjustment.class);
+        this, "spotDateOffset", ImmutableFxSwapConvention.class, DaysAdjustment.class);
     /**
      * The meta-property for the {@code businessDayAdjustment} property.
      */
     private final MetaProperty<BusinessDayAdjustment> businessDayAdjustment = DirectMetaProperty.ofImmutable(
-        this, "businessDayAdjustment", FxSwapConvention.class, BusinessDayAdjustment.class);
+        this, "businessDayAdjustment", ImmutableFxSwapConvention.class, BusinessDayAdjustment.class);
     /**
      * The meta-properties.
      */
     private final Map<String, MetaProperty<?>> metaPropertyMap$ = new DirectMetaPropertyMap(
         this, null,
         "currencyPair",
+        "name",
         "spotDateOffset",
         "businessDayAdjustment");
 
@@ -368,6 +346,8 @@ public final class FxSwapConvention
       switch (propertyName.hashCode()) {
         case 1005147787:  // currencyPair
           return currencyPair;
+        case 3373707:  // name
+          return name;
         case 746995843:  // spotDateOffset
           return spotDateOffset;
         case -1065319863:  // businessDayAdjustment
@@ -377,13 +357,13 @@ public final class FxSwapConvention
     }
 
     @Override
-    public FxSwapConvention.Builder builder() {
-      return new FxSwapConvention.Builder();
+    public ImmutableFxSwapConvention.Builder builder() {
+      return new ImmutableFxSwapConvention.Builder();
     }
 
     @Override
-    public Class<? extends FxSwapConvention> beanType() {
-      return FxSwapConvention.class;
+    public Class<? extends ImmutableFxSwapConvention> beanType() {
+      return ImmutableFxSwapConvention.class;
     }
 
     @Override
@@ -398,6 +378,14 @@ public final class FxSwapConvention
      */
     public MetaProperty<CurrencyPair> currencyPair() {
       return currencyPair;
+    }
+
+    /**
+     * The meta-property for the {@code name} property.
+     * @return the meta-property, not null
+     */
+    public MetaProperty<String> name() {
+      return name;
     }
 
     /**
@@ -421,11 +409,13 @@ public final class FxSwapConvention
     protected Object propertyGet(Bean bean, String propertyName, boolean quiet) {
       switch (propertyName.hashCode()) {
         case 1005147787:  // currencyPair
-          return ((FxSwapConvention) bean).getCurrencyPair();
+          return ((ImmutableFxSwapConvention) bean).getCurrencyPair();
+        case 3373707:  // name
+          return ((ImmutableFxSwapConvention) bean).name;
         case 746995843:  // spotDateOffset
-          return ((FxSwapConvention) bean).getSpotDateOffset();
+          return ((ImmutableFxSwapConvention) bean).getSpotDateOffset();
         case -1065319863:  // businessDayAdjustment
-          return ((FxSwapConvention) bean).businessDayAdjustment;
+          return ((ImmutableFxSwapConvention) bean).businessDayAdjustment;
       }
       return super.propertyGet(bean, propertyName, quiet);
     }
@@ -443,11 +433,12 @@ public final class FxSwapConvention
 
   //-----------------------------------------------------------------------
   /**
-   * The bean-builder for {@code FxSwapConvention}.
+   * The bean-builder for {@code ImmutableFxSwapConvention}.
    */
-  public static final class Builder extends DirectFieldsBeanBuilder<FxSwapConvention> {
+  public static final class Builder extends DirectFieldsBeanBuilder<ImmutableFxSwapConvention> {
 
     private CurrencyPair currencyPair;
+    private String name;
     private DaysAdjustment spotDateOffset;
     private BusinessDayAdjustment businessDayAdjustment;
 
@@ -461,8 +452,9 @@ public final class FxSwapConvention
      * Restricted copy constructor.
      * @param beanToCopy  the bean to copy from, not null
      */
-    private Builder(FxSwapConvention beanToCopy) {
+    private Builder(ImmutableFxSwapConvention beanToCopy) {
       this.currencyPair = beanToCopy.getCurrencyPair();
+      this.name = beanToCopy.name;
       this.spotDateOffset = beanToCopy.getSpotDateOffset();
       this.businessDayAdjustment = beanToCopy.businessDayAdjustment;
     }
@@ -473,6 +465,8 @@ public final class FxSwapConvention
       switch (propertyName.hashCode()) {
         case 1005147787:  // currencyPair
           return currencyPair;
+        case 3373707:  // name
+          return name;
         case 746995843:  // spotDateOffset
           return spotDateOffset;
         case -1065319863:  // businessDayAdjustment
@@ -487,6 +481,9 @@ public final class FxSwapConvention
       switch (propertyName.hashCode()) {
         case 1005147787:  // currencyPair
           this.currencyPair = (CurrencyPair) newValue;
+          break;
+        case 3373707:  // name
+          this.name = (String) newValue;
           break;
         case 746995843:  // spotDateOffset
           this.spotDateOffset = (DaysAdjustment) newValue;
@@ -525,9 +522,10 @@ public final class FxSwapConvention
     }
 
     @Override
-    public FxSwapConvention build() {
-      return new FxSwapConvention(
+    public ImmutableFxSwapConvention build() {
+      return new ImmutableFxSwapConvention(
           currencyPair,
+          name,
           spotDateOffset,
           businessDayAdjustment);
     }
@@ -541,6 +539,18 @@ public final class FxSwapConvention
     public Builder currencyPair(CurrencyPair currencyPair) {
       JodaBeanUtils.notNull(currencyPair, "currencyPair");
       this.currencyPair = currencyPair;
+      return this;
+    }
+
+    /**
+     * Sets the convention name, such as 'EUR-USD', optional with defaulting getter.
+     * <p>
+     * This will default to the name of the currency pair if not specified.
+     * @param name  the new value
+     * @return this, for chaining, not null
+     */
+    public Builder name(String name) {
+      this.name = name;
       return this;
     }
 
@@ -577,9 +587,10 @@ public final class FxSwapConvention
     //-----------------------------------------------------------------------
     @Override
     public String toString() {
-      StringBuilder buf = new StringBuilder(128);
-      buf.append("FxSwapConvention.Builder{");
+      StringBuilder buf = new StringBuilder(160);
+      buf.append("ImmutableFxSwapConvention.Builder{");
       buf.append("currencyPair").append('=').append(JodaBeanUtils.toString(currencyPair)).append(',').append(' ');
+      buf.append("name").append('=').append(JodaBeanUtils.toString(name)).append(',').append(' ');
       buf.append("spotDateOffset").append('=').append(JodaBeanUtils.toString(spotDateOffset)).append(',').append(' ');
       buf.append("businessDayAdjustment").append('=').append(JodaBeanUtils.toString(businessDayAdjustment));
       buf.append('}');

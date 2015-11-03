@@ -3,7 +3,7 @@
  *
  * Please see distribution for license.
  */
-package com.opengamma.strata.finance.fx;
+package com.opengamma.strata.finance.fx.type;
 
 import static com.opengamma.strata.basics.BuySell.BUY;
 import static com.opengamma.strata.basics.currency.Currency.EUR;
@@ -27,6 +27,9 @@ import com.opengamma.strata.basics.currency.CurrencyAmount;
 import com.opengamma.strata.basics.currency.CurrencyPair;
 import com.opengamma.strata.basics.date.DaysAdjustment;
 import com.opengamma.strata.basics.date.HolidayCalendar;
+import com.opengamma.strata.finance.fx.FxSwap;
+import com.opengamma.strata.finance.fx.FxSwapTrade;
+import com.opengamma.strata.finance.fx.type.FxSwapTemplate;
 
 /**
  * Test {@link FxSwapTemplate}.
@@ -37,7 +40,7 @@ public class FxSwapTemplateTest {
   private static final CurrencyPair EUR_USD = CurrencyPair.of(Currency.EUR, Currency.USD);
   private static final HolidayCalendar EUTA_USNY = EUTA.combineWith(USNY);
   private static final DaysAdjustment PLUS_TWO_DAYS = DaysAdjustment.ofBusinessDays(2, EUTA_USNY);
-  private static final FxSwapConvention CONVENTION = FxSwapConvention.of(EUR_USD, PLUS_TWO_DAYS);
+  private static final ImmutableFxSwapConvention CONVENTION = ImmutableFxSwapConvention.of(EUR_USD, PLUS_TWO_DAYS);
   private static final Period NEAR_PERIOD = Period.ofMonths(3);
   private static final Period FAR_PERIOD = Period.ofMonths(6);
 

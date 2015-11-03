@@ -7,13 +7,12 @@ package com.opengamma.strata.pricer.calibration;
 
 import static com.opengamma.strata.basics.currency.Currency.EUR;
 import static com.opengamma.strata.basics.currency.Currency.USD;
-import static com.opengamma.strata.basics.date.BusinessDayConventions.FOLLOWING;
-import static com.opengamma.strata.basics.date.DayCounts.ACT_360;
 import static com.opengamma.strata.basics.date.DayCounts.ACT_365F;
-import static com.opengamma.strata.basics.date.HolidayCalendars.EUTA;
-import static com.opengamma.strata.basics.date.HolidayCalendars.USNY;
 import static com.opengamma.strata.basics.index.OvernightIndices.USD_FED_FUND;
 import static com.opengamma.strata.finance.rate.swap.type.FixedOvernightSwapConventions.USD_FIXED_1Y_FED_FUND_OIS;
+import static com.opengamma.strata.finance.rate.deposit.type.TermDepositConventions.USD_DEPOSIT_T;
+import static com.opengamma.strata.finance.rate.deposit.type.TermDepositConventions.USD_DEPOSIT_T1;
+import static com.opengamma.strata.finance.fx.type.FxSwapConventions.EUR_USD;
 import static org.testng.Assert.assertEquals;
 
 import java.time.LocalDate;
@@ -24,19 +23,17 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
 
 import org.testng.annotations.Test;
 
+import com.opengamma.strata.basics.BuySell;
 import com.opengamma.strata.basics.Trade;
 import com.opengamma.strata.basics.currency.Currency;
 import com.opengamma.strata.basics.currency.CurrencyAmount;
-import com.opengamma.strata.basics.currency.CurrencyPair;
 import com.opengamma.strata.basics.currency.FxMatrix;
 import com.opengamma.strata.basics.currency.MultiCurrencyAmount;
-import com.opengamma.strata.basics.date.BusinessDayAdjustment;
 import com.opengamma.strata.basics.date.DayCount;
-import com.opengamma.strata.basics.date.DaysAdjustment;
-import com.opengamma.strata.basics.date.HolidayCalendar;
 import com.opengamma.strata.basics.date.Tenor;
 import com.opengamma.strata.basics.index.Index;
 import com.opengamma.strata.basics.interpolator.CurveExtrapolator;
@@ -45,13 +42,12 @@ import com.opengamma.strata.basics.market.ImmutableObservableValues;
 import com.opengamma.strata.basics.market.ObservableKey;
 import com.opengamma.strata.collect.id.StandardId;
 import com.opengamma.strata.collect.timeseries.LocalDateDoubleTimeSeries;
-import com.opengamma.strata.finance.fx.FxSwapConvention;
-import com.opengamma.strata.finance.fx.FxSwapTemplate;
+import com.opengamma.strata.finance.fx.FxSwapTrade;
+import com.opengamma.strata.finance.fx.type.FxSwapTemplate;
 import com.opengamma.strata.finance.rate.deposit.TermDepositTrade;
-import com.opengamma.strata.finance.rate.deposit.type.ImmutableTermDepositConvention;
-import com.opengamma.strata.finance.rate.deposit.type.TermDepositConvention;
 import com.opengamma.strata.finance.rate.deposit.type.TermDepositTemplate;
 import com.opengamma.strata.finance.rate.swap.SwapTrade;
+import com.opengamma.strata.finance.rate.swap.type.FixedIborSwapConventions;
 import com.opengamma.strata.finance.rate.swap.type.FixedOvernightSwapTemplate;
 import com.opengamma.strata.market.curve.CurveGroupName;
 import com.opengamma.strata.market.curve.CurveName;
@@ -62,12 +58,17 @@ import com.opengamma.strata.market.curve.definition.FxSwapCurveNode;
 import com.opengamma.strata.market.curve.definition.InterpolatedNodalCurveDefinition;
 import com.opengamma.strata.market.curve.definition.TermDepositCurveNode;
 import com.opengamma.strata.market.key.QuoteKey;
+import com.opengamma.strata.market.sensitivity.CurveCurrencyParameterSensitivities;
+import com.opengamma.strata.market.sensitivity.PointSensitivities;
+import com.opengamma.strata.market.sensitivity.PointSensitivityBuilder;
 import com.opengamma.strata.market.value.ValueType;
 import com.opengamma.strata.math.impl.interpolation.FlatExtrapolator1D;
 import com.opengamma.strata.math.impl.interpolation.LinearInterpolator1D;
+import com.opengamma.strata.pricer.fx.DiscountingFxSwapProductPricer;
 import com.opengamma.strata.pricer.rate.ImmutableRatesProvider;
 import com.opengamma.strata.pricer.rate.deposit.DiscountingTermDepositProductPricer;
 import com.opengamma.strata.pricer.rate.swap.DiscountingSwapProductPricer;
+import com.opengamma.strata.pricer.sensitivity.MarketQuoteSensitivityCalculator;
 
 /**
  * Test for curve calibration in USD and EUR.
@@ -81,10 +82,8 @@ public class CalibrationZeroRateUsdEur2OisFxTest {
   private static final CurveInterpolator INTERPOLATOR_LINEAR = new LinearInterpolator1D();
   private static final CurveExtrapolator EXTRAPOLATOR_FLAT = new FlatExtrapolator1D();
   private static final DayCount CURVE_DC = ACT_365F;
-  private static final LocalDateDoubleTimeSeries TS_EMTPY = LocalDateDoubleTimeSeries.empty();
 
   private static final String SCHEME = "CALIBRATION";
-  private static final HolidayCalendar EUTA_USNY = EUTA.combineWith(USNY);
 
   /** Curve names */
   private static final String USD_DSCON_STR = "USD-DSCON-OIS";
@@ -103,7 +102,8 @@ public class CalibrationZeroRateUsdEur2OisFxTest {
   }
 
   /** Data FX **/
-  private static final double EUR_USD = 1.10;
+  private static final double FX_RATE_EUR_USD = 1.10;
+  private static final FxMatrix FX_MATRIX = FxMatrix.of(EUR, USD, FX_RATE_EUR_USD);
   private static final String EUR_USD_ID_VALUE = "EUR-USD";
   /** Data for USD-DSCON curve */
   /* Market values */
@@ -119,20 +119,17 @@ public class CalibrationZeroRateUsdEur2OisFxTest {
   /* Nodes */
   private static final CurveNode[] USD_DSC_NODES = new CurveNode[USD_DSC_NB_NODES];
   /* Tenors */
-  private static final int[] USD_DSC_DEPO_OFFSET = new int[] {0, 1};
-  private static final int USD_DSC_NB_DEPO_NODES = USD_DSC_DEPO_OFFSET.length;  
+  private static final int[] USD_DSC_DEPO_OFFSET = new int[] {0, 1 };
+  private static final int USD_DSC_NB_DEPO_NODES = USD_DSC_DEPO_OFFSET.length;
   private static final Period[] USD_DSC_OIS_TENORS = new Period[] {
-      Period.ofMonths(1), Period.ofMonths(2), Period.ofMonths(3), Period.ofMonths(6), Period.ofMonths(9),
-      Period.ofYears(1), Period.ofMonths(18), Period.ofYears(2), Period.ofYears(3), Period.ofYears(4)};
+    Period.ofMonths(1), Period.ofMonths(2), Period.ofMonths(3), Period.ofMonths(6), Period.ofMonths(9),
+    Period.ofYears(1), Period.ofMonths(18), Period.ofYears(2), Period.ofYears(3), Period.ofYears(4) };
   private static final int USD_DSC_NB_OIS_NODES = USD_DSC_OIS_TENORS.length;
   static {
-    for(int i = 0; i < USD_DSC_NB_DEPO_NODES; i++) {
-      BusinessDayAdjustment bda = BusinessDayAdjustment.of(FOLLOWING, USNY);
-      TermDepositConvention convention = 
-          ImmutableTermDepositConvention.of(USD, bda, ACT_360, DaysAdjustment.ofBusinessDays(USD_DSC_DEPO_OFFSET[i], USNY));
-      USD_DSC_NODES[i] = TermDepositCurveNode.of(TermDepositTemplate.of(Period.ofDays(1), convention), 
-          QuoteKey.of(StandardId.of(SCHEME, USD_DSC_ID_VALUE[i])));
-    }
+    USD_DSC_NODES[0] = TermDepositCurveNode.of(TermDepositTemplate.of(Period.ofDays(1), USD_DEPOSIT_T),
+        QuoteKey.of(StandardId.of(SCHEME, USD_DSC_ID_VALUE[0])));
+    USD_DSC_NODES[1] = TermDepositCurveNode.of(TermDepositTemplate.of(Period.ofDays(1), USD_DEPOSIT_T1),
+        QuoteKey.of(StandardId.of(SCHEME, USD_DSC_ID_VALUE[1])));
     for (int i = 0; i < USD_DSC_NB_OIS_NODES; i++) {
       USD_DSC_NODES[USD_DSC_NB_DEPO_NODES + i] = FixedOvernightSwapCurveNode.of(
           FixedOvernightSwapTemplate.of(Period.ZERO, Tenor.of(USD_DSC_OIS_TENORS[i]), USD_FIXED_1Y_FED_FUND_OIS),
@@ -156,10 +153,8 @@ public class CalibrationZeroRateUsdEur2OisFxTest {
       Period.ofYears(1), Period.ofMonths(18), Period.ofYears(2), Period.ofYears(3), Period.ofYears(4)};
   private static final int EUR_DSC_NB_FX_NODES = EUR_DSC_FX_TENORS.length;
   static {
-    FxSwapConvention convention = 
-        FxSwapConvention.of(CurrencyPair.of(EUR, USD), DaysAdjustment.ofBusinessDays(2, EUTA_USNY));
     for (int i = 0; i < EUR_DSC_NB_FX_NODES; i++) {
-      EUR_DSC_NODES[i] = FxSwapCurveNode.of(FxSwapTemplate.of(EUR_DSC_FX_TENORS[i], convention), 
+      EUR_DSC_NODES[i] = FxSwapCurveNode.of(FxSwapTemplate.of(EUR_DSC_FX_TENORS[i], EUR_USD), 
           QuoteKey.of(StandardId.of(SCHEME, EUR_USD_ID_VALUE)),
           QuoteKey.of(StandardId.of(SCHEME, EUR_DSC_ID_VALUE[i])));
     }
@@ -175,7 +170,7 @@ public class CalibrationZeroRateUsdEur2OisFxTest {
     for (int i = 0; i < EUR_DSC_NB_NODES; i++) {
       map.put(QuoteKey.of(StandardId.of(SCHEME, EUR_DSC_ID_VALUE[i])), EUR_DSC_MARKET_QUOTES[i]);
     }
-    map.put(QuoteKey.of(StandardId.of(SCHEME, EUR_USD_ID_VALUE)), EUR_USD);
+    map.put(QuoteKey.of(StandardId.of(SCHEME, EUR_USD_ID_VALUE)), FX_RATE_EUR_USD);
     ALL_QUOTES = ImmutableObservableValues.of(map);
   }
 
@@ -183,6 +178,9 @@ public class CalibrationZeroRateUsdEur2OisFxTest {
       DiscountingSwapProductPricer.DEFAULT;
   private static final DiscountingTermDepositProductPricer DEPO_PRICER =
       DiscountingTermDepositProductPricer.DEFAULT;
+  private static final DiscountingFxSwapProductPricer FX_PRICER =
+      DiscountingFxSwapProductPricer.DEFAULT;
+  private static final MarketQuoteSensitivityCalculator MQC = MarketQuoteSensitivityCalculator.DEFAULT;
   
   private static final CalibrationMeasures CALIBRATION_MEASURES = CalibrationMeasures.DEFAULT;
   private static final CurveCalibrator CALIBRATOR = CurveCalibrator.of(1e-9, 1e-9, 100, CALIBRATION_MEASURES);
@@ -221,27 +219,93 @@ public class CalibrationZeroRateUsdEur2OisFxTest {
   //-------------------------------------------------------------------------
   public void calibration_present_value_oneGroup() {
     ImmutableRatesProvider result =
-        CALIBRATOR.calibrate(CURVE_GROUP_CONFIG, VALUATION_DATE, ALL_QUOTES, TS, FxMatrix.empty());
+        CALIBRATOR.calibrate(CURVE_GROUP_CONFIG, VALUATION_DATE, ALL_QUOTES, TS, FX_MATRIX);
     assertPresentValue(result);
   }
   
   private void assertPresentValue(ImmutableRatesProvider result) {
-    // Test PV Dsc;
-    List<Trade> dscTrades = new ArrayList<>();
+    // Test PV USD;
+    List<Trade> usdTrades = new ArrayList<>();
     for (int i = 0; i < USD_DSC_NODES.length; i++) {
-      dscTrades.add(USD_DSC_NODES[i].trade(VALUATION_DATE, ALL_QUOTES));
+      usdTrades.add(USD_DSC_NODES[i].trade(VALUATION_DATE, ALL_QUOTES));
     }
     // Depo
     for (int i = 0; i < USD_DSC_NB_DEPO_NODES; i++) {
-      CurrencyAmount pvIrs = DEPO_PRICER
-          .presentValue(((TermDepositTrade) dscTrades.get(i)).getProduct(), result);
-      assertEquals(pvIrs.getAmount(), 0.0, TOLERANCE_PV);
+      CurrencyAmount pvDep = DEPO_PRICER
+          .presentValue(((TermDepositTrade) usdTrades.get(i)).getProduct(), result);
+      assertEquals(pvDep.getAmount(), 0.0, TOLERANCE_PV);
     }
     // OIS
     for (int i = 0; i < USD_DSC_NB_OIS_NODES; i++) {
-      MultiCurrencyAmount pvIrs = SWAP_PRICER
-          .presentValue(((SwapTrade) dscTrades.get(USD_DSC_NB_DEPO_NODES + i)).getProduct(), result);
-      assertEquals(pvIrs.getAmount(USD).getAmount(), 0.0, TOLERANCE_PV);
+      MultiCurrencyAmount pvOis = SWAP_PRICER
+          .presentValue(((SwapTrade) usdTrades.get(USD_DSC_NB_DEPO_NODES + i)).getProduct(), result);
+      assertEquals(pvOis.getAmount(USD).getAmount(), 0.0, TOLERANCE_PV);
+    }
+    // Test PV EUR;
+    List<Trade> eurTrades = new ArrayList<>();
+    for (int i = 0; i < EUR_DSC_NODES.length; i++) {
+      eurTrades.add(EUR_DSC_NODES[i].trade(VALUATION_DATE, ALL_QUOTES));
+    }
+    // Depo
+    for (int i = 0; i < EUR_DSC_NB_FX_NODES; i++) {
+      MultiCurrencyAmount pvFx = FX_PRICER
+          .presentValue(((FxSwapTrade) eurTrades.get(i)).getProduct(), result);
+      assertEquals(pvFx.convertedTo(USD, result).getAmount(), 0.0, TOLERANCE_PV);
+    }
+  }
+  
+  public void calibration_market_quote_sensitivity_one_group() {
+    double shift = 1.0E-6;
+    Function<ImmutableObservableValues, ImmutableRatesProvider> f =
+        (ov) -> CALIBRATOR.calibrate(CURVE_GROUP_CONFIG, VALUATION_DATE, ov, TS, FX_MATRIX);
+    calibration_market_quote_sensitivity_check(f, shift);
+  }
+
+  private void calibration_market_quote_sensitivity_check(
+      Function<ImmutableObservableValues, ImmutableRatesProvider> calibrator,
+      double shift) {
+    double notional = 100_000_000.0;
+    double fx = 1.1111;
+    double fxPts = 0.0012;
+    FxSwapTrade trade = EUR_USD
+        .toTrade(VALUATION_DATE, Period.ofWeeks(6), Period.ofMonths(5), BuySell.BUY, notional, fx, fxPts);
+    ImmutableRatesProvider result =
+        CALIBRATOR.calibrate(CURVE_GROUP_CONFIG, VALUATION_DATE, ALL_QUOTES, TS, FX_MATRIX);
+    PointSensitivities pts = FX_PRICER.presentValueSensitivity(trade.getProduct(), result);
+    CurveCurrencyParameterSensitivities ps = result.curveParameterSensitivity(pts);
+    CurveCurrencyParameterSensitivities mqs = MQC.sensitivity(ps, result);
+    double pvUsd = FX_PRICER.presentValue(trade.getProduct(), result).getAmount(USD).getAmount();
+    double pvEur = FX_PRICER.presentValue(trade.getProduct(), result).getAmount(EUR).getAmount();
+    double[] mqsUsd1Computed = mqs.getSensitivity(USD_DSCON_CURVE_NAME, USD).getSensitivity().toArray();
+    for (int i = 0; i < USD_DSC_NB_NODES; i++) {
+      Map<ObservableKey, Double> map = new HashMap<>(ALL_QUOTES.getValues());
+      map.put(QuoteKey.of(StandardId.of(SCHEME, USD_DSC_ID_VALUE[i])), USD_DSC_MARKET_QUOTES[i] + shift);
+      ImmutableObservableValues ov = ImmutableObservableValues.of(map);
+      ImmutableRatesProvider rpShifted = calibrator.apply(ov);
+      double pvS = FX_PRICER.presentValue(trade.getProduct(), rpShifted).getAmount(USD).getAmount();
+      assertEquals(mqsUsd1Computed[i], (pvS - pvUsd) / shift, TOLERANCE_PV_DELTA);
+    }
+    double[] mqsUsd2Computed = mqs.getSensitivity(USD_DSCON_CURVE_NAME, EUR).getSensitivity().toArray();
+    for (int i = 0; i < USD_DSC_NB_NODES; i++) {
+      Map<ObservableKey, Double> map = new HashMap<>(ALL_QUOTES.getValues());
+      map.put(QuoteKey.of(StandardId.of(SCHEME, USD_DSC_ID_VALUE[i])), USD_DSC_MARKET_QUOTES[i] + shift);
+      ImmutableObservableValues ov = ImmutableObservableValues.of(map);
+      ImmutableRatesProvider rpShifted = calibrator.apply(ov);
+      double pvS = FX_PRICER.presentValue(trade.getProduct(), rpShifted).getAmount(EUR).getAmount();
+      assertEquals(mqsUsd2Computed[i], (pvS - pvEur) / shift, TOLERANCE_PV_DELTA);
+    }
+    double[] mqsEur1Computed = mqs.getSensitivity(EUR_DSC_CURVE_NAME, USD).getSensitivity().toArray();
+    for (int i = 0; i < EUR_DSC_NB_NODES; i++) {
+      assertEquals(mqsEur1Computed[i], 0.0 , TOLERANCE_PV_DELTA);      
+    }
+    double[] mqsEur2Computed = mqs.getSensitivity(EUR_DSC_CURVE_NAME, EUR).getSensitivity().toArray();
+    for (int i = 0; i < EUR_DSC_NB_NODES; i++) {
+      Map<ObservableKey, Double> map = new HashMap<>(ALL_QUOTES.getValues());
+      map.put(QuoteKey.of(StandardId.of(SCHEME, EUR_DSC_ID_VALUE[i])), EUR_DSC_MARKET_QUOTES[i] + shift);
+      ImmutableObservableValues ov = ImmutableObservableValues.of(map);
+      ImmutableRatesProvider rpShifted = calibrator.apply(ov);
+      double pvS = FX_PRICER.presentValue(trade.getProduct(), rpShifted).getAmount(EUR).getAmount();
+      assertEquals(mqsEur2Computed[i], (pvS - pvEur) / shift, TOLERANCE_PV_DELTA, "Node " + i);
     }
   }
 

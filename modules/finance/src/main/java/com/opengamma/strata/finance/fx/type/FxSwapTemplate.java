@@ -3,7 +3,7 @@
  *
  * Please see distribution for license.
  */
-package com.opengamma.strata.finance.fx;
+package com.opengamma.strata.finance.fx.type;
 
 import java.io.Serializable;
 import java.time.LocalDate;
@@ -16,6 +16,7 @@ import org.joda.beans.PropertyDefinition;
 import com.opengamma.strata.basics.BuySell;
 import com.opengamma.strata.collect.ArgChecker;
 import com.opengamma.strata.finance.TradeTemplate;
+import com.opengamma.strata.finance.fx.FxSwapTrade;
 
 import java.util.Map;
 import java.util.NoSuchElementException;
