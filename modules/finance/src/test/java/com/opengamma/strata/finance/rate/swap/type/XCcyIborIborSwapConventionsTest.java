@@ -130,6 +130,21 @@ public class XCcyIborIborSwapConventionsTest {
   }
 
   //-------------------------------------------------------------------------
+  @DataProvider(name = "notionalExchange")
+  static Object[][] data_notional_exchange() {
+    return new Object[][] {
+        {XCcyIborIborSwapConventions.EUR_EURIBOR_3M_USD_LIBOR_3M, true},
+        {XCcyIborIborSwapConventions.GBP_LIBOR_3M_USD_LIBOR_3M, true}
+    };
+  }
+
+  @Test(dataProvider = "notionalExchange")
+  public void test_notional_exchange(XCcyIborIborSwapConvention convention, boolean notionalExchange) {
+    assertEquals(convention.getSpreadLeg().isNotionalExchange(), notionalExchange);
+    assertEquals(convention.getFlatLeg().isNotionalExchange(), notionalExchange);
+  }
+
+  //-------------------------------------------------------------------------
   public void coverage() {
     coverPrivateConstructor(XCcyIborIborSwapConventions.class);
     coverPrivateConstructor(StandardXCcyIborIborSwapConventions.class);
