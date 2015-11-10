@@ -5,6 +5,8 @@
  */
 package com.opengamma.strata.pricer.impl.model;
 
+import static com.opengamma.strata.collect.TestHelper.assertSerialization;
+import static com.opengamma.strata.collect.TestHelper.coverImmutableBean;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
@@ -424,7 +426,15 @@ public class HullWhiteOneFactorPiecewiseConstantInterestRateModelTest {
     assertTrue(DoubleArrayMath.fuzzyEquals(computed.row(0).toArray(), expected, TOLERANCE_RATE));
   }
 
-  // TODO serialise, immutable bean
+
+  //-------------------------------------------------------------------------
+  public void coverage() {
+    coverImmutableBean(MODEL);
+  }
+
+  public void test_serialization() {
+    assertSerialization(MODEL);
+  }
 
   //-------------------------------------------------------------------------
   /**
