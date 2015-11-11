@@ -59,7 +59,7 @@ public class HullWhiteIborFutureProductPricer
   /**
   * Calculates the convexity adjustment (to the price) of the Ibor future product.
   * <p>
-  * The convexity adjustment of the product is the price on the valuation date.
+  * The convexity adjustment of the product is the value on the valuation date.
   * 
   * @param future  the future to price
   * @param ratesProvider  the rates provider
@@ -80,7 +80,7 @@ public class HullWhiteIborFutureProductPricer
   * Calculates the par rate of the Ibor future product.
   * <p>
   * The par rate is given by ({@code 1 - price}).
-  * The par rate of the product is the price on the valuation date.
+  * The par rate of the product is the value on the valuation date.
   * 
   * @param future  the future to price
   * @param ratesProvider  the rates provider
