@@ -7,6 +7,7 @@ package com.opengamma.strata.examples.finance;
 
 import static com.opengamma.strata.basics.index.IborIndices.USD_LIBOR_3M;
 import static com.opengamma.strata.basics.index.OvernightIndices.USD_FED_FUND;
+import static com.opengamma.strata.basics.currency.Currency.USD;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -46,7 +47,6 @@ import com.opengamma.strata.collect.timeseries.LocalDateDoubleTimeSeries;
 import com.opengamma.strata.collect.tuple.Pair;
 import com.opengamma.strata.function.StandardComponents;
 import com.opengamma.strata.function.marketdata.mapping.MarketDataMappingsBuilder;
-import com.opengamma.strata.loader.LoaderUtils;
 import com.opengamma.strata.loader.csv.QuotesCsvLoader;
 import com.opengamma.strata.loader.csv.RatesCalibrationCsvLoader;
 import com.opengamma.strata.market.curve.CurveGroupName;
@@ -58,20 +58,23 @@ import com.opengamma.strata.market.id.IndexRateId;
 import com.opengamma.strata.market.id.QuoteId;
 
 /**
- * Test for curve calibration with 2 curves in USD. 
+ * Test for multi-currency curve calibration with 4 curves (2 in USD and 2 in EUR). 
  * <p>
- * One curve is used for Discounting and Fed Fund forward.
- * The other curve is used for Libor 3M forward. 
+ * The curves are
+ *  - Discounting and Fed Fund forward in USD
+ *  - USD Libor 3M forward. 
+ *  - Discounting and EONIA forward in EUR
+ *  - EUR Euribor 3M forward. 
  * <p>
  * Curve configuration and market data loaded from csv files.
- * Tests that the trades used for calibration have a PV of 0.
+ * Tests that the trades used for calibration have a total converted PV of 0.
  */
-public class CalibrationCheckExample {
+public class CalibrationXCcyCheckExample {
 
   /**
    * The valuation date.
    */
-  private static final LocalDate VALUATION_DATE = LocalDate.of(2015, 7, 21);
+  private static final LocalDate VALUATION_DATE = LocalDate.of(2015, 11, 2);
   /**
    * The empty time-series.
    */
@@ -88,7 +91,7 @@ public class CalibrationCheckExample {
   /**
    * The curve group name.
    */
-  private static final CurveGroupName CURVE_GROUP_NAME = CurveGroupName.of("USD-DSCON-LIBOR3M");
+  private static final CurveGroupName CURVE_GROUP_NAME = CurveGroupName.of("USD-EUR-XCCY");
 
   /**
    * The location of the data files.
@@ -98,27 +101,22 @@ public class CalibrationCheckExample {
    * The location of the curve calibration groups file.
    */
   private static final ResourceLocator GROUPS_RESOURCE =
-      ResourceLocator.of(ResourceLocator.FILE_URL_PREFIX + PATH_CONFIG + "curves/groups.csv");
+      ResourceLocator.of(ResourceLocator.FILE_URL_PREFIX + PATH_CONFIG + "curves/groups-xccy.csv");
   /**
    * The location of the curve calibration settings file.
    */
   private static final ResourceLocator SETTINGS_RESOURCE =
-      ResourceLocator.of(ResourceLocator.FILE_URL_PREFIX + PATH_CONFIG + "curves/settings.csv");
+      ResourceLocator.of(ResourceLocator.FILE_URL_PREFIX + PATH_CONFIG + "curves/settings-xccy.csv");
   /**
    * The location of the curve calibration nodes file.
    */
   private static final ResourceLocator CALIBRATION_RESOURCE =
-      ResourceLocator.of(ResourceLocator.FILE_URL_PREFIX + PATH_CONFIG + "curves/calibrations.csv");
+      ResourceLocator.of(ResourceLocator.FILE_URL_PREFIX + PATH_CONFIG + "curves/calibrations-xccy.csv");
   /**
    * The location of the market quotes file.
    */
   private static final ResourceLocator QUOTES_RESOURCE =
-      ResourceLocator.of(ResourceLocator.FILE_URL_PREFIX + PATH_CONFIG + "quotes/quotes.csv");
-
-  static {
-    // TODO: remove when Joda-Beans issue fixed
-    LoaderUtils.findIndex("USD-LIBOR-3M");
-  }
+      ResourceLocator.of(ResourceLocator.FILE_URL_PREFIX + PATH_CONFIG + "quotes/quotes-xccy.csv");
 
   //-------------------------------------------------------------------------
   /** 
@@ -145,6 +143,8 @@ public class CalibrationCheckExample {
         output = output + " with value: " + ca;
       } else {
         MultiCurrencyAmount pvMCA = (MultiCurrencyAmount) pvValue;
+        double pvConverted = pvMCA.convertedTo(USD, null).getAmount();
+        ArgChecker.isTrue(Math.abs(pvConverted) < TOLERANCE_PV, "PV should be small");
         output = output + " with values: " + pvMCA;
       }
       System.out.println(output);
@@ -191,8 +191,6 @@ public class CalibrationCheckExample {
     MarketEnvironmentBuilder snapshotBuilder =
         MarketEnvironment.builder()
             .valuationDate(VALUATION_DATE)
-            .addTimeSeries(IndexRateId.of(USD_LIBOR_3M), TS_EMTPY)
-            .addTimeSeries(IndexRateId.of(USD_FED_FUND), TS_EMTPY)
             .addValues(quotes);
     MarketEnvironment snapshot = snapshotBuilder.build();
 
