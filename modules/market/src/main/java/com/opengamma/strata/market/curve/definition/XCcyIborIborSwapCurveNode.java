@@ -27,16 +27,16 @@ import com.google.common.collect.ImmutableSet;
 import com.opengamma.strata.basics.BuySell;
 import com.opengamma.strata.basics.market.ObservableKey;
 import com.opengamma.strata.basics.market.ObservableValues;
-import com.opengamma.strata.finance.rate.swap.SwapTrade;
-import com.opengamma.strata.finance.rate.swap.type.XCcyIborIborSwapTemplate;
 import com.opengamma.strata.market.curve.DatedCurveParameterMetadata;
 import com.opengamma.strata.market.curve.TenorCurveNodeMetadata;
 import com.opengamma.strata.market.value.ValueType;
+import com.opengamma.strata.product.rate.swap.SwapTrade;
+import com.opengamma.strata.product.rate.swap.type.XCcyIborIborSwapTemplate;
 
 /**
- * A curve node whose instrument is a Ibor-Ibor interest rate swap.
+ * A curve node whose instrument is a cross-currency Ibor-Ibor interest rate swap.
  * <p>
- * The spread or market quote is on the first Ibor leg.
+ * Two market quotes are required, one for the spread and one for the FX rate.
  */
 @BeanDefinition
 public final class XCcyIborIborSwapCurveNode
@@ -72,13 +72,18 @@ public final class XCcyIborIborSwapCurveNode
    * @param fxKey  the key identifying the FX rate for the near date used when building the instrument for the node
    * @return a node whose instrument is built from the template using a market rate
    */
-  public static XCcyIborIborSwapCurveNode of(XCcyIborIborSwapTemplate template, ObservableKey spreadKey, ObservableKey fxKey) {
+  public static XCcyIborIborSwapCurveNode of(
+      XCcyIborIborSwapTemplate template,
+      ObservableKey spreadKey,
+      ObservableKey fxKey) {
+
     return XCcyIborIborSwapCurveNode.builder()
         .template(template).spreadKey(spreadKey).fxKey(fxKey).spread(0.0d).build();
   }
 
   /**
-   * Returns a curve node for a Ibor-Ibor interest rate swap using the specified instrument template, rate key and spread.
+   * Returns a curve node for a cross-currency Ibor-Ibor interest rate swap using the
+   * specified instrument template, rate key and spread.
    *
    * @param template  the template defining the node instrument
    * @param spreadKey  the key identifying the market spread used when building the instrument for the node
@@ -87,10 +92,11 @@ public final class XCcyIborIborSwapCurveNode
    * @return a node whose instrument is built from the template using a market rate
    */
   public static XCcyIborIborSwapCurveNode of(
-      XCcyIborIborSwapTemplate template, 
-      ObservableKey spreadKey, 
-      ObservableKey fxKey, 
+      XCcyIborIborSwapTemplate template,
+      ObservableKey spreadKey,
+      ObservableKey fxKey,
       double spread) {
+
     return XCcyIborIborSwapCurveNode.builder()
         .template(template).spreadKey(spreadKey).fxKey(fxKey).spread(spread).build();
   }
