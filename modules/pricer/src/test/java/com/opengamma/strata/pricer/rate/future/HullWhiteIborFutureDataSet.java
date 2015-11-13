@@ -8,6 +8,7 @@ package com.opengamma.strata.pricer.rate.future;
 import static com.opengamma.strata.basics.currency.Currency.EUR;
 import static com.opengamma.strata.basics.date.DayCounts.ACT_ACT_ISDA;
 import static com.opengamma.strata.basics.index.IborIndices.EUR_EURIBOR_3M;
+import static com.opengamma.strata.basics.index.IborIndices.EUR_EURIBOR_6M;
 
 import java.time.LocalDate;
 
@@ -49,6 +50,10 @@ public class HullWhiteIborFutureDataSet {
   public static final HullWhiteOneFactorPiecewiseConstantConvexityFactorProvider CONVEXITY_FACTOR_PROVIDER =
       HullWhiteOneFactorPiecewiseConstantConvexityFactorProvider.of(MODEL_PARAMETERS, ACT_ACT_ISDA, VALUATION);
 
+  public static HullWhiteOneFactorPiecewiseConstantConvexityFactorProvider createHullWhiteProvider(LocalDate valuationDate) {
+    return HullWhiteOneFactorPiecewiseConstantConvexityFactorProvider.of(MODEL_PARAMETERS, ACT_ACT_ISDA, valuationDate);
+  }
+
   /*
    * Rates provider
    */
@@ -67,6 +72,13 @@ public class HullWhiteIborFutureDataSet {
   private static final CurveMetadata META_FWD3 = Curves.zeroRates(FWD3_NAME, ACT_ACT_ISDA);
   private static final InterpolatedNodalCurve FWD3_CURVE =
       InterpolatedNodalCurve.of(META_FWD3, FWD3_TIME, FWD3_RATE, INTERPOLATOR);
+  private static final DoubleArray FWD6_TIME = DoubleArray.of(0.0, 0.5, 1.0, 2.0, 5.0, 10.0);
+  private static final DoubleArray FWD6_RATE = DoubleArray.of(0.0150, 0.0125, 0.0150, 0.0175, 0.0150, 0.0150);
+  /** Forward curve name */
+  public static final CurveName FWD6_NAME = CurveName.of("EUR EURIBOR 6M");
+  private static final CurveMetadata META_FWD6 = Curves.zeroRates(FWD6_NAME, ACT_ACT_ISDA);
+  private static final InterpolatedNodalCurve FWD6_CURVE =
+      InterpolatedNodalCurve.of(META_FWD6, FWD6_TIME, FWD6_RATE, INTERPOLATOR);
   /**  Rates provider  */
   public static final ImmutableRatesProvider RATE_PROVIDER = ImmutableRatesProvider.builder()
       .discountCurves(ImmutableMap.of(EUR, DSC_CURVE))
@@ -74,6 +86,16 @@ public class HullWhiteIborFutureDataSet {
       .fxMatrix(FxMatrix.empty())
       .valuationDate(VALUATION)
       .build();
+
+  public static ImmutableRatesProvider createRatesProvider(LocalDate valuationDate) {
+    return ImmutableRatesProvider.builder()
+        .discountCurves(ImmutableMap.of(EUR, DSC_CURVE))
+        .indexCurves(ImmutableMap.of(EUR_EURIBOR_3M, FWD3_CURVE))
+        .indexCurves(ImmutableMap.of(EUR_EURIBOR_6M, FWD6_CURVE))
+        .fxMatrix(FxMatrix.empty())
+        .valuationDate(valuationDate)
+        .build();
+  }
 
   /*
    * Instruments

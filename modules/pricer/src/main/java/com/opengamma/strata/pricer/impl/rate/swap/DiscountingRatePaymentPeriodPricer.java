@@ -12,7 +12,9 @@ import java.time.LocalDate;
 import com.google.common.collect.ImmutableList;
 import com.opengamma.strata.basics.currency.Currency;
 import com.opengamma.strata.basics.currency.CurrencyAmount;
+import com.opengamma.strata.basics.index.IborIndex;
 import com.opengamma.strata.collect.ArgChecker;
+import com.opengamma.strata.finance.rate.IborRateObservation;
 import com.opengamma.strata.finance.rate.RateObservation;
 import com.opengamma.strata.finance.rate.swap.CompoundingMethod;
 import com.opengamma.strata.finance.rate.swap.FxReset;
@@ -71,6 +73,26 @@ public class DiscountingRatePaymentPeriodPricer
     // fxRate is 1 if no FX conversion
     double notional = period.getNotional() * fxRate(period, provider);
     return accrualWithNotional(period, notional, provider);
+  }
+
+  @Override
+  public double presentValueCashFlowEquivalent(RatePaymentPeriod period, RatesProvider provider) {
+    double notional = period.getNotional() * fxRate(period, provider);
+    if (period.getAccrualPeriods().size() == 1) {
+      RateAccrualPeriod accrualPeriod = period.getAccrualPeriods().get(0);
+      if (accrualPeriod.getRateObservation() instanceof IborRateObservation) {
+        IborRateObservation obs = ((IborRateObservation) accrualPeriod.getRateObservation());
+        IborIndex index = obs.getIndex();
+        LocalDate fixingStartDate = index.calculateEffectiveFromFixing(obs.getFixingDate());
+        LocalDate fixingEndDate = index.calculateMaturityFromEffective(fixingStartDate);
+        double fixingYearFraction = index.getDayCount().yearFraction(fixingStartDate, fixingEndDate);
+        double betaDf = (1d + fixingYearFraction * provider.iborIndexRates(index).rate(obs.getFixingDate()))
+            * provider.discountFactor(period.getCurrency(), period.getPaymentDate());
+        return betaDf * notional;
+      }
+      throw new IllegalArgumentException("RateObservation should be IborRateObservation"); // TODO
+    }
+    throw new IllegalArgumentException("rate payment should not be compounding"); // TODO
   }
 
   @Override
@@ -252,6 +274,31 @@ public class DiscountingRatePaymentPeriodPricer
     double notional = period.getNotional() * fxRate(period, provider);
     sensiAccrual = sensiAccrual.multipliedBy(notional);
     return sensiFx.combinedWith(sensiAccrual);
+  }
+
+  @Override
+  // TODO
+  public PointSensitivityBuilder presentValueSensitivityCashFlowEquivalent(RatePaymentPeriod period,
+      RatesProvider provider) {
+    // forecastValue * discountFactor
+    double notional = period.getNotional() * fxRate(period, provider);
+    if (period.getAccrualPeriods().size() == 1) {
+      RateAccrualPeriod accrualPeriod = period.getAccrualPeriods().get(0);
+      if (accrualPeriod.getRateObservation() instanceof IborRateObservation) {
+        double paymentYearFraction = accrualPeriod.getYearFraction();
+        IborRateObservation obs = ((IborRateObservation) accrualPeriod.getRateObservation());
+        IborIndex index = obs.getIndex();
+        LocalDate fixingStartDate = index.calculateEffectiveFromFixing(obs.getFixingDate());
+        LocalDate fixingEndDate = index.calculateMaturityFromEffective(fixingStartDate);
+        double fixingYearFraction = index.getDayCount().yearFraction(fixingStartDate, fixingEndDate);
+        double beta = (1d + fixingYearFraction * provider.iborIndexRates(index).rate(obs.getFixingDate()))
+            * provider.discountFactor(period.getCurrency(), period.getPaymentDate());
+        double df = provider.discountFactor(period.getCurrency(), fixingStartDate);
+        return null;
+      }
+      throw new IllegalArgumentException("RateObservation should be IborRateObservation"); // TODO
+    }
+    throw new IllegalArgumentException("rate payment should not be compounding"); // TODO
   }
 
   @Override

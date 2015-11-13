@@ -88,6 +88,29 @@ public final class HullWhiteOneFactorPiecewiseConstantConvexityFactorProvider im
     double endTime = relativeYearFraction(endDate);
     return MODEL.futuresConvexityFactor(parameters, referenceTime, startTime, endTime);
   }
+  
+  /**
+   * Computes the alpha value for the specified period with respect to the maturity date.
+   * <p>
+   * The alpha is computed with a bond numeraire of {@code numeraireDate}.
+   * 
+   * @param startDate  the start date of the period
+   * @param endDate  the end date of the period
+   * @param numeraireDate  the numeraire date
+   * @param maturityDate  the maturity date
+   * @return  the alpha
+   */
+  public double alpha(LocalDate startDate, LocalDate endDate, LocalDate numeraireDate, LocalDate maturityDate) {
+    double startTime = relativeYearFraction(startDate);
+    double endTime = relativeYearFraction(endDate);
+    double numeraireTime = relativeYearFraction(numeraireDate);
+    double maturityTime = relativeYearFraction(maturityDate);
+    return MODEL.alpha(parameters, startTime, endTime, numeraireTime, maturityTime);
+  }
+
+  public HullWhiteOneFactorPiecewiseConstantInterestRateModel getModel() {
+    return MODEL;
+  }
 
   private double relativeYearFraction(LocalDate date) {
     return dayCount.relativeYearFraction(valuationDate, date);

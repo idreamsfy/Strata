@@ -63,6 +63,11 @@ public class DiscountingKnownAmountPaymentPeriodPricer
   }
 
   @Override
+  public double presentValueCashFlowEquivalent(KnownAmountPaymentPeriod period, RatesProvider provider) {
+    return presentValue(period, provider);
+  }
+
+  @Override
   public double accruedInterest(KnownAmountPaymentPeriod period, RatesProvider provider) {
     // no day count available, so return the simple day-based fraction
     LocalDate valDate = provider.getValuationDate();
@@ -89,6 +94,13 @@ public class DiscountingKnownAmountPaymentPeriodPricer
   @Override
   public PointSensitivityBuilder forecastValueSensitivity(KnownAmountPaymentPeriod period, RatesProvider provider) {
     return PointSensitivityBuilder.none();
+  }
+
+  @Override
+  public PointSensitivityBuilder presentValueSensitivityCashFlowEquivalent(
+      KnownAmountPaymentPeriod period,
+      RatesProvider provider) {
+    return paymentPricer.presentValueSensitivity(period.getPayment(), provider);
   }
 
   @Override
