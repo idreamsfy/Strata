@@ -14,12 +14,6 @@ import com.opengamma.strata.basics.currency.Currency;
 import com.opengamma.strata.basics.currency.CurrencyAmount;
 import com.opengamma.strata.basics.index.IborIndex;
 import com.opengamma.strata.collect.ArgChecker;
-import com.opengamma.strata.finance.rate.IborRateObservation;
-import com.opengamma.strata.finance.rate.RateObservation;
-import com.opengamma.strata.finance.rate.swap.CompoundingMethod;
-import com.opengamma.strata.finance.rate.swap.FxReset;
-import com.opengamma.strata.finance.rate.swap.RateAccrualPeriod;
-import com.opengamma.strata.finance.rate.swap.RatePaymentPeriod;
 import com.opengamma.strata.market.explain.ExplainKey;
 import com.opengamma.strata.market.explain.ExplainMapBuilder;
 import com.opengamma.strata.market.sensitivity.PointSensitivityBuilder;
@@ -28,6 +22,12 @@ import com.opengamma.strata.market.value.FxIndexRates;
 import com.opengamma.strata.pricer.rate.RateObservationFn;
 import com.opengamma.strata.pricer.rate.RatesProvider;
 import com.opengamma.strata.pricer.rate.swap.PaymentPeriodPricer;
+import com.opengamma.strata.product.rate.IborRateObservation;
+import com.opengamma.strata.product.rate.RateObservation;
+import com.opengamma.strata.product.rate.swap.CompoundingMethod;
+import com.opengamma.strata.product.rate.swap.FxReset;
+import com.opengamma.strata.product.rate.swap.RateAccrualPeriod;
+import com.opengamma.strata.product.rate.swap.RatePaymentPeriod;
 
 /**
  * Pricer implementation for swap payment periods based on a rate.
@@ -80,7 +80,7 @@ public class DiscountingRatePaymentPeriodPricer
     double notional = period.getNotional() * fxRate(period, provider);
     if (period.getAccrualPeriods().size() == 1) {
       RateAccrualPeriod accrualPeriod = period.getAccrualPeriods().get(0);
-      if (accrualPeriod.getRateObservation() instanceof IborRateObservation) {
+      if (accrualPeriod.getRateObservation() instanceof IborRateObservation) { 
         IborRateObservation obs = ((IborRateObservation) accrualPeriod.getRateObservation());
         IborIndex index = obs.getIndex();
         LocalDate fixingStartDate = index.calculateEffectiveFromFixing(obs.getFixingDate());

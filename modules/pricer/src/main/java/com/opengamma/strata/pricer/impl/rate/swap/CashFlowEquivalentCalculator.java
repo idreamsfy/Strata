@@ -15,16 +15,16 @@ import com.opengamma.strata.basics.currency.CurrencyAmount;
 import com.opengamma.strata.basics.currency.Payment;
 import com.opengamma.strata.basics.index.IborIndex;
 import com.opengamma.strata.basics.schedule.SchedulePeriod;
-import com.opengamma.strata.finance.rate.FixedRateObservation;
-import com.opengamma.strata.finance.rate.IborRateObservation;
-import com.opengamma.strata.finance.rate.swap.ExpandedSwap;
-import com.opengamma.strata.finance.rate.swap.ExpandedSwapLeg;
-import com.opengamma.strata.finance.rate.swap.KnownAmountPaymentPeriod;
-import com.opengamma.strata.finance.rate.swap.PaymentPeriod;
-import com.opengamma.strata.finance.rate.swap.RateAccrualPeriod;
-import com.opengamma.strata.finance.rate.swap.RatePaymentPeriod;
-import com.opengamma.strata.finance.rate.swap.SwapLegType;
-import com.opengamma.strata.finance.rate.swap.SwapProduct;
+import com.opengamma.strata.product.rate.FixedRateObservation;
+import com.opengamma.strata.product.rate.IborRateObservation;
+import com.opengamma.strata.product.rate.swap.ExpandedSwap;
+import com.opengamma.strata.product.rate.swap.ExpandedSwapLeg;
+import com.opengamma.strata.product.rate.swap.KnownAmountPaymentPeriod;
+import com.opengamma.strata.product.rate.swap.PaymentPeriod;
+import com.opengamma.strata.product.rate.swap.RateAccrualPeriod;
+import com.opengamma.strata.product.rate.swap.RatePaymentPeriod;
+import com.opengamma.strata.product.rate.swap.SwapLegType;
+import com.opengamma.strata.product.rate.swap.SwapProduct;
 
 public class CashFlowEquivalentCalculator {
 

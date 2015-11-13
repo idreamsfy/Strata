@@ -5,15 +5,6 @@ import java.time.LocalDate;
 import com.opengamma.strata.basics.currency.CurrencyAmount;
 import com.opengamma.strata.collect.ArgChecker;
 import com.opengamma.strata.collect.array.DoubleArray;
-import com.opengamma.strata.finance.rate.swap.ExpandedSwap;
-import com.opengamma.strata.finance.rate.swap.ExpandedSwapLeg;
-import com.opengamma.strata.finance.rate.swap.KnownAmountPaymentPeriod;
-import com.opengamma.strata.finance.rate.swap.PaymentEvent;
-import com.opengamma.strata.finance.rate.swap.PaymentPeriod;
-import com.opengamma.strata.finance.rate.swap.RatePaymentPeriod;
-import com.opengamma.strata.finance.rate.swap.SwapLegType;
-import com.opengamma.strata.finance.rate.swaption.ExpandedSwaption;
-import com.opengamma.strata.finance.rate.swaption.SwaptionProduct;
 import com.opengamma.strata.math.impl.statistics.distribution.NormalDistribution;
 import com.opengamma.strata.math.impl.statistics.distribution.ProbabilityDistribution;
 import com.opengamma.strata.pricer.impl.rate.swap.CashFlowEquivalentCalculator;
@@ -21,6 +12,15 @@ import com.opengamma.strata.pricer.rate.RatesProvider;
 import com.opengamma.strata.pricer.rate.future.HullWhiteOneFactorPiecewiseConstantConvexityFactorProvider;
 import com.opengamma.strata.pricer.rate.swap.PaymentEventPricer;
 import com.opengamma.strata.pricer.rate.swap.PaymentPeriodPricer;
+import com.opengamma.strata.product.rate.swap.ExpandedSwap;
+import com.opengamma.strata.product.rate.swap.ExpandedSwapLeg;
+import com.opengamma.strata.product.rate.swap.KnownAmountPaymentPeriod;
+import com.opengamma.strata.product.rate.swap.PaymentEvent;
+import com.opengamma.strata.product.rate.swap.PaymentPeriod;
+import com.opengamma.strata.product.rate.swap.RatePaymentPeriod;
+import com.opengamma.strata.product.rate.swap.SwapLegType;
+import com.opengamma.strata.product.rate.swaption.ExpandedSwaption;
+import com.opengamma.strata.product.rate.swaption.SwaptionProduct;
 
 public class HullWhiteSwaptionPhysicalProductPricer {
 

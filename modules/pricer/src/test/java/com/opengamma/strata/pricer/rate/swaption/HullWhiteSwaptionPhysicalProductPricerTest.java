@@ -33,20 +33,20 @@ import com.opengamma.strata.basics.schedule.PeriodicSchedule;
 import com.opengamma.strata.basics.schedule.RollConventions;
 import com.opengamma.strata.basics.schedule.StubConvention;
 import com.opengamma.strata.basics.value.ValueSchedule;
-import com.opengamma.strata.finance.rate.swap.FixedRateCalculation;
-import com.opengamma.strata.finance.rate.swap.IborRateCalculation;
-import com.opengamma.strata.finance.rate.swap.NotionalSchedule;
-import com.opengamma.strata.finance.rate.swap.PaymentSchedule;
-import com.opengamma.strata.finance.rate.swap.RateCalculationSwapLeg;
-import com.opengamma.strata.finance.rate.swap.Swap;
-import com.opengamma.strata.finance.rate.swap.SwapLeg;
-import com.opengamma.strata.finance.rate.swaption.CashSettlement;
-import com.opengamma.strata.finance.rate.swaption.CashSettlementMethod;
-import com.opengamma.strata.finance.rate.swaption.PhysicalSettlement;
-import com.opengamma.strata.finance.rate.swaption.Swaption;
 import com.opengamma.strata.pricer.rate.ImmutableRatesProvider;
 import com.opengamma.strata.pricer.rate.future.HullWhiteIborFutureDataSet;
 import com.opengamma.strata.pricer.rate.future.HullWhiteOneFactorPiecewiseConstantConvexityFactorProvider;
+import com.opengamma.strata.product.rate.swap.FixedRateCalculation;
+import com.opengamma.strata.product.rate.swap.IborRateCalculation;
+import com.opengamma.strata.product.rate.swap.NotionalSchedule;
+import com.opengamma.strata.product.rate.swap.PaymentSchedule;
+import com.opengamma.strata.product.rate.swap.RateCalculationSwapLeg;
+import com.opengamma.strata.product.rate.swap.Swap;
+import com.opengamma.strata.product.rate.swap.SwapLeg;
+import com.opengamma.strata.product.rate.swaption.CashSettlement;
+import com.opengamma.strata.product.rate.swaption.CashSettlementMethod;
+import com.opengamma.strata.product.rate.swaption.PhysicalSettlement;
+import com.opengamma.strata.product.rate.swaption.Swaption;
 
 /**
  * Test {@link HullWhiteSwaptionPhysicalProductPricer}.
