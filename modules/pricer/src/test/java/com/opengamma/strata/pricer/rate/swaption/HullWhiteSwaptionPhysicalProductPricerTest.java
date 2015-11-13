@@ -16,6 +16,8 @@ import static com.opengamma.strata.basics.index.IborIndices.EUR_EURIBOR_6M;
 import static com.opengamma.strata.basics.schedule.Frequency.P12M;
 import static com.opengamma.strata.basics.schedule.Frequency.P6M;
 import static com.opengamma.strata.collect.TestHelper.dateUtc;
+import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertTrue;
 
 import java.time.LocalDate;
 import java.time.ZonedDateTime;
@@ -33,9 +35,13 @@ import com.opengamma.strata.basics.schedule.PeriodicSchedule;
 import com.opengamma.strata.basics.schedule.RollConventions;
 import com.opengamma.strata.basics.schedule.StubConvention;
 import com.opengamma.strata.basics.value.ValueSchedule;
+import com.opengamma.strata.collect.DoubleArrayMath;
+import com.opengamma.strata.collect.array.DoubleArray;
+import com.opengamma.strata.market.sensitivity.CurveCurrencyParameterSensitivities;
+import com.opengamma.strata.market.sensitivity.PointSensitivities;
 import com.opengamma.strata.pricer.rate.ImmutableRatesProvider;
 import com.opengamma.strata.pricer.rate.future.HullWhiteIborFutureDataSet;
-import com.opengamma.strata.pricer.rate.future.HullWhiteOneFactorPiecewiseConstantConvexityFactorProvider;
+import com.opengamma.strata.pricer.sensitivity.RatesFiniteDifferenceSensitivityCalculator;
 import com.opengamma.strata.product.rate.swap.FixedRateCalculation;
 import com.opengamma.strata.product.rate.swap.IborRateCalculation;
 import com.opengamma.strata.product.rate.swap.NotionalSchedule;
@@ -55,7 +61,7 @@ import com.opengamma.strata.product.rate.swaption.Swaption;
 public class HullWhiteSwaptionPhysicalProductPricerTest {
 
   private static final LocalDate VALUATION = LocalDate.of(2011, 7, 7);
-  private static final HullWhiteOneFactorPiecewiseConstantConvexityFactorProvider HW_PROVIDER =
+  private static final HullWhiteOneFactorPiecewiseConstantSwaptionProvider HW_PROVIDER =
       HullWhiteIborFutureDataSet.createHullWhiteProvider(VALUATION);
   private static final ImmutableRatesProvider RATE_PROVIDER = HullWhiteIborFutureDataSet.createRatesProvider(VALUATION);
 
@@ -138,7 +144,7 @@ public class HullWhiteSwaptionPhysicalProductPricerTest {
       .expiryDate(AdjustableDate.of(MATURITY.toLocalDate(), BDA_MF))
       .expiryTime(MATURITY.toLocalTime())
       .expiryZone(MATURITY.getZone())
-      .swaptionSettlement(PAR_YIELD)
+      .swaptionSettlement(PhysicalSettlement.DEFAULT)
       .longShort(LONG)
       .underlying(SWAP_REC)
       .build();
@@ -147,7 +153,7 @@ public class HullWhiteSwaptionPhysicalProductPricerTest {
       .expiryDate(AdjustableDate.of(MATURITY.toLocalDate(), BDA_MF))
       .expiryTime(MATURITY.toLocalTime())
       .expiryZone(MATURITY.getZone())
-      .swaptionSettlement(PAR_YIELD)
+      .swaptionSettlement(PhysicalSettlement.DEFAULT)
       .longShort(SHORT)
       .underlying(SWAP_REC)
       .build();
@@ -156,7 +162,7 @@ public class HullWhiteSwaptionPhysicalProductPricerTest {
       .expiryDate(AdjustableDate.of(MATURITY.toLocalDate(), BDA_MF))
       .expiryTime(MATURITY.toLocalTime())
       .expiryZone(MATURITY.getZone())
-      .swaptionSettlement(PAR_YIELD)
+      .swaptionSettlement(PhysicalSettlement.DEFAULT)
       .longShort(LONG)
       .underlying(SWAP_PAY)
       .build();
@@ -165,25 +171,51 @@ public class HullWhiteSwaptionPhysicalProductPricerTest {
       .expiryDate(AdjustableDate.of(MATURITY.toLocalDate(), BDA_MF))
       .expiryTime(MATURITY.toLocalTime())
       .expiryZone(MATURITY.getZone())
-      .swaptionSettlement(PAR_YIELD)
+      .swaptionSettlement(PhysicalSettlement.DEFAULT)
       .longShort(SHORT)
       .underlying(SWAP_PAY)
       .build();
-  private static final Swaption SWAPTION_PHYS = Swaption.builder()
+  private static final Swaption SWAPTION_CASH = Swaption.builder()
       .expiryDate(AdjustableDate.of(MATURITY.toLocalDate()))
       .expiryTime(MATURITY.toLocalTime())
       .expiryZone(MATURITY.getZone())
       .longShort(LongShort.LONG)
-      .swaptionSettlement(PhysicalSettlement.DEFAULT)
+      .swaptionSettlement(PAR_YIELD)
       .underlying(SWAP_REC)
       .build();
 
+  private static final double TOL = 1.0e-12;
+  private static final double FD_TOL = 1.0e-7;
   private static final HullWhiteSwaptionPhysicalProductPricer PRICER = HullWhiteSwaptionPhysicalProductPricer.DEFAULT;
+  private static final RatesFiniteDifferenceSensitivityCalculator FD_CAL = new RatesFiniteDifferenceSensitivityCalculator(
+      FD_TOL);
 
-  public void test() {
+  public void test_presentValueSensitivity() {
+    CurveCurrencyParameterSensitivities fd = FD_CAL.sensitivity(RATE_PROVIDER,
+        p -> PRICER.presentValue(SWAPTION_PAY_LONG, p, HW_PROVIDER));
+  }
+
+  //-------------------------------------------------------------------------
+  public void regression_pv() {
     CurrencyAmount pv = PRICER.presentValue(SWAPTION_PAY_LONG, RATE_PROVIDER, HW_PROVIDER);
-    System.out.println(pv);
-    // [EUR 4213670.335092038]
-    // 
+    assertEquals(pv.getAmount(), 4213670.335092038, NOTIONAL * TOL);
+  }
+
+  public void regression_curveSensitivity() {
+    PointSensitivities point = PRICER.presentValueSensitivity(SWAPTION_PAY_LONG, RATE_PROVIDER, HW_PROVIDER).build();
+    CurveCurrencyParameterSensitivities computed = RATE_PROVIDER.curveParameterSensitivity(point);
+    double[] dscExp = new double[] {0.0, 0.0, 0.0, 0.0, -1.4127023229222856E7, -1.744958350376594E7 };
+    double[] fwdExp = new double[] {0.0, 0.0, 0.0, 0.0, -2.0295973516660026E8, 4.12336887967829E8 };
+    assertTrue(DoubleArrayMath.fuzzyEquals(computed.getSensitivity(HullWhiteIborFutureDataSet.DSC_NAME, EUR)
+        .getSensitivity().toArray(), dscExp, NOTIONAL * TOL));
+    assertTrue(DoubleArrayMath.fuzzyEquals(computed.getSensitivity(HullWhiteIborFutureDataSet.FWD6_NAME, EUR)
+        .getSensitivity().toArray(), fwdExp, NOTIONAL * TOL));
+  }
+
+  public void regression_hullWhiteSensitivity() {
+    DoubleArray computed = PRICER.presentValueHullWhiteSensitivity(SWAPTION_PAY_LONG, RATE_PROVIDER, HW_PROVIDER);
+    double[] expected = new double[] {
+      2.9365484063149095E7, 3.262667329294093E7, 7.226220286364576E7, 2.4446925038968167E8, 120476.73820821749 };
+    assertTrue(DoubleArrayMath.fuzzyEquals(computed.toArray(), expected, NOTIONAL * TOL));
   }
 }

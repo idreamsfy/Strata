@@ -77,22 +77,19 @@ public class DiscountingRatePaymentPeriodPricer
 
   @Override
   public double presentValueCashFlowEquivalent(RatePaymentPeriod period, RatesProvider provider) {
+    ArgChecker.isTrue(period.getAccrualPeriods().size() == 1, "rate payment should not be compounding");
+    RateAccrualPeriod accrualPeriod = period.getAccrualPeriods().get(0);
+    ArgChecker.isTrue(accrualPeriod.getRateObservation() instanceof IborRateObservation,
+        "RateObservation should be IborRateObservation");
+    IborRateObservation obs = ((IborRateObservation) accrualPeriod.getRateObservation());
+    IborIndex index = obs.getIndex();
+    LocalDate fixingStartDate = index.calculateEffectiveFromFixing(obs.getFixingDate());
+    LocalDate fixingEndDate = index.calculateMaturityFromEffective(fixingStartDate);
+    double fixingYearFraction = index.getDayCount().yearFraction(fixingStartDate, fixingEndDate);
+    double betaDf = (1d + fixingYearFraction * provider.iborIndexRates(index).rate(obs.getFixingDate()))
+        * provider.discountFactor(period.getCurrency(), period.getPaymentDate());
     double notional = period.getNotional() * fxRate(period, provider);
-    if (period.getAccrualPeriods().size() == 1) {
-      RateAccrualPeriod accrualPeriod = period.getAccrualPeriods().get(0);
-      if (accrualPeriod.getRateObservation() instanceof IborRateObservation) { 
-        IborRateObservation obs = ((IborRateObservation) accrualPeriod.getRateObservation());
-        IborIndex index = obs.getIndex();
-        LocalDate fixingStartDate = index.calculateEffectiveFromFixing(obs.getFixingDate());
-        LocalDate fixingEndDate = index.calculateMaturityFromEffective(fixingStartDate);
-        double fixingYearFraction = index.getDayCount().yearFraction(fixingStartDate, fixingEndDate);
-        double betaDf = (1d + fixingYearFraction * provider.iborIndexRates(index).rate(obs.getFixingDate()))
-            * provider.discountFactor(period.getCurrency(), period.getPaymentDate());
-        return betaDf * notional;
-      }
-      throw new IllegalArgumentException("RateObservation should be IborRateObservation"); // TODO
-    }
-    throw new IllegalArgumentException("rate payment should not be compounding"); // TODO
+    return betaDf * notional;
   }
 
   @Override
@@ -277,28 +274,28 @@ public class DiscountingRatePaymentPeriodPricer
   }
 
   @Override
-  // TODO
   public PointSensitivityBuilder presentValueSensitivityCashFlowEquivalent(RatePaymentPeriod period,
       RatesProvider provider) {
-    // forecastValue * discountFactor
+    ArgChecker.isTrue(period.getAccrualPeriods().size() == 1, "rate payment should not be compounding");
+    RateAccrualPeriod accrualPeriod = period.getAccrualPeriods().get(0);
+    ArgChecker.isTrue(accrualPeriod.getRateObservation() instanceof IborRateObservation,
+        "RateObservation should be IborRateObservation");
+    IborRateObservation obs = ((IborRateObservation) accrualPeriod.getRateObservation());
+    IborIndex index = obs.getIndex();
+    LocalDate fixingStartDate = index.calculateEffectiveFromFixing(obs.getFixingDate());
+    LocalDate fixingEndDate = index.calculateMaturityFromEffective(fixingStartDate);
+    double fixingYearFraction = index.getDayCount().yearFraction(fixingStartDate, fixingEndDate);
+    Currency currency = period.getCurrency();
+    LocalDate paymentDate = period.getPaymentDate();
+    double betaDf = (1d + fixingYearFraction * provider.iborIndexRates(index).rate(obs.getFixingDate()))
+        * provider.discountFactor(currency, paymentDate);
     double notional = period.getNotional() * fxRate(period, provider);
-    if (period.getAccrualPeriods().size() == 1) {
-      RateAccrualPeriod accrualPeriod = period.getAccrualPeriods().get(0);
-      if (accrualPeriod.getRateObservation() instanceof IborRateObservation) {
-        double paymentYearFraction = accrualPeriod.getYearFraction();
-        IborRateObservation obs = ((IborRateObservation) accrualPeriod.getRateObservation());
-        IborIndex index = obs.getIndex();
-        LocalDate fixingStartDate = index.calculateEffectiveFromFixing(obs.getFixingDate());
-        LocalDate fixingEndDate = index.calculateMaturityFromEffective(fixingStartDate);
-        double fixingYearFraction = index.getDayCount().yearFraction(fixingStartDate, fixingEndDate);
-        double beta = (1d + fixingYearFraction * provider.iborIndexRates(index).rate(obs.getFixingDate()))
-            * provider.discountFactor(period.getCurrency(), period.getPaymentDate());
-        double df = provider.discountFactor(period.getCurrency(), fixingStartDate);
-        return null;
-      }
-      throw new IllegalArgumentException("RateObservation should be IborRateObservation"); // TODO
-    }
-    throw new IllegalArgumentException("rate payment should not be compounding"); // TODO
+    PointSensitivityBuilder betaDfIborSensi = provider.iborIndexRates(index).ratePointSensitivity(obs.getFixingDate())
+        .multipliedBy(notional * fixingYearFraction * provider.discountFactor(currency, paymentDate));
+    PointSensitivityBuilder betaDfDScSensi = provider.discountFactors(currency).zeroRatePointSensitivity(paymentDate)
+        .multipliedBy(notional * (1d + fixingYearFraction * provider.iborIndexRates(index).rate(obs.getFixingDate())));
+    PointSensitivityBuilder sensiFx = fxRateSensitivity(period, provider).multipliedBy(betaDf);
+    return betaDfIborSensi.combinedWith(betaDfDScSensi).combinedWith(sensiFx);
   }
 
   @Override

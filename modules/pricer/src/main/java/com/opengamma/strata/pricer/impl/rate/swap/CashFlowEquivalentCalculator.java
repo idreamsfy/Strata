@@ -8,17 +8,20 @@ package com.opengamma.strata.pricer.impl.rate.swap;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.TreeMap;
 
 import com.opengamma.strata.basics.PayReceive;
 import com.opengamma.strata.basics.currency.CurrencyAmount;
 import com.opengamma.strata.basics.currency.Payment;
 import com.opengamma.strata.basics.index.IborIndex;
 import com.opengamma.strata.basics.schedule.SchedulePeriod;
+import com.opengamma.strata.collect.ArgChecker;
+import com.opengamma.strata.pricer.rate.RatesProvider;
+import com.opengamma.strata.pricer.rate.swap.PaymentPeriodPricer;
 import com.opengamma.strata.product.rate.FixedRateObservation;
 import com.opengamma.strata.product.rate.IborRateObservation;
 import com.opengamma.strata.product.rate.swap.ExpandedSwap;
 import com.opengamma.strata.product.rate.swap.ExpandedSwapLeg;
+import com.opengamma.strata.product.rate.swap.FxReset;
 import com.opengamma.strata.product.rate.swap.KnownAmountPaymentPeriod;
 import com.opengamma.strata.product.rate.swap.PaymentPeriod;
 import com.opengamma.strata.product.rate.swap.RateAccrualPeriod;
@@ -26,61 +29,74 @@ import com.opengamma.strata.product.rate.swap.RatePaymentPeriod;
 import com.opengamma.strata.product.rate.swap.SwapLegType;
 import com.opengamma.strata.product.rate.swap.SwapProduct;
 
-public class CashFlowEquivalentCalculator {
+/**
+ * Computes cash flow equivalent of products.
+ * <p>
+ * Reference: Henrard, M. The Irony in the derivatives discounting Part II: the crisis. Wilmott Journal, 2010, 2, 301-316. 
+ */
+public final class CashFlowEquivalentCalculator {
 
-  public static final CashFlowEquivalentCalculator DEFAULT = new CashFlowEquivalentCalculator();
-
-  public ExpandedSwapLeg cashFlowEquivalent(SwapProduct swap) {
-    // TODO exclude x-currency
+  /**
+   * Computes cash flow equivalent of swap product. 
+   * <p>
+   * The swap should be a fix-for-Ibor swap without compounding, and its swap legs should not involve {@code PaymentEvent}.
+   * <p>
+   * The return type is {@code ExpandedSwapLeg} where individual payments are represented in terms of {@code RatePaymentPeriod} 
+   * or {@code KnownAmountPaymentPeriod}. The present value of these payment should be computed by the method
+   * {@linkplain  PaymentPeriodPricer#presentValueCashFlowEquivalent(PaymentPeriod, RatesProvider) presentValueCashFlowEquivalent}.
+   * 
+   * @param swap  the swap product
+   * @return the cash flow equivalent
+   */
+  public static ExpandedSwapLeg cashFlowEquivalent(SwapProduct swap) {
     ExpandedSwap expanded = swap.expand();
     ExpandedSwapLeg fixedLeg = expanded.getLegs(SwapLegType.FIXED).get(0);
     ExpandedSwapLeg iborLeg = expanded.getLegs(SwapLegType.IBOR).get(0);
     List<PaymentPeriod> paymentPeriods = new ArrayList<PaymentPeriod>();
-    TreeMap<LocalDate, KnownAmountPaymentPeriod> flow = new TreeMap<>();
-    for (PaymentPeriod paymentPeriod : fixedLeg.getPaymentPeriods()) {
-      RatePaymentPeriod ratePaymentPeriod = (RatePaymentPeriod) paymentPeriod; // TODO check
-      RateAccrualPeriod rateAccrualPeriod = ratePaymentPeriod.getAccrualPeriods().get(0); // TODO check
-      double factor = rateAccrualPeriod.getYearFraction() *
-          ((FixedRateObservation) rateAccrualPeriod.getRateObservation()).getRate();
-      CurrencyAmount notional = ratePaymentPeriod.getNotionalAmount().multipliedBy(factor);
-      LocalDate startDate = rateAccrualPeriod.getStartDate();
-      LocalDate endDate = rateAccrualPeriod.getEndDate();
-      LocalDate paymentDate = ratePaymentPeriod.getPaymentDate();
-      KnownAmountPaymentPeriod pay = KnownAmountPaymentPeriod.of(
-          Payment.of(notional, paymentDate), SchedulePeriod.of(startDate, endDate));
-      paymentPeriods.add(pay);
-    }
-
+    ArgChecker.isTrue(fixedLeg.getPaymentEvents().isEmpty(), "PaymentEvent should be empty");
+    ArgChecker.isTrue(iborLeg.getPaymentEvents().isEmpty(), "PaymentEvent should be empty");
+    // ibor leg
     for (PaymentPeriod paymentPeriod : iborLeg.getPaymentPeriods()) {
-      RatePaymentPeriod ratePaymentPeriod = (RatePaymentPeriod) paymentPeriod; // TODO check
-      RateAccrualPeriod rateAccrualPeriod = ratePaymentPeriod.getAccrualPeriods().get(0); // TODO check
+      ArgChecker.isTrue(paymentPeriod instanceof RatePaymentPeriod, "rate payment should be RatePaymentPeriod");
+      RatePaymentPeriod ratePaymentPeriod = (RatePaymentPeriod) paymentPeriod;
+      ArgChecker.isTrue(ratePaymentPeriod.getAccrualPeriods().size() == 1, "rate payment should not be compounding");
+      RateAccrualPeriod rateAccrualPeriod = ratePaymentPeriod.getAccrualPeriods().get(0);
       CurrencyAmount notional = ratePaymentPeriod.getNotionalAmount();
-      LocalDate startDate = rateAccrualPeriod.getStartDate();
-      LocalDate endDate = rateAccrualPeriod.getEndDate();
       LocalDate paymentDate = ratePaymentPeriod.getPaymentDate();
-
-      IborRateObservation obs = ((IborRateObservation) rateAccrualPeriod.getRateObservation()); // TODO
+      IborRateObservation obs = ((IborRateObservation) rateAccrualPeriod.getRateObservation());
       IborIndex index = obs.getIndex();
       LocalDate fixingStartDate = index.calculateEffectiveFromFixing(obs.getFixingDate());
       LocalDate fixingEndDate = index.calculateMaturityFromEffective(fixingStartDate);
       double fixingYearFraction = index.getDayCount().yearFraction(fixingStartDate, fixingEndDate);
-
-      //      RatePaymentPeriod payStart = ratePaymentPeriod;
+      FxReset fxReset = ratePaymentPeriod.getFxReset().orElse(null);
       RatePaymentPeriod payStart = RatePaymentPeriod.builder()
-          .accrualPeriods(ratePaymentPeriod.getAccrualPeriods()) // TODO no compounding
+          .accrualPeriods(ratePaymentPeriod.getAccrualPeriods())
           .currency(ratePaymentPeriod.getCurrency())
+          .fxReset(fxReset)
           .dayCount(ratePaymentPeriod.getDayCount())
           .notional(ratePaymentPeriod.getNotional() * rateAccrualPeriod.getYearFraction() / fixingYearFraction)
           .paymentDate(paymentDate).build();
-
       KnownAmountPaymentPeriod payEnd = KnownAmountPaymentPeriod.of(
           Payment.of(notional.multipliedBy(-rateAccrualPeriod.getYearFraction() / fixingYearFraction), paymentDate),
-          SchedulePeriod.of(startDate, endDate));
+          SchedulePeriod.of(ratePaymentPeriod.getStartDate(), ratePaymentPeriod.getEndDate()));
       paymentPeriods.add(payStart);
       paymentPeriods.add(payEnd);
     }
-    paymentPeriods.addAll(flow.values());
-    
+    // fixed leg
+    for (PaymentPeriod paymentPeriod : fixedLeg.getPaymentPeriods()) {
+      ArgChecker.isTrue(paymentPeriod instanceof RatePaymentPeriod, "rate payment should be RatePaymentPeriod");
+      RatePaymentPeriod ratePaymentPeriod = (RatePaymentPeriod) paymentPeriod;
+      ArgChecker.isTrue(ratePaymentPeriod.getAccrualPeriods().size() == 1, "rate payment should not be compounding");
+      RateAccrualPeriod rateAccrualPeriod = ratePaymentPeriod.getAccrualPeriods().get(0);
+      double factor = rateAccrualPeriod.getYearFraction() *
+          ((FixedRateObservation) rateAccrualPeriod.getRateObservation()).getRate();
+      CurrencyAmount notional = ratePaymentPeriod.getNotionalAmount().multipliedBy(factor);
+      LocalDate paymentDate = ratePaymentPeriod.getPaymentDate();
+      KnownAmountPaymentPeriod pay = KnownAmountPaymentPeriod.of(Payment.of(notional, paymentDate),
+          SchedulePeriod.of(ratePaymentPeriod.getStartDate(), ratePaymentPeriod.getEndDate()));
+      paymentPeriods.add(pay);
+    }
+    // cash flow equivalent
     ExpandedSwapLeg leg = ExpandedSwapLeg.builder()
         .paymentPeriods(paymentPeriods)
         .payReceive(PayReceive.RECEIVE)

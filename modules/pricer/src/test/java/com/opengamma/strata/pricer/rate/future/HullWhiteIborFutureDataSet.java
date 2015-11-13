@@ -25,6 +25,7 @@ import com.opengamma.strata.market.curve.InterpolatedNodalCurve;
 import com.opengamma.strata.market.interpolator.CurveInterpolators;
 import com.opengamma.strata.pricer.impl.rate.model.HullWhiteOneFactorPiecewiseConstantParameters;
 import com.opengamma.strata.pricer.rate.ImmutableRatesProvider;
+import com.opengamma.strata.pricer.rate.swaption.HullWhiteOneFactorPiecewiseConstantSwaptionProvider;
 import com.opengamma.strata.product.Security;
 import com.opengamma.strata.product.SecurityLink;
 import com.opengamma.strata.product.TradeInfo;
@@ -50,8 +51,8 @@ public class HullWhiteIborFutureDataSet {
   public static final HullWhiteOneFactorPiecewiseConstantConvexityFactorProvider CONVEXITY_FACTOR_PROVIDER =
       HullWhiteOneFactorPiecewiseConstantConvexityFactorProvider.of(MODEL_PARAMETERS, ACT_ACT_ISDA, VALUATION);
 
-  public static HullWhiteOneFactorPiecewiseConstantConvexityFactorProvider createHullWhiteProvider(LocalDate valuationDate) {
-    return HullWhiteOneFactorPiecewiseConstantConvexityFactorProvider.of(MODEL_PARAMETERS, ACT_ACT_ISDA, valuationDate);
+  public static HullWhiteOneFactorPiecewiseConstantSwaptionProvider createHullWhiteProvider(LocalDate valuationDate) {
+    return HullWhiteOneFactorPiecewiseConstantSwaptionProvider.of(MODEL_PARAMETERS, ACT_ACT_ISDA, valuationDate);
   }
 
   /*
@@ -60,7 +61,8 @@ public class HullWhiteIborFutureDataSet {
   private static final CurveInterpolator INTERPOLATOR = CurveInterpolators.LINEAR;
   private static final DoubleArray DSC_TIME = DoubleArray.of(0.0, 0.5, 1.0, 2.0, 5.0, 10.0);
   private static final DoubleArray DSC_RATE = DoubleArray.of(0.0150, 0.0125, 0.0150, 0.0175, 0.0150, 0.0150);
-  private static final CurveName DSC_NAME = CurveName.of("EUR Dsc");
+  /** discounting curve name */
+  public static final CurveName DSC_NAME = CurveName.of("EUR Dsc");
   private static final CurveMetadata META_DSC = Curves.zeroRates(DSC_NAME, ACT_ACT_ISDA);
   private static final InterpolatedNodalCurve DSC_CURVE =
       InterpolatedNodalCurve.of(META_DSC, DSC_TIME, DSC_RATE, INTERPOLATOR);
