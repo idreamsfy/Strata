@@ -36,8 +36,14 @@ import com.opengamma.strata.product.rate.swaption.SwaptionProduct;
  */
 public class HullWhiteSwaptionPhysicalProductPricer {
 
+  /**
+   * Normal distribution function.
+   */
   private static final ProbabilityDistribution<Double> NORMAL = new NormalDistribution(0, 1);
 
+  /**
+   * Default implementation.
+   */
   public static final HullWhiteSwaptionPhysicalProductPricer DEFAULT =
       new HullWhiteSwaptionPhysicalProductPricer(PaymentPeriodPricer.instance());
 
@@ -96,13 +102,14 @@ public class HullWhiteSwaptionPhysicalProductPricer {
     return CurrencyAmount.of(cashFlowEquiv.getCurrency(), pv * (expanded.getLongShort().isLong() ? 1d : -1d));
   }
 
+  //-------------------------------------------------------------------------
   /**
    * Computes the currency exposure of the swaption product.
    * 
    * @param swaption  the product to price
    * @param ratesProvider  the rates provider
    * @param hwProvider  the Hull-White model parameter provider
-   * @return the present value of the swaption product
+   * @return the currency exposure of the swaption product
    */
   public MultiCurrencyAmount currencyExposure(
       SwaptionProduct swaption,
@@ -112,6 +119,7 @@ public class HullWhiteSwaptionPhysicalProductPricer {
     return MultiCurrencyAmount.of(presentValue(swaption, ratesProvider, hwProvider));
   }
 
+  //-------------------------------------------------------------------------
   /**
    * Calculates the present value sensitivity of the swaption product.
    * <p>
@@ -121,7 +129,7 @@ public class HullWhiteSwaptionPhysicalProductPricer {
    * @param swaption  the product to price
    * @param ratesProvider  the rates provider
    * @param hwProvider  the Hull-White model parameter provider
-   * @return the present value of the swaption product
+   * @return the present value curve sensitivity of the swaption product
    */
   public PointSensitivityBuilder presentValueSensitivity(
       SwaptionProduct swaption,
@@ -156,13 +164,14 @@ public class HullWhiteSwaptionPhysicalProductPricer {
     return expanded.getLongShort().isLong() ? point : point.multipliedBy(-1d);
   }
 
+  //-------------------------------------------------------------------------
   /**
    * Calculates the present value sensitivity to piecewise constant volatility parameters of the Hull-White model.
    * 
    * @param swaption  the product to price
    * @param ratesProvider  the rates provider
    * @param hwProvider  the Hull-White model parameter provider
-   * @return the present value of the swaption product
+   * @return the present value Hull-White model parameter sensitivity of the swaption product
    */
   public DoubleArray presentValueSensitivityHullWhiteParameter(
       SwaptionProduct swaption,
