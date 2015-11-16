@@ -34,6 +34,12 @@ import com.opengamma.strata.collect.ArgChecker;
 import com.opengamma.strata.pricer.impl.rate.model.HullWhiteOneFactorPiecewiseConstantInterestRateModel;
 import com.opengamma.strata.pricer.impl.rate.model.HullWhiteOneFactorPiecewiseConstantParameters;
 
+
+/**
+ * Provider for swaptions based on Hull-White one factor model with piecewise constant volatility.
+ * <p>
+ * Reference: Henrard, M. "The Irony in the derivatives discounting Part II: the crisis", Wilmott Journal, 2010, 2, 301-316
+ */
 @BeanDefinition(builderScope = "private")
 public final class HullWhiteOneFactorPiecewiseConstantSwaptionProvider implements ImmutableBean, Serializable {
 

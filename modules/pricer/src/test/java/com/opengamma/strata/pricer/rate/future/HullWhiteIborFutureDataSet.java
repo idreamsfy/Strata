@@ -37,6 +37,9 @@ import com.opengamma.strata.product.rate.future.IborFutureTrade;
  * Data set used for testing futures pricers under Hull-White one factor model. 
  */
 public class HullWhiteIborFutureDataSet {
+
+  // TODO sort out after #547 is merged
+
   private static final LocalDate VALUATION = LocalDate.of(2011, 5, 12);
 
   /*
@@ -51,6 +54,12 @@ public class HullWhiteIborFutureDataSet {
   public static final HullWhiteOneFactorPiecewiseConstantConvexityFactorProvider CONVEXITY_FACTOR_PROVIDER =
       HullWhiteOneFactorPiecewiseConstantConvexityFactorProvider.of(MODEL_PARAMETERS, ACT_ACT_ISDA, VALUATION);
 
+  /**
+   * Creates Hull-White one factor model parameters with specified valuation date for swaption
+   * 
+   * @param valuationDate  the valuation date
+   * @return  the parameter provider
+   */
   public static HullWhiteOneFactorPiecewiseConstantSwaptionProvider createHullWhiteProvider(LocalDate valuationDate) {
     return HullWhiteOneFactorPiecewiseConstantSwaptionProvider.of(MODEL_PARAMETERS, ACT_ACT_ISDA, valuationDate);
   }
@@ -89,6 +98,12 @@ public class HullWhiteIborFutureDataSet {
       .valuationDate(VALUATION)
       .build();
 
+  /**
+   * Creates rates provider with specified  valuation date. 
+   * 
+   * @param valuationDate  the valuation date
+   * @return  the rates provider
+   */
   public static ImmutableRatesProvider createRatesProvider(LocalDate valuationDate) {
     return ImmutableRatesProvider.builder()
         .discountCurves(ImmutableMap.of(EUR, DSC_CURVE))

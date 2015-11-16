@@ -1,10 +1,17 @@
+/**
+ * Copyright (C) 2015 - present by OpenGamma Inc. and the OpenGamma group of companies
+ * 
+ * Please see distribution for license.
+ */
 package com.opengamma.strata.pricer.rate.swaption;
 
 import java.time.LocalDate;
 
 import com.opengamma.strata.basics.currency.CurrencyAmount;
+import com.opengamma.strata.basics.currency.MultiCurrencyAmount;
 import com.opengamma.strata.basics.value.ValueDerivatives;
 import com.opengamma.strata.collect.ArgChecker;
+import com.opengamma.strata.collect.DoubleArrayMath;
 import com.opengamma.strata.collect.array.DoubleArray;
 import com.opengamma.strata.market.sensitivity.PointSensitivityBuilder;
 import com.opengamma.strata.math.impl.statistics.distribution.NormalDistribution;
@@ -22,6 +29,11 @@ import com.opengamma.strata.product.rate.swaption.ExpandedSwaption;
 import com.opengamma.strata.product.rate.swaption.SettlementType;
 import com.opengamma.strata.product.rate.swaption.SwaptionProduct;
 
+/**
+ * Pricer for swaption with physical settlement in Hull-White one factor model with piecewise constant volatility.
+ * <p>
+ * Reference: Henrard, M. "The Irony in the derivatives discounting Part II: the crisis", Wilmott Journal, 2010, 2, 301-316
+ */
 public class HullWhiteSwaptionPhysicalProductPricer {
 
   private static final ProbabilityDistribution<Double> NORMAL = new NormalDistribution(0, 1);
@@ -43,6 +55,16 @@ public class HullWhiteSwaptionPhysicalProductPricer {
     this.paymentPeriodPricer = ArgChecker.notNull(paymentPeriodPricer, "paymentPeriodPricer");
   }
 
+  /**
+   * Calculates the present value of the swaption product.
+   * <p>
+   * The result is expressed using the currency of the swapion.
+   * 
+   * @param swaption  the product to price
+   * @param ratesProvider  the rates provider
+   * @param hwProvider  the Hull-White model parameter provider
+   * @return the present value of the swaption product
+   */
   public CurrencyAmount presentValue(
       SwaptionProduct swaption,
       RatesProvider ratesProvider,
@@ -52,8 +74,11 @@ public class HullWhiteSwaptionPhysicalProductPricer {
     validate(expanded, ratesProvider, hwProvider);
     ExpandedSwap swap = expanded.getUnderlying();
     ExpandedSwapLeg cashFlowEquiv = CashFlowEquivalentCalculator.cashFlowEquivalent(swap);
-    int nPayments = cashFlowEquiv.getPaymentPeriods().size();
     LocalDate expiryDate = expanded.getExpiryDate();
+    if (expiryDate.isBefore(ratesProvider.getValuationDate())) { // Option has expired already
+      return CurrencyAmount.of(cashFlowEquiv.getCurrency(), 0d);
+    }
+    int nPayments = cashFlowEquiv.getPaymentPeriods().size();
     double[] alpha = new double[nPayments];
     double[] discountedCashFlow = new double[nPayments];
     for (int loopcf = 0; loopcf < nPayments; loopcf++) {
@@ -62,8 +87,8 @@ public class HullWhiteSwaptionPhysicalProductPricer {
       alpha[loopcf] = hwProvider.alpha(ratesProvider.getValuationDate(), expiryDate, expiryDate, paymentDate);
       discountedCashFlow[loopcf] = paymentPeriodPricer.presentValueCashFlowEquivalent(payment, ratesProvider);
     }
-    double kappa = hwProvider.getModel().kappa(DoubleArray.copyOf(discountedCashFlow), DoubleArray.copyOf(alpha));
     double omega = (swap.getLegs(SwapLegType.FIXED).get(0).getPayReceive().isPay() ? -1d : 1d);
+    double kappa = computeKappa(hwProvider, discountedCashFlow, alpha, omega);
     double pv = 0.0;
     for (int loopcf = 0; loopcf < nPayments; loopcf++) {
       pv += discountedCashFlow[loopcf] * NORMAL.getCDF(omega * (kappa + alpha[loopcf]));
@@ -71,6 +96,33 @@ public class HullWhiteSwaptionPhysicalProductPricer {
     return CurrencyAmount.of(cashFlowEquiv.getCurrency(), pv * (expanded.getLongShort().isLong() ? 1d : -1d));
   }
 
+  /**
+   * Computes the currency exposure of the swaption product.
+   * 
+   * @param swaption  the product to price
+   * @param ratesProvider  the rates provider
+   * @param hwProvider  the Hull-White model parameter provider
+   * @return the present value of the swaption product
+   */
+  public MultiCurrencyAmount currencyExposure(
+      SwaptionProduct swaption,
+      RatesProvider ratesProvider,
+      HullWhiteOneFactorPiecewiseConstantSwaptionProvider hwProvider) {
+
+    return MultiCurrencyAmount.of(presentValue(swaption, ratesProvider, hwProvider));
+  }
+
+  /**
+   * Calculates the present value sensitivity of the swaption product.
+   * <p>
+   * The present value sensitivity of the product is the sensitivity of the present value to
+   * the underlying curves.
+   * 
+   * @param swaption  the product to price
+   * @param ratesProvider  the rates provider
+   * @param hwProvider  the Hull-White model parameter provider
+   * @return the present value of the swaption product
+   */
   public PointSensitivityBuilder presentValueSensitivity(
       SwaptionProduct swaption,
       RatesProvider ratesProvider,
@@ -80,8 +132,11 @@ public class HullWhiteSwaptionPhysicalProductPricer {
     validate(expanded, ratesProvider, hwProvider);
     ExpandedSwap swap = expanded.getUnderlying();
     ExpandedSwapLeg cashFlowEquiv = CashFlowEquivalentCalculator.cashFlowEquivalent(swap);
-    int nPayments = cashFlowEquiv.getPaymentPeriods().size();
     LocalDate expiryDate = expanded.getExpiryDate();
+    if (expiryDate.isBefore(ratesProvider.getValuationDate())) { // Option has expired already
+      return PointSensitivityBuilder.none();
+    }
+    int nPayments = cashFlowEquiv.getPaymentPeriods().size();
     double[] alpha = new double[nPayments];
     double[] discountedCashFlow = new double[nPayments];
     for (int loopcf = 0; loopcf < nPayments; loopcf++) {
@@ -90,9 +145,8 @@ public class HullWhiteSwaptionPhysicalProductPricer {
       alpha[loopcf] = hwProvider.alpha(ratesProvider.getValuationDate(), expiryDate, expiryDate, paymentDate);
       discountedCashFlow[loopcf] = paymentPeriodPricer.presentValueCashFlowEquivalent(payment, ratesProvider);
     }
-    double kappa = hwProvider.getModel().kappa(DoubleArray.copyOf(discountedCashFlow), DoubleArray.copyOf(alpha));
     double omega = (swap.getLegs(SwapLegType.FIXED).get(0).getPayReceive().isPay() ? -1d : 1d);
-
+    double kappa = computeKappa(hwProvider, discountedCashFlow, alpha, omega);
     PointSensitivityBuilder point = PointSensitivityBuilder.none();
     for (int loopcf = 0; loopcf < nPayments; loopcf++) {
       PaymentPeriod payment = cashFlowEquiv.getPaymentPeriods().get(loopcf);
@@ -102,7 +156,15 @@ public class HullWhiteSwaptionPhysicalProductPricer {
     return expanded.getLongShort().isLong() ? point : point.multipliedBy(-1d);
   }
 
-  public DoubleArray presentValueHullWhiteSensitivity(
+  /**
+   * Calculates the present value sensitivity to piecewise constant volatility parameters of the Hull-White model.
+   * 
+   * @param swaption  the product to price
+   * @param ratesProvider  the rates provider
+   * @param hwProvider  the Hull-White model parameter provider
+   * @return the present value of the swaption product
+   */
+  public DoubleArray presentValueSensitivityHullWhiteParameter(
       SwaptionProduct swaption,
       RatesProvider ratesProvider,
       HullWhiteOneFactorPiecewiseConstantSwaptionProvider hwProvider) {
@@ -111,8 +173,11 @@ public class HullWhiteSwaptionPhysicalProductPricer {
     validate(expanded, ratesProvider, hwProvider);
     ExpandedSwap swap = expanded.getUnderlying();
     ExpandedSwapLeg cashFlowEquiv = CashFlowEquivalentCalculator.cashFlowEquivalent(swap);
-    int nPayments = cashFlowEquiv.getPaymentPeriods().size();
     LocalDate expiryDate = expanded.getExpiryDate();
+    if (expiryDate.isBefore(ratesProvider.getValuationDate())) { // Option has expired already
+      return DoubleArray.EMPTY;
+    }
+    int nPayments = cashFlowEquiv.getPaymentPeriods().size();
     double[] alpha = new double[nPayments];
     double[][] alphaAdjoint = new double[nPayments][];
     double[] discountedCashFlow = new double[nPayments];
@@ -125,10 +190,8 @@ public class HullWhiteSwaptionPhysicalProductPricer {
       alphaAdjoint[loopcf] = valueDeriv.getDerivatives();
       discountedCashFlow[loopcf] = paymentPeriodPricer.presentValueCashFlowEquivalent(payment, ratesProvider);
     }
-    double kappa = hwProvider.getModel().kappa(DoubleArray.copyOf(discountedCashFlow), DoubleArray.copyOf(alpha));
     double omega = (swap.getLegs(SwapLegType.FIXED).get(0).getPayReceive().isPay() ? -1d : 1d);
-    double pv = 0.0;
-
+    double kappa = computeKappa(hwProvider, discountedCashFlow, alpha, omega);
     int nParams = alphaAdjoint[0].length;
     double[] pvSensi = new double[nParams];
     double sign = (expanded.getLongShort().isLong() ? 1d : -1d);
@@ -136,22 +199,33 @@ public class HullWhiteSwaptionPhysicalProductPricer {
       for (int loopcf = 0; loopcf < nPayments; loopcf++) {
         pvSensi[i] += sign * discountedCashFlow[loopcf] * NORMAL.getPDF(omega * (kappa + alpha[loopcf])) * omega *
             alphaAdjoint[loopcf][i];
-        pv += discountedCashFlow[loopcf] * NORMAL.getCDF(omega * (kappa + alpha[loopcf]));
       }
     }
-    CurrencyAmount.of(cashFlowEquiv.getCurrency(), pv * (expanded.getLongShort().isLong() ? 1d : -1d));
     return DoubleArray.copyOf(pvSensi);
   }
 
   //-------------------------------------------------------------------------
   // validate that the rates and volatilities providers are coherent
   private void validate(ExpandedSwaption swaption, RatesProvider ratesProvider,
-      HullWhiteOneFactorPiecewiseConstantSwaptionProvider volatilityProvider) {
-    ArgChecker.isTrue(volatilityProvider.getValuationDateTime().toLocalDate().equals(ratesProvider.getValuationDate()),
+      HullWhiteOneFactorPiecewiseConstantSwaptionProvider hwProvider) {
+    ArgChecker.isTrue(hwProvider.getValuationDateTime().toLocalDate().equals(ratesProvider.getValuationDate()),
         "Hull-White model data and rate data should be for the same date");
     ArgChecker.isFalse(swaption.getUnderlying().isCrossCurrency(), "underlying swap should be single currency");
     ArgChecker.isTrue(swaption.getSwaptionSettlement().getSettlementType().equals(SettlementType.PHYSICAL),
         "swaption should be physical settlement");
+  }
+
+  // handling short time to expiry
+  private double computeKappa(HullWhiteOneFactorPiecewiseConstantSwaptionProvider hwProvider,
+      double[] discountedCashFlow, double[] alpha, double omega) {
+    double kappa = 0d;
+    if (DoubleArrayMath.fuzzyEqualsZero(alpha, 1.0e-9)) { // threshold coherent to rootfinder in kappa computation
+      double totalPv = DoubleArrayMath.sum(discountedCashFlow);
+      kappa = totalPv * omega > 0d ? Double.POSITIVE_INFINITY : Double.NEGATIVE_INFINITY;
+    } else {
+      kappa = hwProvider.getModel().kappa(DoubleArray.copyOf(discountedCashFlow), DoubleArray.copyOf(alpha));
+    }
+    return kappa;
   }
 
   // returns "correct" payment date
