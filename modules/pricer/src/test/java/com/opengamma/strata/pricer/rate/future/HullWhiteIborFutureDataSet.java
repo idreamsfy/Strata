@@ -51,8 +51,8 @@ public class HullWhiteIborFutureDataSet {
   private static final HullWhiteOneFactorPiecewiseConstantParameters MODEL_PARAMETERS =
       HullWhiteOneFactorPiecewiseConstantParameters.of(MEAN_REVERSION, VOLATILITY, VOLATILITY_TIME);
   /**  Hull-White one factor model parameters   */
-  public static final HullWhiteOneFactorPiecewiseConstantConvexityFactorProvider CONVEXITY_FACTOR_PROVIDER =
-      HullWhiteOneFactorPiecewiseConstantConvexityFactorProvider.of(MODEL_PARAMETERS, ACT_ACT_ISDA, VALUATION);
+  public static final HullWhiteOneFactorPiecewiseConstantParametersProvider HULL_WHITE_PARAMETER_PROVIDER =
+      HullWhiteOneFactorPiecewiseConstantParametersProvider.of(MODEL_PARAMETERS, ACT_ACT_ISDA, VALUATION);
 
   /**
    * Creates Hull-White one factor model parameters with specified valuation date for swaption
@@ -94,7 +94,7 @@ public class HullWhiteIborFutureDataSet {
   public static final ImmutableRatesProvider RATE_PROVIDER = ImmutableRatesProvider.builder()
       .discountCurves(ImmutableMap.of(EUR, DSC_CURVE))
       .indexCurves(ImmutableMap.of(EUR_EURIBOR_3M, FWD3_CURVE))
-      .fxMatrix(FxMatrix.empty())
+      .fxRateProvider(FxMatrix.empty())
       .valuationDate(VALUATION)
       .build();
 
