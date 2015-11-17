@@ -3,7 +3,7 @@
  *
  * Please see distribution for license.
  */
-package com.opengamma.strata.pricer.rate.future;
+package com.opengamma.strata.pricer.rate;
 
 import static com.opengamma.strata.basics.date.DayCounts.ACT_360;
 import static com.opengamma.strata.basics.date.DayCounts.ACT_ACT_ISDA;
@@ -24,6 +24,7 @@ import com.opengamma.strata.basics.value.ValueDerivatives;
 import com.opengamma.strata.collect.array.DoubleArray;
 import com.opengamma.strata.pricer.impl.rate.model.HullWhiteOneFactorPiecewiseConstantInterestRateModel;
 import com.opengamma.strata.pricer.impl.rate.model.HullWhiteOneFactorPiecewiseConstantParameters;
+import com.opengamma.strata.pricer.rate.HullWhiteOneFactorPiecewiseConstantParametersProvider;
 
 /**
  * Test {@link HullWhiteOneFactorPiecewiseConstantParametersProvider}.

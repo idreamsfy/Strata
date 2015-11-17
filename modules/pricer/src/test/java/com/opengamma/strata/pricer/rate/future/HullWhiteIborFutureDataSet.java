@@ -24,6 +24,7 @@ import com.opengamma.strata.market.curve.Curves;
 import com.opengamma.strata.market.curve.InterpolatedNodalCurve;
 import com.opengamma.strata.market.interpolator.CurveInterpolators;
 import com.opengamma.strata.pricer.impl.rate.model.HullWhiteOneFactorPiecewiseConstantParameters;
+import com.opengamma.strata.pricer.rate.HullWhiteOneFactorPiecewiseConstantParametersProvider;
 import com.opengamma.strata.pricer.rate.ImmutableRatesProvider;
 import com.opengamma.strata.product.Security;
 import com.opengamma.strata.product.SecurityLink;

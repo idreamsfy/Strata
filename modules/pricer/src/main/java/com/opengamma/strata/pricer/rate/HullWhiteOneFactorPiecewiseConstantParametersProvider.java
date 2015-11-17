@@ -3,7 +3,7 @@
  *
  * Please see distribution for license.
  */
-package com.opengamma.strata.pricer.rate.future;
+package com.opengamma.strata.pricer.rate;
 
 import java.io.Serializable;
 import java.time.LocalDate;

@@ -13,8 +13,8 @@ import com.opengamma.strata.basics.currency.Payment;
 import com.opengamma.strata.collect.array.DoubleArray;
 import com.opengamma.strata.market.sensitivity.PointSensitivityBuilder;
 import com.opengamma.strata.pricer.DiscountingPaymentPricer;
+import com.opengamma.strata.pricer.rate.HullWhiteOneFactorPiecewiseConstantParametersProvider;
 import com.opengamma.strata.pricer.rate.RatesProvider;
-import com.opengamma.strata.pricer.rate.future.HullWhiteOneFactorPiecewiseConstantParametersProvider;
 import com.opengamma.strata.product.rate.swaption.Swaption;
 import com.opengamma.strata.product.rate.swaption.SwaptionTrade;
 
@@ -107,7 +107,7 @@ public class HullWhiteSwaptionPhysicalTradePricer {
    * @param hwProvider  the Hull-White model parameter provider
    * @return the present value curve sensitivity of the swaption trade
    */
-  public PointSensitivityBuilder presentValueSensitivityStickyStrike(
+  public PointSensitivityBuilder presentValueSensitivity(
       SwaptionTrade trade,
       RatesProvider ratesProvider,
       HullWhiteOneFactorPiecewiseConstantParametersProvider hwProvider) {

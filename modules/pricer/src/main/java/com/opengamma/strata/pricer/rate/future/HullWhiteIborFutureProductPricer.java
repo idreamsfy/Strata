@@ -11,6 +11,7 @@ import com.opengamma.strata.basics.index.IborIndex;
 import com.opengamma.strata.collect.array.DoubleArray;
 import com.opengamma.strata.market.sensitivity.IborRateSensitivity;
 import com.opengamma.strata.market.sensitivity.PointSensitivities;
+import com.opengamma.strata.pricer.rate.HullWhiteOneFactorPiecewiseConstantParametersProvider;
 import com.opengamma.strata.pricer.rate.RatesProvider;
 import com.opengamma.strata.product.rate.future.IborFuture;
 

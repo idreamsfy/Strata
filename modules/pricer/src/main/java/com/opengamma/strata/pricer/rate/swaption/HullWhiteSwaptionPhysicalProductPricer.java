@@ -17,8 +17,8 @@ import com.opengamma.strata.market.sensitivity.PointSensitivityBuilder;
 import com.opengamma.strata.math.impl.statistics.distribution.NormalDistribution;
 import com.opengamma.strata.math.impl.statistics.distribution.ProbabilityDistribution;
 import com.opengamma.strata.pricer.impl.rate.swap.CashFlowEquivalentCalculator;
+import com.opengamma.strata.pricer.rate.HullWhiteOneFactorPiecewiseConstantParametersProvider;
 import com.opengamma.strata.pricer.rate.RatesProvider;
-import com.opengamma.strata.pricer.rate.future.HullWhiteOneFactorPiecewiseConstantParametersProvider;
 import com.opengamma.strata.pricer.rate.swap.PaymentPeriodPricer;
 import com.opengamma.strata.product.rate.swap.ExpandedSwap;
 import com.opengamma.strata.product.rate.swap.ExpandedSwapLeg;
@@ -41,6 +41,11 @@ public class HullWhiteSwaptionPhysicalProductPricer {
    * Normal distribution function.
    */
   private static final ProbabilityDistribution<Double> NORMAL = new NormalDistribution(0, 1);
+
+  /**
+   * The small parameter. 
+   */
+  private static final double SMALL = 1.0e-9;
 
   /**
    * Default implementation.
@@ -90,8 +95,8 @@ public class HullWhiteSwaptionPhysicalProductPricer {
     double[] discountedCashFlow = new double[nPayments];
     for (int loopcf = 0; loopcf < nPayments; loopcf++) {
       PaymentPeriod payment = cashFlowEquiv.getPaymentPeriods().get(loopcf);
-      LocalDate paymentDate = cashFlowEquivalentPaymnetDate(payment);
-      alpha[loopcf] = hwProvider.alpha(ratesProvider.getValuationDate(), expiryDate, expiryDate, paymentDate);
+      LocalDate maturityDate = cashFlowEquivalentMaturityDate(payment);
+      alpha[loopcf] = hwProvider.alpha(ratesProvider.getValuationDate(), expiryDate, expiryDate, maturityDate);
       discountedCashFlow[loopcf] = paymentPeriodPricer.presentValueCashFlowEquivalent(payment, ratesProvider);
     }
     double omega = (swap.getLegs(SwapLegType.FIXED).get(0).getPayReceive().isPay() ? -1d : 1d);
@@ -150,8 +155,8 @@ public class HullWhiteSwaptionPhysicalProductPricer {
     double[] discountedCashFlow = new double[nPayments];
     for (int loopcf = 0; loopcf < nPayments; loopcf++) {
       PaymentPeriod payment = cashFlowEquiv.getPaymentPeriods().get(loopcf);
-      LocalDate paymentDate = cashFlowEquivalentPaymnetDate(payment);
-      alpha[loopcf] = hwProvider.alpha(ratesProvider.getValuationDate(), expiryDate, expiryDate, paymentDate);
+      LocalDate maturityDate = cashFlowEquivalentMaturityDate(payment);
+      alpha[loopcf] = hwProvider.alpha(ratesProvider.getValuationDate(), expiryDate, expiryDate, maturityDate);
       discountedCashFlow[loopcf] = paymentPeriodPricer.presentValueCashFlowEquivalent(payment, ratesProvider);
     }
     double omega = (swap.getLegs(SwapLegType.FIXED).get(0).getPayReceive().isPay() ? -1d : 1d);
@@ -193,9 +198,9 @@ public class HullWhiteSwaptionPhysicalProductPricer {
     double[] discountedCashFlow = new double[nPayments];
     for (int loopcf = 0; loopcf < nPayments; loopcf++) {
       PaymentPeriod payment = cashFlowEquiv.getPaymentPeriods().get(loopcf);
-      LocalDate paymentDate = cashFlowEquivalentPaymnetDate(payment);
+      LocalDate maturityDate = cashFlowEquivalentMaturityDate(payment);
       ValueDerivatives valueDeriv = hwProvider.alphaAdjoint(
-          ratesProvider.getValuationDate(), expiryDate, expiryDate, paymentDate);
+          ratesProvider.getValuationDate(), expiryDate, expiryDate, maturityDate);
       alpha[loopcf] = valueDeriv.getValue();
       alphaAdjoint[loopcf] = valueDeriv.getDerivatives();
       discountedCashFlow[loopcf] = paymentPeriodPricer.presentValueCashFlowEquivalent(payment, ratesProvider);
@@ -203,12 +208,15 @@ public class HullWhiteSwaptionPhysicalProductPricer {
     double omega = (swap.getLegs(SwapLegType.FIXED).get(0).getPayReceive().isPay() ? -1d : 1d);
     double kappa = computeKappa(hwProvider, discountedCashFlow, alpha, omega);
     int nParams = alphaAdjoint[0].length;
+    if (Math.abs(kappa) > 1d / SMALL) { // decays exponentially
+      return DoubleArray.filled(nParams);
+    }
     double[] pvSensi = new double[nParams];
     double sign = (expanded.getLongShort().isLong() ? 1d : -1d);
     for (int i = 0; i < nParams; ++i) {
       for (int loopcf = 0; loopcf < nPayments; loopcf++) {
-        pvSensi[i] += sign * discountedCashFlow[loopcf] * NORMAL.getPDF(omega * (kappa + alpha[loopcf])) * omega *
-            alphaAdjoint[loopcf][i];
+        pvSensi[i] += sign * discountedCashFlow[loopcf] * NORMAL.getPDF(omega * (kappa + alpha[loopcf])) *
+            omega * alphaAdjoint[loopcf][i];
       }
     }
     return DoubleArray.copyOf(pvSensi);
@@ -229,7 +237,7 @@ public class HullWhiteSwaptionPhysicalProductPricer {
   private double computeKappa(HullWhiteOneFactorPiecewiseConstantParametersProvider hwProvider,
       double[] discountedCashFlow, double[] alpha, double omega) {
     double kappa = 0d;
-    if (DoubleArrayMath.fuzzyEqualsZero(alpha, 1.0e-9)) { // threshold coherent to rootfinder in kappa computation
+    if (DoubleArrayMath.fuzzyEqualsZero(alpha, SMALL)) { // threshold coherent to rootfinder in kappa computation
       double totalPv = DoubleArrayMath.sum(discountedCashFlow);
       kappa = totalPv * omega > 0d ? Double.POSITIVE_INFINITY : Double.NEGATIVE_INFINITY;
     } else {
@@ -238,8 +246,8 @@ public class HullWhiteSwaptionPhysicalProductPricer {
     return kappa;
   }
 
-  // returns "correct" payment date
-  private LocalDate cashFlowEquivalentPaymnetDate(PaymentPeriod payment) {
+  // returns maturity date used to compute alpha
+  private LocalDate cashFlowEquivalentMaturityDate(PaymentPeriod payment) {
     return payment instanceof KnownAmountPaymentPeriod ? payment.getPaymentDate()
         : ((RatePaymentPeriod) payment).getAccrualPeriods().get(0).getStartDate();
   }
