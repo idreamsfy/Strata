@@ -109,7 +109,7 @@ public class HullWhiteIborFutureDataSet {
         .discountCurves(ImmutableMap.of(EUR, DSC_CURVE))
         .indexCurves(ImmutableMap.of(EUR_EURIBOR_3M, FWD3_CURVE))
         .indexCurves(ImmutableMap.of(EUR_EURIBOR_6M, FWD6_CURVE))
-        .fxMatrix(FxMatrix.empty())
+        .fxRateProvider(FxMatrix.empty())
         .valuationDate(valuationDate)
         .build();
   }
