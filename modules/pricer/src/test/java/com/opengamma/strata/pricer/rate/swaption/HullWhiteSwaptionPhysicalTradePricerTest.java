@@ -32,6 +32,7 @@ import com.opengamma.strata.pricer.DiscountingPaymentPricer;
 import com.opengamma.strata.pricer.datasets.RatesProviderDataSets;
 import com.opengamma.strata.pricer.rate.ImmutableRatesProvider;
 import com.opengamma.strata.pricer.rate.future.HullWhiteIborFutureDataSet;
+import com.opengamma.strata.pricer.rate.future.HullWhiteOneFactorPiecewiseConstantParametersProvider;
 import com.opengamma.strata.product.rate.swap.Swap;
 import com.opengamma.strata.product.rate.swaption.PhysicalSettlement;
 import com.opengamma.strata.product.rate.swaption.Swaption;
@@ -95,7 +96,7 @@ public class HullWhiteSwaptionPhysicalTradePricerTest {
   private static final ImmutableRatesProvider MULTI_USD = RatesProviderDataSets.MULTI_USD.toBuilder()
       .valuationDate(VALUATION_DATE)
       .build();
-  private static final HullWhiteOneFactorPiecewiseConstantSwaptionProvider HW_PROVIDER =
+  private static final HullWhiteOneFactorPiecewiseConstantParametersProvider HW_PROVIDER =
       HullWhiteIborFutureDataSet.createHullWhiteProvider(VALUATION_DATE);
 
   private static final double TOL = 1.0E-12;

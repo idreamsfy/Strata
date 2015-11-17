@@ -25,7 +25,6 @@ import com.opengamma.strata.market.curve.InterpolatedNodalCurve;
 import com.opengamma.strata.market.interpolator.CurveInterpolators;
 import com.opengamma.strata.pricer.impl.rate.model.HullWhiteOneFactorPiecewiseConstantParameters;
 import com.opengamma.strata.pricer.rate.ImmutableRatesProvider;
-import com.opengamma.strata.pricer.rate.swaption.HullWhiteOneFactorPiecewiseConstantSwaptionProvider;
 import com.opengamma.strata.product.Security;
 import com.opengamma.strata.product.SecurityLink;
 import com.opengamma.strata.product.TradeInfo;
@@ -50,18 +49,14 @@ public class HullWhiteIborFutureDataSet {
   private static final DoubleArray VOLATILITY_TIME = DoubleArray.of(0.5, 1.0, 2.0, 5.0);
   private static final HullWhiteOneFactorPiecewiseConstantParameters MODEL_PARAMETERS =
       HullWhiteOneFactorPiecewiseConstantParameters.of(MEAN_REVERSION, VOLATILITY, VOLATILITY_TIME);
-  /**  Hull-White one factor model parameters   */
-  public static final HullWhiteOneFactorPiecewiseConstantParametersProvider HULL_WHITE_PARAMETER_PROVIDER =
-      HullWhiteOneFactorPiecewiseConstantParametersProvider.of(MODEL_PARAMETERS, ACT_ACT_ISDA, VALUATION);
-
   /**
    * Creates Hull-White one factor model parameters with specified valuation date for swaption
    * 
    * @param valuationDate  the valuation date
    * @return  the parameter provider
    */
-  public static HullWhiteOneFactorPiecewiseConstantSwaptionProvider createHullWhiteProvider(LocalDate valuationDate) {
-    return HullWhiteOneFactorPiecewiseConstantSwaptionProvider.of(MODEL_PARAMETERS, ACT_ACT_ISDA, valuationDate);
+  public static HullWhiteOneFactorPiecewiseConstantParametersProvider createHullWhiteProvider(LocalDate valuationDate) {
+    return HullWhiteOneFactorPiecewiseConstantParametersProvider.of(MODEL_PARAMETERS, ACT_ACT_ISDA, valuationDate);
   }
 
   /*
@@ -90,14 +85,6 @@ public class HullWhiteIborFutureDataSet {
   private static final CurveMetadata META_FWD6 = Curves.zeroRates(FWD6_NAME, ACT_ACT_ISDA);
   private static final InterpolatedNodalCurve FWD6_CURVE =
       InterpolatedNodalCurve.of(META_FWD6, FWD6_TIME, FWD6_RATE, INTERPOLATOR);
-  /**  Rates provider  */
-  public static final ImmutableRatesProvider RATE_PROVIDER = ImmutableRatesProvider.builder()
-      .discountCurves(ImmutableMap.of(EUR, DSC_CURVE))
-      .indexCurves(ImmutableMap.of(EUR_EURIBOR_3M, FWD3_CURVE))
-      .fxRateProvider(FxMatrix.empty())
-      .valuationDate(VALUATION)
-      .build();
-
   /**
    * Creates rates provider with specified  valuation date. 
    * 
@@ -107,8 +94,7 @@ public class HullWhiteIborFutureDataSet {
   public static ImmutableRatesProvider createRatesProvider(LocalDate valuationDate) {
     return ImmutableRatesProvider.builder()
         .discountCurves(ImmutableMap.of(EUR, DSC_CURVE))
-        .indexCurves(ImmutableMap.of(EUR_EURIBOR_3M, FWD3_CURVE))
-        .indexCurves(ImmutableMap.of(EUR_EURIBOR_6M, FWD6_CURVE))
+        .indexCurves(ImmutableMap.of(EUR_EURIBOR_3M, FWD3_CURVE, EUR_EURIBOR_6M, FWD6_CURVE))
         .fxRateProvider(FxMatrix.empty())
         .valuationDate(valuationDate)
         .build();

@@ -18,6 +18,7 @@ import com.opengamma.strata.math.impl.statistics.distribution.NormalDistribution
 import com.opengamma.strata.math.impl.statistics.distribution.ProbabilityDistribution;
 import com.opengamma.strata.pricer.impl.rate.swap.CashFlowEquivalentCalculator;
 import com.opengamma.strata.pricer.rate.RatesProvider;
+import com.opengamma.strata.pricer.rate.future.HullWhiteOneFactorPiecewiseConstantParametersProvider;
 import com.opengamma.strata.pricer.rate.swap.PaymentPeriodPricer;
 import com.opengamma.strata.product.rate.swap.ExpandedSwap;
 import com.opengamma.strata.product.rate.swap.ExpandedSwapLeg;
@@ -74,7 +75,7 @@ public class HullWhiteSwaptionPhysicalProductPricer {
   public CurrencyAmount presentValue(
       SwaptionProduct swaption,
       RatesProvider ratesProvider,
-      HullWhiteOneFactorPiecewiseConstantSwaptionProvider hwProvider) {
+      HullWhiteOneFactorPiecewiseConstantParametersProvider hwProvider) {
 
     ExpandedSwaption expanded = swaption.expand();
     validate(expanded, ratesProvider, hwProvider);
@@ -114,7 +115,7 @@ public class HullWhiteSwaptionPhysicalProductPricer {
   public MultiCurrencyAmount currencyExposure(
       SwaptionProduct swaption,
       RatesProvider ratesProvider,
-      HullWhiteOneFactorPiecewiseConstantSwaptionProvider hwProvider) {
+      HullWhiteOneFactorPiecewiseConstantParametersProvider hwProvider) {
 
     return MultiCurrencyAmount.of(presentValue(swaption, ratesProvider, hwProvider));
   }
@@ -134,7 +135,7 @@ public class HullWhiteSwaptionPhysicalProductPricer {
   public PointSensitivityBuilder presentValueSensitivity(
       SwaptionProduct swaption,
       RatesProvider ratesProvider,
-      HullWhiteOneFactorPiecewiseConstantSwaptionProvider hwProvider) {
+      HullWhiteOneFactorPiecewiseConstantParametersProvider hwProvider) {
 
     ExpandedSwaption expanded = swaption.expand();
     validate(expanded, ratesProvider, hwProvider);
@@ -176,7 +177,7 @@ public class HullWhiteSwaptionPhysicalProductPricer {
   public DoubleArray presentValueSensitivityHullWhiteParameter(
       SwaptionProduct swaption,
       RatesProvider ratesProvider,
-      HullWhiteOneFactorPiecewiseConstantSwaptionProvider hwProvider) {
+      HullWhiteOneFactorPiecewiseConstantParametersProvider hwProvider) {
 
     ExpandedSwaption expanded = swaption.expand();
     validate(expanded, ratesProvider, hwProvider);
@@ -216,7 +217,7 @@ public class HullWhiteSwaptionPhysicalProductPricer {
   //-------------------------------------------------------------------------
   // validate that the rates and volatilities providers are coherent
   private void validate(ExpandedSwaption swaption, RatesProvider ratesProvider,
-      HullWhiteOneFactorPiecewiseConstantSwaptionProvider hwProvider) {
+      HullWhiteOneFactorPiecewiseConstantParametersProvider hwProvider) {
     ArgChecker.isTrue(hwProvider.getValuationDateTime().toLocalDate().equals(ratesProvider.getValuationDate()),
         "Hull-White model data and rate data should be for the same date");
     ArgChecker.isFalse(swaption.getUnderlying().isCrossCurrency(), "underlying swap should be single currency");
@@ -225,7 +226,7 @@ public class HullWhiteSwaptionPhysicalProductPricer {
   }
 
   // handling short time to expiry
-  private double computeKappa(HullWhiteOneFactorPiecewiseConstantSwaptionProvider hwProvider,
+  private double computeKappa(HullWhiteOneFactorPiecewiseConstantParametersProvider hwProvider,
       double[] discountedCashFlow, double[] alpha, double omega) {
     double kappa = 0d;
     if (DoubleArrayMath.fuzzyEqualsZero(alpha, 1.0e-9)) { // threshold coherent to rootfinder in kappa computation

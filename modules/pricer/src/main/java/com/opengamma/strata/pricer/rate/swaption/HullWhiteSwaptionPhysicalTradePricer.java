@@ -14,6 +14,7 @@ import com.opengamma.strata.collect.array.DoubleArray;
 import com.opengamma.strata.market.sensitivity.PointSensitivityBuilder;
 import com.opengamma.strata.pricer.DiscountingPaymentPricer;
 import com.opengamma.strata.pricer.rate.RatesProvider;
+import com.opengamma.strata.pricer.rate.future.HullWhiteOneFactorPiecewiseConstantParametersProvider;
 import com.opengamma.strata.product.rate.swaption.Swaption;
 import com.opengamma.strata.product.rate.swaption.SwaptionTrade;
 
@@ -51,7 +52,7 @@ public class HullWhiteSwaptionPhysicalTradePricer {
   public CurrencyAmount presentValue(
       SwaptionTrade trade,
       RatesProvider ratesProvider,
-      HullWhiteOneFactorPiecewiseConstantSwaptionProvider hwProvider) {
+      HullWhiteOneFactorPiecewiseConstantParametersProvider hwProvider) {
 
     Swaption product = trade.getProduct();
     CurrencyAmount pvProduct = PRICER_PRODUCT.presentValue(product, ratesProvider, hwProvider);
@@ -72,7 +73,7 @@ public class HullWhiteSwaptionPhysicalTradePricer {
   public MultiCurrencyAmount currencyExposure(
       SwaptionTrade trade,
       RatesProvider ratesProvider,
-      HullWhiteOneFactorPiecewiseConstantSwaptionProvider hwProvider) {
+      HullWhiteOneFactorPiecewiseConstantParametersProvider hwProvider) {
 
     return MultiCurrencyAmount.of(presentValue(trade, ratesProvider, hwProvider));
   }
@@ -109,7 +110,7 @@ public class HullWhiteSwaptionPhysicalTradePricer {
   public PointSensitivityBuilder presentValueSensitivityStickyStrike(
       SwaptionTrade trade,
       RatesProvider ratesProvider,
-      HullWhiteOneFactorPiecewiseConstantSwaptionProvider hwProvider) {
+      HullWhiteOneFactorPiecewiseConstantParametersProvider hwProvider) {
 
     Swaption product = trade.getProduct();
     PointSensitivityBuilder pvcsProduct =
@@ -131,7 +132,7 @@ public class HullWhiteSwaptionPhysicalTradePricer {
   public DoubleArray presentValueSensitivityHullWhiteParameter(
       SwaptionTrade trade,
       RatesProvider ratesProvider,
-      HullWhiteOneFactorPiecewiseConstantSwaptionProvider hwProvider) {
+      HullWhiteOneFactorPiecewiseConstantParametersProvider hwProvider) {
 
     Swaption product = trade.getProduct();
     return PRICER_PRODUCT.presentValueSensitivityHullWhiteParameter(product, ratesProvider, hwProvider);

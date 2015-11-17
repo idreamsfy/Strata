@@ -50,6 +50,7 @@ import com.opengamma.strata.math.impl.statistics.distribution.ProbabilityDistrib
 import com.opengamma.strata.pricer.impl.rate.swap.CashFlowEquivalentCalculator;
 import com.opengamma.strata.pricer.rate.ImmutableRatesProvider;
 import com.opengamma.strata.pricer.rate.future.HullWhiteIborFutureDataSet;
+import com.opengamma.strata.pricer.rate.future.HullWhiteOneFactorPiecewiseConstantParametersProvider;
 import com.opengamma.strata.pricer.rate.swap.DiscountingSwapProductPricer;
 import com.opengamma.strata.pricer.rate.swap.PaymentPeriodPricer;
 import com.opengamma.strata.pricer.sensitivity.RatesFiniteDifferenceSensitivityCalculator;
@@ -195,11 +196,11 @@ public class HullWhiteSwaptionPhysicalProductPricerTest {
       .build();
 
   private static final LocalDate VALUATION = LocalDate.of(2011, 7, 7);
-  private static final HullWhiteOneFactorPiecewiseConstantSwaptionProvider HW_PROVIDER =
+  private static final HullWhiteOneFactorPiecewiseConstantParametersProvider HW_PROVIDER =
       HullWhiteIborFutureDataSet.createHullWhiteProvider(VALUATION);
-  private static final HullWhiteOneFactorPiecewiseConstantSwaptionProvider HW_PROVIDER_AT_MATURITY =
+  private static final HullWhiteOneFactorPiecewiseConstantParametersProvider HW_PROVIDER_AT_MATURITY =
       HullWhiteIborFutureDataSet.createHullWhiteProvider(MATURITY.toLocalDate());
-  private static final HullWhiteOneFactorPiecewiseConstantSwaptionProvider HW_PROVIDER_AFTER_MATURITY =
+  private static final HullWhiteOneFactorPiecewiseConstantParametersProvider HW_PROVIDER_AFTER_MATURITY =
       HullWhiteIborFutureDataSet.createHullWhiteProvider(MATURITY.toLocalDate().plusDays(1));
   private static final ImmutableRatesProvider RATE_PROVIDER = HullWhiteIborFutureDataSet.createRatesProvider(VALUATION);
   private static final ImmutableRatesProvider RATES_PROVIDER_AT_MATURITY = HullWhiteIborFutureDataSet

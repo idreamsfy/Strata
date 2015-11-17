@@ -150,6 +150,57 @@ public final class HullWhiteOneFactorPiecewiseConstantParametersProvider impleme
   }
 
   /**
+   * Computes the alpha value for the specified period with respect to the maturity date.
+   * <p>
+   * The alpha is computed with a bond numeraire of {@code numeraireDate}.
+   * 
+   * @param startDate  the start date of the period
+   * @param endDate  the end date of the period
+   * @param numeraireDate  the numeraire date
+   * @param maturityDate  the maturity date
+   * @return  the alpha
+   */
+  public double alpha(LocalDate startDate, LocalDate endDate, LocalDate numeraireDate, LocalDate maturityDate) {
+    double startTime = relativeTime(startDate);
+    double endTime = relativeTime(endDate);
+    double numeraireTime = relativeTime(numeraireDate);
+    double maturityTime = relativeTime(maturityDate);
+    return MODEL.alpha(parameters, startTime, endTime, numeraireTime, maturityTime);
+  }
+
+  /**
+   * Computes the alpha and its derivative values for the specified period with respect to the maturity date.
+   * <p>
+   * The alpha is computed with a bond numeraire of {@code numeraireDate}.
+   * 
+   * @param startDate  the start date of the period
+   * @param endDate  the end date of the period
+   * @param numeraireDate  the numeraire date
+   * @param maturityDate  the maturity date
+   * @return  the alpha adjoint
+   */
+  public ValueDerivatives alphaAdjoint(
+      LocalDate startDate,
+      LocalDate endDate,
+      LocalDate numeraireDate,
+      LocalDate maturityDate) {
+    double startTime = relativeTime(startDate);
+    double endTime = relativeTime(endDate);
+    double numeraireTime = relativeTime(numeraireDate);
+    double maturityTime = relativeTime(maturityDate);
+    return MODEL.alphaAdjoint(parameters, startTime, endTime, numeraireTime, maturityTime);
+  }
+
+  /**
+   * Returns a Hull-White one-factor model.
+   * 
+   * @return the model
+   */
+  public HullWhiteOneFactorPiecewiseConstantInterestRateModel getModel() {
+    return MODEL;
+  }
+
+  /**
    * Converts a date to a relative year fraction. 
    * <p>
    * When the date is after the valuation date, the returned number is negative.
