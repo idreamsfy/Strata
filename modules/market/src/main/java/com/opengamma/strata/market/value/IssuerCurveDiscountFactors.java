@@ -25,8 +25,8 @@ import org.joda.beans.impl.direct.DirectMetaProperty;
 import org.joda.beans.impl.direct.DirectMetaPropertyMap;
 
 import com.opengamma.strata.basics.currency.Currency;
+import com.opengamma.strata.market.curve.CurveCurrencyParameterSensitivities;
 import com.opengamma.strata.market.curve.CurveName;
-import com.opengamma.strata.market.sensitivity.CurveCurrencyParameterSensitivities;
 import com.opengamma.strata.market.sensitivity.IssuerCurveZeroRateSensitivity;
 import com.opengamma.strata.market.sensitivity.ZeroRateSensitivity;
 
@@ -252,8 +252,8 @@ public final class IssuerCurveDiscountFactors
     }
     if (obj != null && obj.getClass() == this.getClass()) {
       IssuerCurveDiscountFactors other = (IssuerCurveDiscountFactors) obj;
-      return JodaBeanUtils.equal(getDiscountFactors(), other.getDiscountFactors()) &&
-          JodaBeanUtils.equal(getLegalEntityGroup(), other.getLegalEntityGroup());
+      return JodaBeanUtils.equal(discountFactors, other.discountFactors) &&
+          JodaBeanUtils.equal(legalEntityGroup, other.legalEntityGroup);
     }
     return false;
   }
@@ -261,8 +261,8 @@ public final class IssuerCurveDiscountFactors
   @Override
   public int hashCode() {
     int hash = getClass().hashCode();
-    hash = hash * 31 + JodaBeanUtils.hashCode(getDiscountFactors());
-    hash = hash * 31 + JodaBeanUtils.hashCode(getLegalEntityGroup());
+    hash = hash * 31 + JodaBeanUtils.hashCode(discountFactors);
+    hash = hash * 31 + JodaBeanUtils.hashCode(legalEntityGroup);
     return hash;
   }
 
@@ -270,8 +270,8 @@ public final class IssuerCurveDiscountFactors
   public String toString() {
     StringBuilder buf = new StringBuilder(96);
     buf.append("IssuerCurveDiscountFactors{");
-    buf.append("discountFactors").append('=').append(getDiscountFactors()).append(',').append(' ');
-    buf.append("legalEntityGroup").append('=').append(JodaBeanUtils.toString(getLegalEntityGroup()));
+    buf.append("discountFactors").append('=').append(discountFactors).append(',').append(' ');
+    buf.append("legalEntityGroup").append('=').append(JodaBeanUtils.toString(legalEntityGroup));
     buf.append('}');
     return buf.toString();
   }

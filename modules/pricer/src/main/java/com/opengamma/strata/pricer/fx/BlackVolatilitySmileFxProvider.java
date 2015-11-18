@@ -30,14 +30,14 @@ import com.opengamma.strata.basics.date.DayCount;
 import com.opengamma.strata.collect.ArgChecker;
 import com.opengamma.strata.collect.array.DoubleArray;
 import com.opengamma.strata.collect.array.DoubleMatrix;
+import com.opengamma.strata.market.ValueType;
 import com.opengamma.strata.market.option.DeltaStrike;
 import com.opengamma.strata.market.sensitivity.FxOptionSensitivity;
-import com.opengamma.strata.market.sensitivity.SurfaceCurrencyParameterSensitivity;
 import com.opengamma.strata.market.surface.DefaultSurfaceMetadata;
-import com.opengamma.strata.market.surface.FxVolatilitySurfaceYearFractionNodeMetadata;
+import com.opengamma.strata.market.surface.SurfaceCurrencyParameterSensitivity;
 import com.opengamma.strata.market.surface.SurfaceName;
 import com.opengamma.strata.market.surface.SurfaceParameterMetadata;
-import com.opengamma.strata.market.value.ValueType;
+import com.opengamma.strata.market.surface.meta.FxVolatilitySurfaceYearFractionNodeMetadata;
 
 /**
  * Data provider of volatility for FX options in the lognormal or Black-Scholes model. 
@@ -262,10 +262,10 @@ final class BlackVolatilitySmileFxProvider
     }
     if (obj != null && obj.getClass() == this.getClass()) {
       BlackVolatilitySmileFxProvider other = (BlackVolatilitySmileFxProvider) obj;
-      return JodaBeanUtils.equal(getSmile(), other.getSmile()) &&
-          JodaBeanUtils.equal(getCurrencyPair(), other.getCurrencyPair()) &&
-          JodaBeanUtils.equal(getDayCount(), other.getDayCount()) &&
-          JodaBeanUtils.equal(getValuationDateTime(), other.getValuationDateTime());
+      return JodaBeanUtils.equal(smile, other.smile) &&
+          JodaBeanUtils.equal(currencyPair, other.currencyPair) &&
+          JodaBeanUtils.equal(dayCount, other.dayCount) &&
+          JodaBeanUtils.equal(valuationDateTime, other.valuationDateTime);
     }
     return false;
   }
@@ -273,10 +273,10 @@ final class BlackVolatilitySmileFxProvider
   @Override
   public int hashCode() {
     int hash = getClass().hashCode();
-    hash = hash * 31 + JodaBeanUtils.hashCode(getSmile());
-    hash = hash * 31 + JodaBeanUtils.hashCode(getCurrencyPair());
-    hash = hash * 31 + JodaBeanUtils.hashCode(getDayCount());
-    hash = hash * 31 + JodaBeanUtils.hashCode(getValuationDateTime());
+    hash = hash * 31 + JodaBeanUtils.hashCode(smile);
+    hash = hash * 31 + JodaBeanUtils.hashCode(currencyPair);
+    hash = hash * 31 + JodaBeanUtils.hashCode(dayCount);
+    hash = hash * 31 + JodaBeanUtils.hashCode(valuationDateTime);
     return hash;
   }
 
@@ -284,10 +284,10 @@ final class BlackVolatilitySmileFxProvider
   public String toString() {
     StringBuilder buf = new StringBuilder(160);
     buf.append("BlackVolatilitySmileFxProvider{");
-    buf.append("smile").append('=').append(getSmile()).append(',').append(' ');
-    buf.append("currencyPair").append('=').append(getCurrencyPair()).append(',').append(' ');
-    buf.append("dayCount").append('=').append(getDayCount()).append(',').append(' ');
-    buf.append("valuationDateTime").append('=').append(JodaBeanUtils.toString(getValuationDateTime()));
+    buf.append("smile").append('=').append(smile).append(',').append(' ');
+    buf.append("currencyPair").append('=').append(currencyPair).append(',').append(' ');
+    buf.append("dayCount").append('=').append(dayCount).append(',').append(' ');
+    buf.append("valuationDateTime").append('=').append(JodaBeanUtils.toString(valuationDateTime));
     buf.append('}');
     return buf.toString();
   }

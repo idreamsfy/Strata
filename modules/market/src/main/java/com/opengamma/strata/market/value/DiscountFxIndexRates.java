@@ -33,7 +33,7 @@ import com.opengamma.strata.basics.index.FxIndex;
 import com.opengamma.strata.collect.ArgChecker;
 import com.opengamma.strata.collect.Messages;
 import com.opengamma.strata.collect.timeseries.LocalDateDoubleTimeSeries;
-import com.opengamma.strata.market.sensitivity.CurveCurrencyParameterSensitivities;
+import com.opengamma.strata.market.curve.CurveCurrencyParameterSensitivities;
 import com.opengamma.strata.market.sensitivity.FxIndexSensitivity;
 import com.opengamma.strata.market.sensitivity.PointSensitivityBuilder;
 
@@ -257,9 +257,9 @@ public final class DiscountFxIndexRates
     }
     if (obj != null && obj.getClass() == this.getClass()) {
       DiscountFxIndexRates other = (DiscountFxIndexRates) obj;
-      return JodaBeanUtils.equal(getIndex(), other.getIndex()) &&
-          JodaBeanUtils.equal(getTimeSeries(), other.getTimeSeries()) &&
-          JodaBeanUtils.equal(getFxForwardRates(), other.getFxForwardRates());
+      return JodaBeanUtils.equal(index, other.index) &&
+          JodaBeanUtils.equal(timeSeries, other.timeSeries) &&
+          JodaBeanUtils.equal(fxForwardRates, other.fxForwardRates);
     }
     return false;
   }
@@ -267,9 +267,9 @@ public final class DiscountFxIndexRates
   @Override
   public int hashCode() {
     int hash = getClass().hashCode();
-    hash = hash * 31 + JodaBeanUtils.hashCode(getIndex());
-    hash = hash * 31 + JodaBeanUtils.hashCode(getTimeSeries());
-    hash = hash * 31 + JodaBeanUtils.hashCode(getFxForwardRates());
+    hash = hash * 31 + JodaBeanUtils.hashCode(index);
+    hash = hash * 31 + JodaBeanUtils.hashCode(timeSeries);
+    hash = hash * 31 + JodaBeanUtils.hashCode(fxForwardRates);
     return hash;
   }
 
@@ -277,9 +277,9 @@ public final class DiscountFxIndexRates
   public String toString() {
     StringBuilder buf = new StringBuilder(128);
     buf.append("DiscountFxIndexRates{");
-    buf.append("index").append('=').append(getIndex()).append(',').append(' ');
-    buf.append("timeSeries").append('=').append(getTimeSeries()).append(',').append(' ');
-    buf.append("fxForwardRates").append('=').append(JodaBeanUtils.toString(getFxForwardRates()));
+    buf.append("index").append('=').append(index).append(',').append(' ');
+    buf.append("timeSeries").append('=').append(timeSeries).append(',').append(' ');
+    buf.append("fxForwardRates").append('=').append(JodaBeanUtils.toString(fxForwardRates));
     buf.append('}');
     return buf.toString();
   }

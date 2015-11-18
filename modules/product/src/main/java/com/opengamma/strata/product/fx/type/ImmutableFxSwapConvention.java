@@ -56,7 +56,7 @@ public final class ImmutableFxSwapConvention
   /**
    * The currency pair associated with the convention.
    */
-  @PropertyDefinition(validate = "notNull")
+  @PropertyDefinition(validate = "notNull", overrideGet = true)
   private final CurrencyPair currencyPair;
   /**
    * The convention name, such as 'EUR/USD', optional with defaulting getter.
@@ -156,7 +156,7 @@ public final class ImmutableFxSwapConvention
       BuySell buySell,
       double notional,
       double nearFxRate,
-      double forwardPoints) {
+      double farLegForwardPoints) {
 
     ArgChecker.inOrderOrEqual(tradeDate, startDate, "tradeDate", "startDate");
     double amount1 = BuySell.BUY.normalize(notional);
@@ -169,7 +169,7 @@ public final class ImmutableFxSwapConvention
             CurrencyAmount.of(currencyPair.getBase(), amount1),
             currencyPair.getCounter(),
             nearFxRate,
-            forwardPoints,
+            farLegForwardPoints,
             startDateAdjusted,
             endDateAdjusted))
         .build();
@@ -245,6 +245,7 @@ public final class ImmutableFxSwapConvention
    * Gets the currency pair associated with the convention.
    * @return the value of the property, not null
    */
+  @Override
   public CurrencyPair getCurrencyPair() {
     return currencyPair;
   }
@@ -278,9 +279,9 @@ public final class ImmutableFxSwapConvention
     }
     if (obj != null && obj.getClass() == this.getClass()) {
       ImmutableFxSwapConvention other = (ImmutableFxSwapConvention) obj;
-      return JodaBeanUtils.equal(getCurrencyPair(), other.getCurrencyPair()) &&
+      return JodaBeanUtils.equal(currencyPair, other.currencyPair) &&
           JodaBeanUtils.equal(name, other.name) &&
-          JodaBeanUtils.equal(getSpotDateOffset(), other.getSpotDateOffset()) &&
+          JodaBeanUtils.equal(spotDateOffset, other.spotDateOffset) &&
           JodaBeanUtils.equal(businessDayAdjustment, other.businessDayAdjustment);
     }
     return false;
@@ -289,9 +290,9 @@ public final class ImmutableFxSwapConvention
   @Override
   public int hashCode() {
     int hash = getClass().hashCode();
-    hash = hash * 31 + JodaBeanUtils.hashCode(getCurrencyPair());
+    hash = hash * 31 + JodaBeanUtils.hashCode(currencyPair);
     hash = hash * 31 + JodaBeanUtils.hashCode(name);
-    hash = hash * 31 + JodaBeanUtils.hashCode(getSpotDateOffset());
+    hash = hash * 31 + JodaBeanUtils.hashCode(spotDateOffset);
     hash = hash * 31 + JodaBeanUtils.hashCode(businessDayAdjustment);
     return hash;
   }

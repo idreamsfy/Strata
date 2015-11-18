@@ -23,24 +23,24 @@ import com.opengamma.strata.calc.runner.CalculationRunner;
 import com.opengamma.strata.calc.runner.DefaultCalculationRunner;
 import com.opengamma.strata.collect.id.LinkResolver;
 import com.opengamma.strata.function.marketdata.curve.CurveGroupMarketDataFunction;
+import com.opengamma.strata.function.marketdata.curve.CurveInputsMarketDataFunction;
 import com.opengamma.strata.function.marketdata.curve.DiscountCurveMarketDataFunction;
 import com.opengamma.strata.function.marketdata.curve.DiscountFactorsMarketDataFunction;
 import com.opengamma.strata.function.marketdata.curve.IborIndexRatesMarketDataFunction;
 import com.opengamma.strata.function.marketdata.curve.OvernightIndexRatesMarketDataFunction;
-import com.opengamma.strata.function.marketdata.curve.ParRatesMarketDataFunction;
 import com.opengamma.strata.function.marketdata.curve.RateIndexCurveMarketDataFunction;
 import com.opengamma.strata.function.marketdata.curve.RootFinderConfig;
 import com.opengamma.strata.pricer.calibration.CalibrationMeasures;
 import com.opengamma.strata.product.credit.CdsTrade;
+import com.opengamma.strata.product.deposit.TermDepositTrade;
+import com.opengamma.strata.product.fra.FraTrade;
 import com.opengamma.strata.product.future.GenericFutureOptionTrade;
 import com.opengamma.strata.product.future.GenericFutureTrade;
 import com.opengamma.strata.product.fx.FxNdfTrade;
 import com.opengamma.strata.product.fx.FxSingleTrade;
 import com.opengamma.strata.product.fx.FxSwapTrade;
 import com.opengamma.strata.product.payment.BulletPaymentTrade;
-import com.opengamma.strata.product.rate.deposit.TermDepositTrade;
-import com.opengamma.strata.product.rate.fra.FraTrade;
-import com.opengamma.strata.product.rate.swap.SwapTrade;
+import com.opengamma.strata.product.swap.SwapTrade;
 
 /**
  * Factory methods for creating standard Strata components.
@@ -129,7 +129,7 @@ public class StandardComponents {
         new IborIndexRatesMarketDataFunction(),
         new OvernightIndexRatesMarketDataFunction(),
         new CurveGroupMarketDataFunction(RootFinderConfig.defaults(), CalibrationMeasures.DEFAULT),
-        new ParRatesMarketDataFunction());
+        new CurveInputsMarketDataFunction());
   }
 
   /**

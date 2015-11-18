@@ -18,12 +18,11 @@ import com.google.common.collect.Iterables;
 import com.opengamma.strata.basics.currency.Currency;
 import com.opengamma.strata.basics.index.IborIndices;
 import com.opengamma.strata.collect.io.ResourceLocator;
-import com.opengamma.strata.loader.LoaderUtils;
+import com.opengamma.strata.market.ValueType;
+import com.opengamma.strata.market.curve.CurveGroupDefinition;
+import com.opengamma.strata.market.curve.CurveGroupEntry;
 import com.opengamma.strata.market.curve.CurveGroupName;
 import com.opengamma.strata.market.curve.CurveName;
-import com.opengamma.strata.market.curve.definition.CurveGroupDefinition;
-import com.opengamma.strata.market.curve.definition.CurveGroupEntry;
-import com.opengamma.strata.market.value.ValueType;
 
 /**
  * Test {@link RatesCalibrationCsvLoader}.
@@ -38,11 +37,6 @@ public class RatesCalibrationCsvLoaderTest {
   private static final String SETTINGS_EMPTY = "classpath:com/opengamma/strata/loader/csv/settings-empty.csv";
   private static final String CALIBRATION_INVALID_TYPE =
       "classpath:com/opengamma/strata/loader/csv/calibration-invalid-type.csv";
-
-  static {
-    // TODO: remove when Joda-Beans issue fixed
-    LoaderUtils.findIndex("USD-LIBOR-3M");
-  }
 
   //-------------------------------------------------------------------------
   public void test_parsing() {

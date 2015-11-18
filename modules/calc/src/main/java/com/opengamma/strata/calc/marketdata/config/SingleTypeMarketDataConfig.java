@@ -9,7 +9,6 @@ import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.NoSuchElementException;
-import java.util.Optional;
 import java.util.Set;
 
 import org.joda.beans.Bean;
@@ -53,13 +52,23 @@ final class SingleTypeMarketDataConfig implements ImmutableBean, Serializable {
   private final ImmutableMap<String, Object> configObjects;
 
   /**
-   * Returns the configuration object with the specified name if found.
+   * Returns the configuration object with the specified name if found or throws an exception if not.
    *
    * @param name  the name of the configuration object
    * @return the named object if available
+   * @throws IllegalArgumentException if no configuration is found with the specified name
    */
-  Optional<Object> get(String name) {
-    return Optional.ofNullable(configObjects.get(name));
+  Object get(String name) {
+    Object config = configObjects.get(name);
+
+    if (config == null) {
+      throw new IllegalArgumentException(
+          Messages.format(
+              "No configuration found with type {} and name {}",
+              configType.getName(),
+              name));
+    }
+    return config;
   }
 
   /**
@@ -177,8 +186,8 @@ final class SingleTypeMarketDataConfig implements ImmutableBean, Serializable {
     }
     if (obj != null && obj.getClass() == this.getClass()) {
       SingleTypeMarketDataConfig other = (SingleTypeMarketDataConfig) obj;
-      return JodaBeanUtils.equal(getConfigType(), other.getConfigType()) &&
-          JodaBeanUtils.equal(getConfigObjects(), other.getConfigObjects());
+      return JodaBeanUtils.equal(configType, other.configType) &&
+          JodaBeanUtils.equal(configObjects, other.configObjects);
     }
     return false;
   }
@@ -186,8 +195,8 @@ final class SingleTypeMarketDataConfig implements ImmutableBean, Serializable {
   @Override
   public int hashCode() {
     int hash = getClass().hashCode();
-    hash = hash * 31 + JodaBeanUtils.hashCode(getConfigType());
-    hash = hash * 31 + JodaBeanUtils.hashCode(getConfigObjects());
+    hash = hash * 31 + JodaBeanUtils.hashCode(configType);
+    hash = hash * 31 + JodaBeanUtils.hashCode(configObjects);
     return hash;
   }
 
@@ -195,8 +204,8 @@ final class SingleTypeMarketDataConfig implements ImmutableBean, Serializable {
   public String toString() {
     StringBuilder buf = new StringBuilder(96);
     buf.append("SingleTypeMarketDataConfig{");
-    buf.append("configType").append('=').append(getConfigType()).append(',').append(' ');
-    buf.append("configObjects").append('=').append(JodaBeanUtils.toString(getConfigObjects()));
+    buf.append("configType").append('=').append(configType).append(',').append(' ');
+    buf.append("configObjects").append('=').append(JodaBeanUtils.toString(configObjects));
     buf.append('}');
     return buf.toString();
   }

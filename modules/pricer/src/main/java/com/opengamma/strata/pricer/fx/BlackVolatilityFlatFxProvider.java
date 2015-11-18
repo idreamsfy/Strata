@@ -29,16 +29,16 @@ import com.opengamma.strata.basics.currency.CurrencyPair;
 import com.opengamma.strata.basics.date.DayCount;
 import com.opengamma.strata.collect.ArgChecker;
 import com.opengamma.strata.collect.array.DoubleArray;
+import com.opengamma.strata.market.ValueType;
+import com.opengamma.strata.market.curve.CurveUnitParameterSensitivity;
 import com.opengamma.strata.market.curve.NodalCurve;
 import com.opengamma.strata.market.option.DeltaStrike;
-import com.opengamma.strata.market.sensitivity.CurveUnitParameterSensitivity;
 import com.opengamma.strata.market.sensitivity.FxOptionSensitivity;
-import com.opengamma.strata.market.sensitivity.SurfaceCurrencyParameterSensitivity;
 import com.opengamma.strata.market.surface.DefaultSurfaceMetadata;
-import com.opengamma.strata.market.surface.FxVolatilitySurfaceYearFractionNodeMetadata;
+import com.opengamma.strata.market.surface.SurfaceCurrencyParameterSensitivity;
 import com.opengamma.strata.market.surface.SurfaceName;
 import com.opengamma.strata.market.surface.SurfaceParameterMetadata;
-import com.opengamma.strata.market.value.ValueType;
+import com.opengamma.strata.market.surface.meta.FxVolatilitySurfaceYearFractionNodeMetadata;
 
 /**
  * Data provider of volatility for FX options in the lognormal or Black-Scholes model.
@@ -245,10 +245,10 @@ public final class BlackVolatilityFlatFxProvider
     }
     if (obj != null && obj.getClass() == this.getClass()) {
       BlackVolatilityFlatFxProvider other = (BlackVolatilityFlatFxProvider) obj;
-      return JodaBeanUtils.equal(getCurve(), other.getCurve()) &&
-          JodaBeanUtils.equal(getCurrencyPair(), other.getCurrencyPair()) &&
-          JodaBeanUtils.equal(getDayCount(), other.getDayCount()) &&
-          JodaBeanUtils.equal(getValuationDateTime(), other.getValuationDateTime());
+      return JodaBeanUtils.equal(curve, other.curve) &&
+          JodaBeanUtils.equal(currencyPair, other.currencyPair) &&
+          JodaBeanUtils.equal(dayCount, other.dayCount) &&
+          JodaBeanUtils.equal(valuationDateTime, other.valuationDateTime);
     }
     return false;
   }
@@ -256,10 +256,10 @@ public final class BlackVolatilityFlatFxProvider
   @Override
   public int hashCode() {
     int hash = getClass().hashCode();
-    hash = hash * 31 + JodaBeanUtils.hashCode(getCurve());
-    hash = hash * 31 + JodaBeanUtils.hashCode(getCurrencyPair());
-    hash = hash * 31 + JodaBeanUtils.hashCode(getDayCount());
-    hash = hash * 31 + JodaBeanUtils.hashCode(getValuationDateTime());
+    hash = hash * 31 + JodaBeanUtils.hashCode(curve);
+    hash = hash * 31 + JodaBeanUtils.hashCode(currencyPair);
+    hash = hash * 31 + JodaBeanUtils.hashCode(dayCount);
+    hash = hash * 31 + JodaBeanUtils.hashCode(valuationDateTime);
     return hash;
   }
 
@@ -267,10 +267,10 @@ public final class BlackVolatilityFlatFxProvider
   public String toString() {
     StringBuilder buf = new StringBuilder(160);
     buf.append("BlackVolatilityFlatFxProvider{");
-    buf.append("curve").append('=').append(getCurve()).append(',').append(' ');
-    buf.append("currencyPair").append('=').append(getCurrencyPair()).append(',').append(' ');
-    buf.append("dayCount").append('=').append(getDayCount()).append(',').append(' ');
-    buf.append("valuationDateTime").append('=').append(JodaBeanUtils.toString(getValuationDateTime()));
+    buf.append("curve").append('=').append(curve).append(',').append(' ');
+    buf.append("currencyPair").append('=').append(currencyPair).append(',').append(' ');
+    buf.append("dayCount").append('=').append(dayCount).append(',').append(' ');
+    buf.append("valuationDateTime").append('=').append(JodaBeanUtils.toString(valuationDateTime));
     buf.append('}');
     return buf.toString();
   }

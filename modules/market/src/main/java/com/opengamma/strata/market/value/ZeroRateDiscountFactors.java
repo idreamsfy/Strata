@@ -27,14 +27,15 @@ import org.joda.beans.impl.direct.DirectMetaPropertyMap;
 
 import com.opengamma.strata.basics.currency.Currency;
 import com.opengamma.strata.basics.date.DayCount;
-import com.opengamma.strata.basics.market.Perturbation;
 import com.opengamma.strata.collect.ArgChecker;
+import com.opengamma.strata.market.Perturbation;
+import com.opengamma.strata.market.ValueType;
 import com.opengamma.strata.market.curve.Curve;
+import com.opengamma.strata.market.curve.CurveCurrencyParameterSensitivities;
 import com.opengamma.strata.market.curve.CurveInfoType;
 import com.opengamma.strata.market.curve.CurveName;
+import com.opengamma.strata.market.curve.CurveUnitParameterSensitivities;
 import com.opengamma.strata.market.curve.InterpolatedNodalCurve;
-import com.opengamma.strata.market.sensitivity.CurveCurrencyParameterSensitivities;
-import com.opengamma.strata.market.sensitivity.CurveUnitParameterSensitivities;
 import com.opengamma.strata.market.sensitivity.ZeroRateSensitivity;
 
 /**
@@ -298,9 +299,9 @@ public final class ZeroRateDiscountFactors
     }
     if (obj != null && obj.getClass() == this.getClass()) {
       ZeroRateDiscountFactors other = (ZeroRateDiscountFactors) obj;
-      return JodaBeanUtils.equal(getCurrency(), other.getCurrency()) &&
-          JodaBeanUtils.equal(getValuationDate(), other.getValuationDate()) &&
-          JodaBeanUtils.equal(getCurve(), other.getCurve());
+      return JodaBeanUtils.equal(currency, other.currency) &&
+          JodaBeanUtils.equal(valuationDate, other.valuationDate) &&
+          JodaBeanUtils.equal(curve, other.curve);
     }
     return false;
   }
@@ -308,9 +309,9 @@ public final class ZeroRateDiscountFactors
   @Override
   public int hashCode() {
     int hash = getClass().hashCode();
-    hash = hash * 31 + JodaBeanUtils.hashCode(getCurrency());
-    hash = hash * 31 + JodaBeanUtils.hashCode(getValuationDate());
-    hash = hash * 31 + JodaBeanUtils.hashCode(getCurve());
+    hash = hash * 31 + JodaBeanUtils.hashCode(currency);
+    hash = hash * 31 + JodaBeanUtils.hashCode(valuationDate);
+    hash = hash * 31 + JodaBeanUtils.hashCode(curve);
     return hash;
   }
 
@@ -318,9 +319,9 @@ public final class ZeroRateDiscountFactors
   public String toString() {
     StringBuilder buf = new StringBuilder(128);
     buf.append("ZeroRateDiscountFactors{");
-    buf.append("currency").append('=').append(getCurrency()).append(',').append(' ');
-    buf.append("valuationDate").append('=').append(getValuationDate()).append(',').append(' ');
-    buf.append("curve").append('=').append(JodaBeanUtils.toString(getCurve()));
+    buf.append("currency").append('=').append(currency).append(',').append(' ');
+    buf.append("valuationDate").append('=').append(valuationDate).append(',').append(' ');
+    buf.append("curve").append('=').append(JodaBeanUtils.toString(curve));
     buf.append('}');
     return buf.toString();
   }

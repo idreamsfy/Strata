@@ -26,6 +26,7 @@ import org.joda.beans.impl.direct.DirectMetaProperty;
 import org.joda.beans.impl.direct.DirectMetaPropertyMap;
 
 import com.opengamma.strata.basics.BuySell;
+import com.opengamma.strata.basics.currency.CurrencyPair;
 import com.opengamma.strata.collect.ArgChecker;
 import com.opengamma.strata.product.TradeTemplate;
 import com.opengamma.strata.product.fx.FxSwapTrade;
@@ -122,6 +123,15 @@ public final class FxSwapTemplate
   }
 
   //-------------------------------------------------------------------------
+  /**
+   * Gets the currency pair of the template.
+   * 
+   * @return the currency pair
+   */
+  public CurrencyPair getCurrencyPair() {
+    return convention.getCurrencyPair();
+  }
+
   /**
    * Creates a trade based on this template.
    * <p>
@@ -251,9 +261,9 @@ public final class FxSwapTemplate
     }
     if (obj != null && obj.getClass() == this.getClass()) {
       FxSwapTemplate other = (FxSwapTemplate) obj;
-      return JodaBeanUtils.equal(getPeriodToNear(), other.getPeriodToNear()) &&
-          JodaBeanUtils.equal(getPeriodToFar(), other.getPeriodToFar()) &&
-          JodaBeanUtils.equal(getConvention(), other.getConvention());
+      return JodaBeanUtils.equal(periodToNear, other.periodToNear) &&
+          JodaBeanUtils.equal(periodToFar, other.periodToFar) &&
+          JodaBeanUtils.equal(convention, other.convention);
     }
     return false;
   }
@@ -261,9 +271,9 @@ public final class FxSwapTemplate
   @Override
   public int hashCode() {
     int hash = getClass().hashCode();
-    hash = hash * 31 + JodaBeanUtils.hashCode(getPeriodToNear());
-    hash = hash * 31 + JodaBeanUtils.hashCode(getPeriodToFar());
-    hash = hash * 31 + JodaBeanUtils.hashCode(getConvention());
+    hash = hash * 31 + JodaBeanUtils.hashCode(periodToNear);
+    hash = hash * 31 + JodaBeanUtils.hashCode(periodToFar);
+    hash = hash * 31 + JodaBeanUtils.hashCode(convention);
     return hash;
   }
 
@@ -271,9 +281,9 @@ public final class FxSwapTemplate
   public String toString() {
     StringBuilder buf = new StringBuilder(128);
     buf.append("FxSwapTemplate{");
-    buf.append("periodToNear").append('=').append(getPeriodToNear()).append(',').append(' ');
-    buf.append("periodToFar").append('=').append(getPeriodToFar()).append(',').append(' ');
-    buf.append("convention").append('=').append(JodaBeanUtils.toString(getConvention()));
+    buf.append("periodToNear").append('=').append(periodToNear).append(',').append(' ');
+    buf.append("periodToFar").append('=').append(periodToFar).append(',').append(' ');
+    buf.append("convention").append('=').append(JodaBeanUtils.toString(convention));
     buf.append('}');
     return buf.toString();
   }
