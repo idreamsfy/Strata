@@ -59,7 +59,6 @@ import com.opengamma.strata.calc.runner.DefaultCalculationRunner;
 import com.opengamma.strata.calc.runner.Results;
 import com.opengamma.strata.collect.result.Result;
 import com.opengamma.strata.collect.timeseries.LocalDateDoubleTimeSeries;
-import com.opengamma.strata.function.calculation.swap.SwapPvFunction;
 import com.opengamma.strata.function.marketdata.curve.DiscountCurveMarketDataFunction;
 import com.opengamma.strata.function.marketdata.curve.DiscountFactorsMarketDataFunction;
 import com.opengamma.strata.function.marketdata.curve.IborIndexRatesMarketDataFunction;
