@@ -5,8 +5,6 @@
  */
 package com.opengamma.strata.examples.finance;
 
-import static com.opengamma.strata.basics.index.IborIndices.USD_LIBOR_3M;
-import static com.opengamma.strata.basics.index.OvernightIndices.USD_FED_FUND;
 import static com.opengamma.strata.basics.currency.Currency.USD;
 
 import java.time.LocalDate;
@@ -20,7 +18,7 @@ import com.google.common.collect.ImmutableMap;
 import com.opengamma.strata.basics.Trade;
 import com.opengamma.strata.basics.currency.CurrencyAmount;
 import com.opengamma.strata.basics.currency.MultiCurrencyAmount;
-import com.opengamma.strata.basics.market.ObservableValues;
+import com.opengamma.strata.basics.market.MarketData;
 import com.opengamma.strata.calc.CalculationEngine;
 import com.opengamma.strata.calc.CalculationRules;
 import com.opengamma.strata.calc.Column;
@@ -49,12 +47,11 @@ import com.opengamma.strata.function.StandardComponents;
 import com.opengamma.strata.function.marketdata.mapping.MarketDataMappingsBuilder;
 import com.opengamma.strata.loader.csv.QuotesCsvLoader;
 import com.opengamma.strata.loader.csv.RatesCalibrationCsvLoader;
+import com.opengamma.strata.market.curve.CurveGroupDefinition;
+import com.opengamma.strata.market.curve.CurveGroupEntry;
 import com.opengamma.strata.market.curve.CurveGroupName;
-import com.opengamma.strata.market.curve.definition.CurveGroupDefinition;
-import com.opengamma.strata.market.curve.definition.CurveGroupEntry;
-import com.opengamma.strata.market.curve.definition.CurveNode;
-import com.opengamma.strata.market.curve.definition.IborFixingDepositCurveNode;
-import com.opengamma.strata.market.id.IndexRateId;
+import com.opengamma.strata.market.curve.CurveNode;
+import com.opengamma.strata.market.curve.node.IborFixingDepositCurveNode;
 import com.opengamma.strata.market.id.QuoteId;
 
 /**
@@ -207,7 +204,8 @@ public class CalibrationXCcyCheckExample {
       for (CurveNode node : nodes) {
         if (!(node instanceof IborFixingDepositCurveNode)) {
           // IborFixingDeposit is not a real trade, so there is no appropriate comparison
-          trades.add(node.trade(VALUATION_DATE, ObservableValues.ofIdMap(quotes)));
+          MarketData marketData = MarketData.builder().addObservableValuesById(quotes).build();
+          trades.add(node.trade(VALUATION_DATE, marketData));
         }
       }
     }
