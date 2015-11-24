@@ -30,6 +30,7 @@ import com.opengamma.strata.function.marketdata.curve.IborIndexRatesMarketDataFu
 import com.opengamma.strata.function.marketdata.curve.OvernightIndexRatesMarketDataFunction;
 import com.opengamma.strata.function.marketdata.curve.RateIndexCurveMarketDataFunction;
 import com.opengamma.strata.function.marketdata.curve.RootFinderConfig;
+import com.opengamma.strata.function.marketdata.fx.FxRateMarketDataFunction;
 import com.opengamma.strata.pricer.calibration.CalibrationMeasures;
 import com.opengamma.strata.product.credit.CdsTrade;
 import com.opengamma.strata.product.deposit.TermDepositTrade;
@@ -39,7 +40,9 @@ import com.opengamma.strata.product.future.GenericFutureTrade;
 import com.opengamma.strata.product.fx.FxNdfTrade;
 import com.opengamma.strata.product.fx.FxSingleTrade;
 import com.opengamma.strata.product.fx.FxSwapTrade;
+import com.opengamma.strata.product.index.IborFutureTrade;
 import com.opengamma.strata.product.payment.BulletPaymentTrade;
+import com.opengamma.strata.product.swap.DeliverableSwapFutureTrade;
 import com.opengamma.strata.product.swap.SwapTrade;
 
 /**
@@ -129,7 +132,8 @@ public class StandardComponents {
         new IborIndexRatesMarketDataFunction(),
         new OvernightIndexRatesMarketDataFunction(),
         new CurveGroupMarketDataFunction(RootFinderConfig.defaults(), CalibrationMeasures.DEFAULT),
-        new CurveInputsMarketDataFunction());
+        new CurveInputsMarketDataFunction(),
+        new FxRateMarketDataFunction());
   }
 
   /**
@@ -143,12 +147,14 @@ public class StandardComponents {
    * <ul>
    *  <li>Bullet Payment - {@link BulletPaymentTrade}
    *  <li>Credit Default Swap - {@link CdsTrade}
+   *  <li>Deliverable Swap Future - {@link DeliverableSwapFutureTrade}
    *  <li>Forward Rate Agreement - {@link FraTrade}
    *  <li>FX single (spot/forward) - {@link FxSingleTrade}
    *  <li>FX NDF - {@link FxNdfTrade}
    *  <li>FX swap - {@link FxSwapTrade}
    *  <li>Generic Future - {@link GenericFutureTrade}
    *  <li>Generic Future Option - {@link GenericFutureOptionTrade}
+   *  <li>Ibor Future (STIR) - {@link IborFutureTrade}
    *  <li>Rate Swap - {@link SwapTrade}
    *  <li>Term Deposit - {@link TermDepositTrade}
    * </ul>
