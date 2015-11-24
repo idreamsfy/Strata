@@ -220,10 +220,10 @@ public class DiscountingFxNdfProductPricerTest {
   }
 
   public void test_currentCash_onPayment() {
+    double rate = 1111.2;
     LocalDate paymentDate = NDF.getPaymentDate();
-    RatesProvider provider = RatesProviderFxDataSets.createProvider(paymentDate, NDF.getIndex());
+    RatesProvider provider = RatesProviderFxDataSets.createProvider(paymentDate, NDF.getIndex(), rate);
     CurrencyAmount computed = PRICER.currentCash(NDF, provider);
-    assertEquals(computed, CurrencyAmount.of(NDF.getSettlementCurrency(),
-            NOMINAL_USD * (1d - FX_RATE / provider.fxRate(CurrencyPair.of(USD, KRW)))));
+    assertEquals(computed, CurrencyAmount.of(NDF.getSettlementCurrency(), NOMINAL_USD * (1d - FX_RATE / rate)));
   }
 }

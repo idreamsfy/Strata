@@ -120,7 +120,7 @@ public interface PaymentEventPricer<T extends PaymentEvent> {
    * 
    * @param event  the event to price
    * @param provider  the rates provider
-   * @return the currency exposure
+   * @return the current cash
    */
   public abstract double currentCash(T event, RatesProvider provider);
 }

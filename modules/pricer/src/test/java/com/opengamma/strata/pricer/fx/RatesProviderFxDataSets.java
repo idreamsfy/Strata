@@ -105,9 +105,10 @@ public class RatesProviderFxDataSets {
    * 
    * @param valuationDate  the valuation date
    * @param fxIndex  the FX index
+   * @param spotRate  the spot rate for the index
    * @return the provider
    */
-  public static RatesProvider createProvider(LocalDate valuationDate, FxIndex fxIndex) {
+  public static RatesProvider createProvider(LocalDate valuationDate, FxIndex fxIndex, double spotRate) {
     return ImmutableRatesProvider.builder()
         .valuationDate(valuationDate)
         .discountCurves(ImmutableMap.<Currency, Curve>builder()
@@ -118,7 +119,7 @@ public class RatesProviderFxDataSets {
             .build())
         .fxRateProvider(FX_MATRIX)
         .timeSeries(ImmutableMap.of(fxIndex, LocalDateDoubleTimeSeries.builder().put(
-            fxIndex.calculateFixingFromMaturity(valuationDate), FX_MATRIX.fxRate(fxIndex.getCurrencyPair())).build()))
+            fxIndex.calculateFixingFromMaturity(valuationDate), spotRate).build()))
         .build();
   }
 

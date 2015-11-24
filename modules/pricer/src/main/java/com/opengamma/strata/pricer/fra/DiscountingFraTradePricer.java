@@ -129,10 +129,6 @@ public class DiscountingFraTradePricer {
 
   /**
    * Calculates the current cash of the FRA trade.
-   * <p>
-   * If the valuation date is equal to the payment date, this returns the present value of the product based on 
-   * {@code RatesProvider} environment. 
-   * Zero currency amount is returned otherwise. 
    * 
    * @param trade  the trade to price
    * @param provider  the rates provider

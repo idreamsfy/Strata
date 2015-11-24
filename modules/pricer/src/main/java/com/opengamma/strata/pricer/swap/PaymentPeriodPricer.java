@@ -163,7 +163,7 @@ public interface PaymentPeriodPricer<T extends PaymentPeriod> {
    * 
    * @param period  the period to price
    * @param provider  the rates provider
-   * @return the currency exposure
+   * @return the current cash
    */
   public abstract double currentCash(T period, RatesProvider provider);
 }
