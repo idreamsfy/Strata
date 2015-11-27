@@ -219,8 +219,8 @@ public class BlackSwaptionPhysicalProductPricer {
   /**
    * Calculates the present value delta of the swaption product.
    * <p>
-   * The present value theta is is given by {@code pvbp * blackTheta} where {@code blackTheta} is the first derivative 
-   * of Black price with respect to {@code timeToExpiry}.
+   * The present value theta is is given by {@code pvbp * blackTheta} where {@code blackTheta} is the minus of the 
+   * Black price sensitivity to {@code timeToExpiry}.
    * <p>
    * The result is expressed using the currency of the swapion.
    * 
@@ -249,7 +249,7 @@ public class BlackSwaptionPhysicalProductPricer {
     double tenor = volatilityProvider.tenor(fixedLeg.getStartDate(), fixedLeg.getEndDate());
     double volatility = volatilityProvider.getVolatility(expiryDateTime, tenor, strike, forward);
     double theta = Math.abs(pvbp) * BlackFormulaRepository.driftlessTheta(forward, strike, expiry, volatility);
-    return CurrencyAmount.of(fixedLeg.getCurrency(), theta * ((expanded.getLongShort() == LongShort.LONG) ? -1d : 1d));
+    return CurrencyAmount.of(fixedLeg.getCurrency(), theta * ((expanded.getLongShort() == LongShort.LONG) ? 1d : -1d));
   }
 
   //-------------------------------------------------------------------------

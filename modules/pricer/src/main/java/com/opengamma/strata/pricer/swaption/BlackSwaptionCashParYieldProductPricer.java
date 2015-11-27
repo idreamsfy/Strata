@@ -225,8 +225,8 @@ public class BlackSwaptionCashParYieldProductPricer {
   /**
    * Calculates the present value theta of the swaption product.
    * <p>
-   * The present value theta is given by {@code -1 * discountFactor * annuityCash * blackTheta} where {@code blackTheta} 
-   * is the first derivative of Black price with respect to {@code timeToExpiry}. 
+   * The present value theta is given by {@code discountFactor * annuityCash * blackTheta} where {@code blackTheta} 
+   * is the minus of the Black price sensitivity to {@code timeToExpiry}. 
    * <p>
    * The result is expressed using the currency of the swapion.
    * 
@@ -257,7 +257,7 @@ public class BlackSwaptionCashParYieldProductPricer {
     double volatility = volatilityProvider.getVolatility(expiryDateTime, tenor, strike, forward);
     double theta = annuityCash * discountSettle
         * BlackFormulaRepository.driftlessTheta(forward, strike, expiry, volatility);
-    return CurrencyAmount.of(fixedLeg.getCurrency(), theta * ((expanded.getLongShort() == LongShort.LONG) ? -1d : 1d));
+    return CurrencyAmount.of(fixedLeg.getCurrency(), theta * ((expanded.getLongShort() == LongShort.LONG) ? 1d : -1d));
   }
 
   //-------------------------------------------------------------------------
