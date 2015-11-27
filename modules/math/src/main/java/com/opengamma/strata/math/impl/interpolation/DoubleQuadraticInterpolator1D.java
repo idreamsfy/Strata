@@ -48,8 +48,7 @@ public final class DoubleQuadraticInterpolator1D
 
   //-------------------------------------------------------------------------
   @Override
-  public Double interpolate(Interpolator1DDataBundle data, Double value) {
-    ArgChecker.notNull(value, "value");
+  public double interpolate(Interpolator1DDataBundle data, double value) {
     ArgChecker.notNull(data, "data bundle");
     ArgChecker.isTrue(data instanceof Interpolator1DDoubleQuadraticDataBundle, "data bundle is of wrong type");
     Interpolator1DDoubleQuadraticDataBundle quadraticData = (Interpolator1DDoubleQuadraticDataBundle) data;
@@ -63,21 +62,20 @@ public final class DoubleQuadraticInterpolator1D
     } else if (low == 0) {
       RealPolynomialFunction1D quadratic = quadraticData.getQuadratic(0);
       double x = value - xData[1];
-      return quadratic.evaluate(x);
+      return quadratic.applyAsDouble(x);
     } else if (high == n) {
       RealPolynomialFunction1D quadratic = quadraticData.getQuadratic(n - 2);
       double x = value - xData[n - 1];
-      return quadratic.evaluate(x);
+      return quadratic.applyAsDouble(x);
     }
     RealPolynomialFunction1D quadratic1 = quadraticData.getQuadratic(low - 1);
     RealPolynomialFunction1D quadratic2 = quadraticData.getQuadratic(high - 1);
     double w = weightFunction.getWeight((xData[high] - value) / (xData[high] - xData[low]));
-    return w * quadratic1.evaluate(value - xData[low]) + (1 - w) * quadratic2.evaluate(value - xData[high]);
+    return w * quadratic1.applyAsDouble(value - xData[low]) + (1 - w) * quadratic2.applyAsDouble(value - xData[high]);
   }
 
   @Override
-  public double firstDerivative(Interpolator1DDataBundle data, Double value) {
-    ArgChecker.notNull(value, "value");
+  public double firstDerivative(Interpolator1DDataBundle data, double value) {
     ArgChecker.notNull(data, "data bundle");
     ArgChecker.isTrue(data instanceof Interpolator1DDoubleQuadraticDataBundle, "data bundle is of wrong type");
     Interpolator1DDoubleQuadraticDataBundle quadraticData = (Interpolator1DDoubleQuadraticDataBundle) data;
@@ -92,23 +90,24 @@ public final class DoubleQuadraticInterpolator1D
     if (low == 0 || n == 1) { //second case handles two knots 
       RealPolynomialFunction1D quadraticFirstDerivative = quadraticData.getQuadraticFirstDerivative(0);
       double x = value - xData[1];
-      return quadraticFirstDerivative.evaluate(x);
+      return quadraticFirstDerivative.applyAsDouble(x);
     } else if (high >= n) {
       RealPolynomialFunction1D quadraticFirstDerivative = quadraticData.getQuadraticFirstDerivative(n - 2);
       double x = value - xData[n - 1];
-      return quadraticFirstDerivative.evaluate(x);
+      return quadraticFirstDerivative.applyAsDouble(x);
     }
     RealPolynomialFunction1D quadratic1 = quadraticData.getQuadratic(low - 1);
     RealPolynomialFunction1D quadratic2 = quadraticData.getQuadratic(high - 1);
     RealPolynomialFunction1D quadratic1FirstDerivative = quadraticData.getQuadraticFirstDerivative(low - 1);
     RealPolynomialFunction1D quadratic2FirstDerivative = quadraticData.getQuadraticFirstDerivative(high - 1);
     double w = weightFunction.getWeight((xData[high] - value) / (xData[high] - xData[low]));
-    return w * quadratic1FirstDerivative.evaluate(value - xData[low]) + (1 - w) * quadratic2FirstDerivative.evaluate(value - xData[high]) +
-        (quadratic2.evaluate(value - xData[high]) - quadratic1.evaluate(value - xData[low])) / (xData[high] - xData[low]);
+    return w * quadratic1FirstDerivative.applyAsDouble(value - xData[low]) +
+        (1 - w) * quadratic2FirstDerivative.applyAsDouble(value - xData[high]) +
+        (quadratic2.applyAsDouble(value - xData[high]) - quadratic1.applyAsDouble(value - xData[low])) / (xData[high] - xData[low]);
   }
 
   @Override
-  public double[] getNodeSensitivitiesForValue(Interpolator1DDataBundle data, Double value) {
+  public double[] getNodeSensitivitiesForValue(Interpolator1DDataBundle data, double value) {
     ArgChecker.notNull(data, "data");
     ArgChecker.isTrue(data instanceof Interpolator1DDoubleQuadraticDataBundle, "data bundle is of wrong type");
     Interpolator1DDoubleQuadraticDataBundle quadraticData = (Interpolator1DDoubleQuadraticDataBundle) data;
