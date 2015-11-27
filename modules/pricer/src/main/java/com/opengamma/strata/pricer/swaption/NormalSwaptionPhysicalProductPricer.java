@@ -159,8 +159,8 @@ public class NormalSwaptionPhysicalProductPricer {
   /**
    * Calculates the present value delta of the swaption product.
    * <p>
-   * The present value delta is given by {@code discountFactor * annuityCash * normalDelta} where {@code normalDelta} 
-   * is the first derivative of normal price with respect to forward. 
+   * The present value delta is given by {@code pvbp * normalDelta} where {@code normalDelta} is the first derivative 
+   * of normal price with respect to forward. 
    * <p>
    * The result is expressed using the currency of the swapion.
    * 
@@ -198,8 +198,8 @@ public class NormalSwaptionPhysicalProductPricer {
   /**
    * Calculates the present value gamma of the swaption product.
    * <p>
-   * The present value gamma is given by {@code discountFactor * annuityCash * normalGamma} where {@code normalGamma} 
-   * is the second derivative of normal price with respect to forward. 
+   * The present value gamma is given by {@code pvbp * normalGamma} where {@code normalGamma} is the second derivative 
+   * of normal price with respect to forward. 
    * <p>
    * The result is expressed using the currency of the swapion.
    * 
@@ -239,8 +239,8 @@ public class NormalSwaptionPhysicalProductPricer {
   /**
    * Calculates the present value of the swaption product.
    * <p>
-   * The present value theta is given by {@code discountFactor * annuityCash * normalTheta} where {@code normalTheta} 
-   * is the minus of the normal price sensitivity to {@code timeToExpiry}. 
+   * The present value theta is given by {@code pvbp * normalTheta} where {@code normalTheta} is the minus of 
+   * the normal price sensitivity to {@code timeToExpiry}. 
    * <p>
    * The result is expressed using the currency of the swapion.
    * 

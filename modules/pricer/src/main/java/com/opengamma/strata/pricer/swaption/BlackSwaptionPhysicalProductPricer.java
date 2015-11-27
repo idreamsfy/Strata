@@ -217,7 +217,7 @@ public class BlackSwaptionPhysicalProductPricer {
   }
 
   /**
-   * Calculates the present value delta of the swaption product.
+   * Calculates the present value theta of the swaption product.
    * <p>
    * The present value theta is is given by {@code pvbp * blackTheta} where {@code blackTheta} is the minus of the 
    * Black price sensitivity to {@code timeToExpiry}.
@@ -227,7 +227,7 @@ public class BlackSwaptionPhysicalProductPricer {
    * @param swaption  the product to price
    * @param ratesProvider  the rates provider
    * @param volatilityProvider  the Black volatility provider
-   * @return the present value delta of the swaption product
+   * @return the present value theta of the swaption product
    */
   public CurrencyAmount presentValueTheta(
       SwaptionProduct swaption,
