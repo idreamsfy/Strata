@@ -15,7 +15,7 @@ import com.opengamma.strata.market.sensitivity.PointSensitivityBuilder;
 import com.opengamma.strata.market.value.DiscountFactors;
 import com.opengamma.strata.market.value.DiscountIborIndexRates;
 import com.opengamma.strata.market.value.IborIndexRates;
-import com.opengamma.strata.market.value.ZeroRateDiscountFactors;
+import com.opengamma.strata.market.value.SimpleDiscountFactors;
 import com.opengamma.strata.pricer.rate.ImmutableRatesProvider;
 import com.opengamma.strata.product.deposit.ExpandedIborFixingDeposit;
 import com.opengamma.strata.product.deposit.IborFixingDeposit;
@@ -131,7 +131,8 @@ public class DiscountingIborFixingDepositProductPricer {
     IborIndex index = product.getFloatingRate().getIndex();
     Curve curve = provider.getIndexCurves().get(index);
     IborIndexRates rates = DiscountIborIndexRates.of(index, LocalDateDoubleTimeSeries.empty(),
-        ZeroRateDiscountFactors.of(index.getCurrency(), provider.getValuationDate(), curve));
+        //        ZeroRateDiscountFactors.of(index.getCurrency(), provider.getValuationDate(), curve));
+        SimpleDiscountFactors.of(index.getCurrency(), provider.getValuationDate(), curve));
     return rates.rate(product.getFloatingRate().getFixingDate());
   }
 
@@ -140,7 +141,8 @@ public class DiscountingIborFixingDepositProductPricer {
     IborIndex index = product.getFloatingRate().getIndex();
     Curve curve = provider.getIndexCurves().get(index);
     IborIndexRates rates = DiscountIborIndexRates.of(index, LocalDateDoubleTimeSeries.empty(),
-        ZeroRateDiscountFactors.of(index.getCurrency(), provider.getValuationDate(), curve));
+        //        ZeroRateDiscountFactors.of(index.getCurrency(), provider.getValuationDate(), curve));
+        SimpleDiscountFactors.of(index.getCurrency(), provider.getValuationDate(), curve));
     return rates.ratePointSensitivity(product.getFloatingRate().getFixingDate());
   }
 

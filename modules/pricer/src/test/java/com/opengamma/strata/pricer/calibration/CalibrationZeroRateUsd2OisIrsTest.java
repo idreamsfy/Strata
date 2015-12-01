@@ -335,6 +335,39 @@ public class CalibrationZeroRateUsd2OisIrsTest {
     calibration_market_quote_sensitivity_check(calibrator, shift);
   }
 
+  public void test() {
+    CurveInterpolator interp = CurveInterpolators.LOG_LINEAR;
+
+    InterpolatedNodalCurveDefinition dsc =
+        InterpolatedNodalCurveDefinition.builder()
+            .name(DSCON_CURVE_NAME)
+            .xValueType(ValueType.YEAR_FRACTION)
+            .yValueType(ValueType.DISCOUNT_FACTOR)
+            .dayCount(CURVE_DC)
+            .interpolator(INTERPOLATOR_LINEAR)
+            .extrapolatorLeft(EXTRAPOLATOR_FLAT)
+            .extrapolatorRight(EXTRAPOLATOR_FLAT)
+            .nodes(DSC_NODES).build();
+    InterpolatedNodalCurveDefinition fwd =
+        InterpolatedNodalCurveDefinition.builder()
+            .name(FWD3_CURVE_NAME)
+            .xValueType(ValueType.YEAR_FRACTION)
+            .yValueType(ValueType.DISCOUNT_FACTOR)
+            .dayCount(CURVE_DC)
+            .interpolator(INTERPOLATOR_LINEAR)
+            .extrapolatorLeft(EXTRAPOLATOR_FLAT)
+            .extrapolatorRight(EXTRAPOLATOR_FLAT)
+            .nodes(FWD3_NODES).build();
+    CurveGroupDefinition config =
+        CurveGroupDefinition.builder()
+            .name(CURVE_GROUP_NAME)
+            .addCurve(dsc, USD, USD_FED_FUND)
+            .addForwardCurve(fwd, USD_LIBOR_3M).build();
+
+    ImmutableRatesProvider result =
+        CALIBRATOR.calibrate(config, VALUATION_DATE, ALL_QUOTES, TS);
+  }
+
   private void calibration_market_quote_sensitivity_check(
       Function<MarketData, ImmutableRatesProvider> calibrator,
       double shift) {
