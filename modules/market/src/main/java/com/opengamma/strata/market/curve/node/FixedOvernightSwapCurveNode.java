@@ -154,8 +154,7 @@ public final class FixedOvernightSwapCurveNode
     }
     if (ValueType.DISCOUNT_FACTOR.equals(valueType)) {
       double approximateMaturity = template.getPeriodToStart().plus(template.getTenor()).toTotalMonths() / 12.0d;
-            return Math.exp(-approximateMaturity * marketData.getValue(rateKey));
-//      return 0.9d;
+      return Math.exp(-approximateMaturity * marketData.getValue(rateKey));
     }
     return 0d;
   }
