@@ -15,7 +15,7 @@ import org.testng.annotations.Test;
 import com.opengamma.strata.basics.currency.Currency;
 import com.opengamma.strata.basics.currency.CurrencyAmount;
 import com.opengamma.strata.basics.currency.MultiCurrencyAmount;
-import com.opengamma.strata.market.sensitivity.CurveCurrencyParameterSensitivities;
+import com.opengamma.strata.market.curve.CurveCurrencyParameterSensitivities;
 import com.opengamma.strata.market.sensitivity.PointSensitivities;
 import com.opengamma.strata.pricer.rate.ImmutableRatesProvider;
 import com.opengamma.strata.pricer.rate.RatesProvider;
@@ -171,4 +171,21 @@ public class DiscountingFxSwapProductPricerTest {
     assertTrue(computed.equalWithTolerance(CurveCurrencyParameterSensitivities.empty(), TOLERANCE_SPREAD_DELTA));
   }
 
+  //-------------------------------------------------------------------------
+  public void test_currentCash_zero() {
+    MultiCurrencyAmount computed = PRICER.currentCash(SWAP_PRODUCT, PROVIDER.getValuationDate());
+    assertEquals(computed, MultiCurrencyAmount.empty());
+  }
+
+  public void test_currentCash_firstPayment() {
+    MultiCurrencyAmount computed = PRICER.currentCash(SWAP_PRODUCT, PAYMENT_DATE_NEAR);
+    assertEquals(computed, MultiCurrencyAmount.of(
+        SWAP_PRODUCT.getNearLeg().getBaseCurrencyAmount(), SWAP_PRODUCT.getNearLeg().getCounterCurrencyAmount()));
+  }
+
+  public void test_currentCash_secondPayment() {
+    MultiCurrencyAmount computed = PRICER.currentCash(SWAP_PRODUCT, PAYMENT_DATE_FAR);
+    assertEquals(computed, MultiCurrencyAmount.of(
+        SWAP_PRODUCT.getFarLeg().getBaseCurrencyAmount(), SWAP_PRODUCT.getFarLeg().getCounterCurrencyAmount()));
+  }
 }

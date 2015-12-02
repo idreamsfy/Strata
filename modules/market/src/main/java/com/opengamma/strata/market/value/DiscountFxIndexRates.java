@@ -33,7 +33,7 @@ import com.opengamma.strata.basics.index.FxIndex;
 import com.opengamma.strata.collect.ArgChecker;
 import com.opengamma.strata.collect.Messages;
 import com.opengamma.strata.collect.timeseries.LocalDateDoubleTimeSeries;
-import com.opengamma.strata.market.sensitivity.CurveCurrencyParameterSensitivities;
+import com.opengamma.strata.market.curve.CurveCurrencyParameterSensitivities;
 import com.opengamma.strata.market.sensitivity.FxIndexSensitivity;
 import com.opengamma.strata.market.sensitivity.PointSensitivityBuilder;
 
@@ -62,7 +62,7 @@ public final class DiscountFxIndexRates
   /**
    * The underlying FX forward rates.
    */
-  @PropertyDefinition(validate = "notNull")
+  @PropertyDefinition(validate = "notNull", overrideGet = true)
   private final FxForwardRates fxForwardRates;
 
   //-------------------------------------------------------------------------
@@ -245,6 +245,7 @@ public final class DiscountFxIndexRates
    * Gets the underlying FX forward rates.
    * @return the value of the property, not null
    */
+  @Override
   public FxForwardRates getFxForwardRates() {
     return fxForwardRates;
   }

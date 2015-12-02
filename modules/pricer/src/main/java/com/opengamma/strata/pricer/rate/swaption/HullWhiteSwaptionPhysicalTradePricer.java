@@ -13,10 +13,10 @@ import com.opengamma.strata.basics.currency.Payment;
 import com.opengamma.strata.collect.array.DoubleArray;
 import com.opengamma.strata.market.sensitivity.PointSensitivityBuilder;
 import com.opengamma.strata.pricer.DiscountingPaymentPricer;
-import com.opengamma.strata.pricer.rate.HullWhiteOneFactorPiecewiseConstantParametersProvider;
+import com.opengamma.strata.pricer.index.HullWhiteOneFactorPiecewiseConstantParametersProvider;
 import com.opengamma.strata.pricer.rate.RatesProvider;
-import com.opengamma.strata.product.rate.swaption.Swaption;
-import com.opengamma.strata.product.rate.swaption.SwaptionTrade;
+import com.opengamma.strata.product.swaption.Swaption;
+import com.opengamma.strata.product.swaption.SwaptionTrade;
 
 /**
  * Pricer for swaption with physical settlement in Hull-White one factor model with piecewise constant volatility.
@@ -31,11 +31,11 @@ public class HullWhiteSwaptionPhysicalTradePricer {
   public static final HullWhiteSwaptionPhysicalTradePricer DEFAULT = new HullWhiteSwaptionPhysicalTradePricer();
 
   /** 
-   * Pricer for {@link Swaption}. 
+   * Pricer for {@link Swaption}.  
    */
   private static final HullWhiteSwaptionPhysicalProductPricer PRICER_PRODUCT = HullWhiteSwaptionPhysicalProductPricer.DEFAULT;
   /** 
-   * Pricer for {@link Payment} which is used to described the premium. 
+   * Pricer for {@link Payment} which is used to described the premium.  
    */
   private static final DiscountingPaymentPricer PRICER_PREMIUM = DiscountingPaymentPricer.DEFAULT;
 

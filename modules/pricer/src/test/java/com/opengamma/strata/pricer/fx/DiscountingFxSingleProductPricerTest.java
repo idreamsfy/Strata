@@ -17,7 +17,7 @@ import com.opengamma.strata.basics.currency.CurrencyAmount;
 import com.opengamma.strata.basics.currency.CurrencyPair;
 import com.opengamma.strata.basics.currency.FxRate;
 import com.opengamma.strata.basics.currency.MultiCurrencyAmount;
-import com.opengamma.strata.market.sensitivity.CurveCurrencyParameterSensitivities;
+import com.opengamma.strata.market.curve.CurveCurrencyParameterSensitivities;
 import com.opengamma.strata.market.sensitivity.FxForwardSensitivity;
 import com.opengamma.strata.market.sensitivity.PointSensitivities;
 import com.opengamma.strata.market.sensitivity.PointSensitivityBuilder;
@@ -58,12 +58,6 @@ public class DiscountingFxSingleProductPricerTest {
     FxSingle fwd = FxSingle.of(CurrencyAmount.of(USD, NOMINAL_USD), FxRate.of(USD, KRW, FX_RATE), PAYMENT_DATE_PAST);
     MultiCurrencyAmount computed = PRICER.presentValue(fwd, PROVIDER);
     assertEquals(computed, MultiCurrencyAmount.empty());
-  }
-
-  public void test_currencyExposure() {
-    MultiCurrencyAmount computed = PRICER.currencyExposure(FWD, PROVIDER);
-    MultiCurrencyAmount expected = PRICER.presentValue(FWD, PROVIDER);
-    assertEquals(computed, expected);
   }
 
   public void test_parSpread() {
@@ -118,4 +112,20 @@ public class DiscountingFxSingleProductPricerTest {
     assertEquals(computed, PointSensitivities.empty());
   }
 
+  //-------------------------------------------------------------------------
+  public void test_currencyExposure() {
+    MultiCurrencyAmount computed = PRICER.currencyExposure(FWD, PROVIDER);
+    MultiCurrencyAmount expected = PRICER.presentValue(FWD, PROVIDER);
+    assertEquals(computed, expected);
+  }
+
+  public void test_currentCash_zero() {
+    MultiCurrencyAmount computed = PRICER.currentCash(FWD, PROVIDER.getValuationDate());
+    assertEquals(computed, MultiCurrencyAmount.empty());
+  }
+
+  public void test_currentCash_onPayment() {
+    MultiCurrencyAmount computed = PRICER.currentCash(FWD, PAYMENT_DATE);
+    assertEquals(computed, MultiCurrencyAmount.of(FWD.getBaseCurrencyAmount(), FWD.getCounterCurrencyAmount()));
+  }
 }

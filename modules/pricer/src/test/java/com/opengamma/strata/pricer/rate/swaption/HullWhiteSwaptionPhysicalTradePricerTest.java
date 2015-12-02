@@ -8,7 +8,6 @@ package com.opengamma.strata.pricer.rate.swaption;
 import static com.opengamma.strata.basics.BuySell.SELL;
 import static com.opengamma.strata.basics.currency.Currency.USD;
 import static com.opengamma.strata.basics.index.IborIndices.USD_LIBOR_3M;
-import static com.opengamma.strata.product.rate.swap.type.FixedIborSwapConventions.USD_FIXED_6M_LIBOR_3M;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
 
@@ -26,18 +25,19 @@ import com.opengamma.strata.basics.currency.Payment;
 import com.opengamma.strata.basics.date.AdjustableDate;
 import com.opengamma.strata.collect.DoubleArrayMath;
 import com.opengamma.strata.collect.array.DoubleArray;
-import com.opengamma.strata.market.sensitivity.CurveCurrencyParameterSensitivities;
+import com.opengamma.strata.market.curve.CurveCurrencyParameterSensitivities;
 import com.opengamma.strata.market.sensitivity.PointSensitivityBuilder;
 import com.opengamma.strata.pricer.DiscountingPaymentPricer;
 import com.opengamma.strata.pricer.datasets.RatesProviderDataSets;
-import com.opengamma.strata.pricer.rate.HullWhiteOneFactorPiecewiseConstantParametersProvider;
+import com.opengamma.strata.pricer.index.HullWhiteIborFutureDataSet;
+import com.opengamma.strata.pricer.index.HullWhiteOneFactorPiecewiseConstantParametersProvider;
 import com.opengamma.strata.pricer.rate.ImmutableRatesProvider;
-import com.opengamma.strata.pricer.rate.future.HullWhiteIborFutureDataSet;
-import com.opengamma.strata.product.rate.swap.Swap;
-import com.opengamma.strata.product.rate.swaption.PhysicalSettlement;
-import com.opengamma.strata.product.rate.swaption.Swaption;
-import com.opengamma.strata.product.rate.swaption.SwaptionSettlement;
-import com.opengamma.strata.product.rate.swaption.SwaptionTrade;
+import com.opengamma.strata.product.swap.Swap;
+import com.opengamma.strata.product.swap.type.FixedIborSwapConventions;
+import com.opengamma.strata.product.swaption.PhysicalSettlement;
+import com.opengamma.strata.product.swaption.Swaption;
+import com.opengamma.strata.product.swaption.SwaptionSettlement;
+import com.opengamma.strata.product.swaption.SwaptionTrade;
 
 /**
  * Test {@link HullWhiteSwaptionPhysicalTradePricer}.
@@ -56,7 +56,7 @@ public class HullWhiteSwaptionPhysicalTradePricerTest {
   private static final LocalDate SWAP_MATURITY_DATE = SWAP_EFFECTIVE_DATE.plus(SWAP_TENOR);
   private static final double STRIKE = 0.01;
   private static final double NOTIONAL = 100_000_000;
-  private static final Swap SWAP_REC = USD_FIXED_6M_LIBOR_3M
+  private static final Swap SWAP_REC = FixedIborSwapConventions.USD_FIXED_6M_LIBOR_3M
       .toTrade(VALUATION_DATE, SWAP_EFFECTIVE_DATE, SWAP_MATURITY_DATE, SELL, NOTIONAL, STRIKE).getProduct();
   private static final SwaptionSettlement PHYSICAL_SETTLE = PhysicalSettlement.DEFAULT;
 

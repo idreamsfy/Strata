@@ -16,18 +16,18 @@ import com.opengamma.strata.basics.index.IborIndex;
 import com.opengamma.strata.basics.schedule.SchedulePeriod;
 import com.opengamma.strata.collect.ArgChecker;
 import com.opengamma.strata.pricer.rate.RatesProvider;
-import com.opengamma.strata.pricer.rate.swap.PaymentPeriodPricer;
+import com.opengamma.strata.pricer.swap.PaymentPeriodPricer;
 import com.opengamma.strata.product.rate.FixedRateObservation;
 import com.opengamma.strata.product.rate.IborRateObservation;
-import com.opengamma.strata.product.rate.swap.ExpandedSwap;
-import com.opengamma.strata.product.rate.swap.ExpandedSwapLeg;
-import com.opengamma.strata.product.rate.swap.FxReset;
-import com.opengamma.strata.product.rate.swap.KnownAmountPaymentPeriod;
-import com.opengamma.strata.product.rate.swap.PaymentPeriod;
-import com.opengamma.strata.product.rate.swap.RateAccrualPeriod;
-import com.opengamma.strata.product.rate.swap.RatePaymentPeriod;
-import com.opengamma.strata.product.rate.swap.SwapLegType;
-import com.opengamma.strata.product.rate.swap.SwapProduct;
+import com.opengamma.strata.product.swap.ExpandedSwap;
+import com.opengamma.strata.product.swap.ExpandedSwapLeg;
+import com.opengamma.strata.product.swap.FxReset;
+import com.opengamma.strata.product.swap.KnownAmountPaymentPeriod;
+import com.opengamma.strata.product.swap.PaymentPeriod;
+import com.opengamma.strata.product.swap.RateAccrualPeriod;
+import com.opengamma.strata.product.swap.RatePaymentPeriod;
+import com.opengamma.strata.product.swap.SwapLegType;
+import com.opengamma.strata.product.swap.SwapProduct;
 
 /**
  * Computes cash flow equivalent of products.

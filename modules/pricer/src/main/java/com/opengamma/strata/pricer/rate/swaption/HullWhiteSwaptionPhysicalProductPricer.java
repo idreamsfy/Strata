@@ -17,18 +17,18 @@ import com.opengamma.strata.market.sensitivity.PointSensitivityBuilder;
 import com.opengamma.strata.math.impl.statistics.distribution.NormalDistribution;
 import com.opengamma.strata.math.impl.statistics.distribution.ProbabilityDistribution;
 import com.opengamma.strata.pricer.impl.rate.swap.CashFlowEquivalentCalculator;
-import com.opengamma.strata.pricer.rate.HullWhiteOneFactorPiecewiseConstantParametersProvider;
+import com.opengamma.strata.pricer.index.HullWhiteOneFactorPiecewiseConstantParametersProvider;
 import com.opengamma.strata.pricer.rate.RatesProvider;
-import com.opengamma.strata.pricer.rate.swap.PaymentPeriodPricer;
-import com.opengamma.strata.product.rate.swap.ExpandedSwap;
-import com.opengamma.strata.product.rate.swap.ExpandedSwapLeg;
-import com.opengamma.strata.product.rate.swap.KnownAmountPaymentPeriod;
-import com.opengamma.strata.product.rate.swap.PaymentPeriod;
-import com.opengamma.strata.product.rate.swap.RatePaymentPeriod;
-import com.opengamma.strata.product.rate.swap.SwapLegType;
-import com.opengamma.strata.product.rate.swaption.ExpandedSwaption;
-import com.opengamma.strata.product.rate.swaption.SettlementType;
-import com.opengamma.strata.product.rate.swaption.SwaptionProduct;
+import com.opengamma.strata.pricer.swap.PaymentPeriodPricer;
+import com.opengamma.strata.product.swap.ExpandedSwap;
+import com.opengamma.strata.product.swap.ExpandedSwapLeg;
+import com.opengamma.strata.product.swap.KnownAmountPaymentPeriod;
+import com.opengamma.strata.product.swap.PaymentPeriod;
+import com.opengamma.strata.product.swap.RatePaymentPeriod;
+import com.opengamma.strata.product.swap.SwapLegType;
+import com.opengamma.strata.product.swaption.ExpandedSwaption;
+import com.opengamma.strata.product.swaption.SettlementType;
+import com.opengamma.strata.product.swaption.SwaptionProduct;
 
 /**
  * Pricer for swaption with physical settlement in Hull-White one factor model with piecewise constant volatility.

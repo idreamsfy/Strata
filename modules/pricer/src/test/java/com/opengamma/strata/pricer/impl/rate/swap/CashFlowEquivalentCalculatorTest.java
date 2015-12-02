@@ -12,9 +12,9 @@ import static com.opengamma.strata.basics.date.DayCounts.ACT_365F;
 import static com.opengamma.strata.basics.index.IborIndices.GBP_LIBOR_3M;
 import static com.opengamma.strata.collect.TestHelper.assertThrowsIllegalArg;
 import static com.opengamma.strata.collect.TestHelper.date;
-import static com.opengamma.strata.product.rate.swap.SwapLegType.FIXED;
-import static com.opengamma.strata.product.rate.swap.SwapLegType.IBOR;
-import static com.opengamma.strata.product.rate.swap.SwapLegType.OTHER;
+import static com.opengamma.strata.product.swap.SwapLegType.FIXED;
+import static com.opengamma.strata.product.swap.SwapLegType.IBOR;
+import static com.opengamma.strata.product.swap.SwapLegType.OTHER;
 import static org.testng.Assert.assertEquals;
 
 import java.time.LocalDate;
@@ -25,11 +25,11 @@ import com.opengamma.strata.basics.currency.Payment;
 import com.opengamma.strata.basics.schedule.SchedulePeriod;
 import com.opengamma.strata.product.rate.FixedRateObservation;
 import com.opengamma.strata.product.rate.IborRateObservation;
-import com.opengamma.strata.product.rate.swap.ExpandedSwapLeg;
-import com.opengamma.strata.product.rate.swap.KnownAmountPaymentPeriod;
-import com.opengamma.strata.product.rate.swap.RateAccrualPeriod;
-import com.opengamma.strata.product.rate.swap.RatePaymentPeriod;
-import com.opengamma.strata.product.rate.swap.Swap;
+import com.opengamma.strata.product.swap.ExpandedSwapLeg;
+import com.opengamma.strata.product.swap.KnownAmountPaymentPeriod;
+import com.opengamma.strata.product.swap.RateAccrualPeriod;
+import com.opengamma.strata.product.swap.RatePaymentPeriod;
+import com.opengamma.strata.product.swap.Swap;
 
 /**
  * Test {@link CashFlowEquivalentCalculator}.
