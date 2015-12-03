@@ -371,7 +371,7 @@ public class CalibrationZeroRateAndDiscountFactorUsd2OisIrsTest {
 
   public void calibration_present_value_discountCurve() {
     CurveInterpolator interp = CurveInterpolators.LOG_LINEAR;
-    CurveExtrapolator extrap = CurveExtrapolators.LOG_LINEAR;
+    CurveExtrapolator extrapRight = CurveExtrapolators.LOG_LINEAR;
     CurveExtrapolator extrapLeft = CurveExtrapolators.QUADRATIC_LEFT;
     InterpolatedNodalCurveDefinition dsc =
         InterpolatedNodalCurveDefinition.builder()
@@ -381,7 +381,7 @@ public class CalibrationZeroRateAndDiscountFactorUsd2OisIrsTest {
             .dayCount(CURVE_DC)
             .interpolator(interp)
             .extrapolatorLeft(extrapLeft)
-            .extrapolatorRight(extrap)
+            .extrapolatorRight(extrapRight)
             .nodes(DSC_NODES).build();
     InterpolatedNodalCurveDefinition fwd =
         InterpolatedNodalCurveDefinition.builder()
@@ -391,7 +391,7 @@ public class CalibrationZeroRateAndDiscountFactorUsd2OisIrsTest {
             .dayCount(CURVE_DC)
             .interpolator(interp)
             .extrapolatorLeft(extrapLeft)
-            .extrapolatorRight(extrap)
+            .extrapolatorRight(extrapRight)
             .nodes(FWD3_NODES).build();
     CurveGroupDefinition config =
         CurveGroupDefinition.builder()
