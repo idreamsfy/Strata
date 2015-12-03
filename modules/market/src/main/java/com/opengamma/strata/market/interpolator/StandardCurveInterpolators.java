@@ -10,6 +10,7 @@ import com.opengamma.strata.math.impl.interpolation.ExponentialInterpolator1D;
 import com.opengamma.strata.math.impl.interpolation.LinearInterpolator1D;
 import com.opengamma.strata.math.impl.interpolation.LogLinearInterpolator1D;
 import com.opengamma.strata.math.impl.interpolation.LogNaturalCubicMonotonicityPreservingInterpolator1D;
+import com.opengamma.strata.math.impl.interpolation.LogNaturalDiscountFactorInterpolator1D;
 import com.opengamma.strata.math.impl.interpolation.NaturalCubicSplineInterpolator1D;
 import com.opengamma.strata.math.impl.interpolation.TimeSquareInterpolator1D;
 
@@ -45,6 +46,9 @@ final class StandardCurveInterpolators {
   // Natural cubic spline interpolator.
   public static final CurveInterpolator NATURAL_CUBIC_SPLINE =
       new ImmutableCurveInterpolator("NaturalCubicSpline", new NaturalCubicSplineInterpolator1D());
+
+  public static final CurveInterpolator LOG_NATURAL_CUBIC_DISCOUNT_FACTOR =
+      new ImmutableCurveInterpolator("LogNaturalCubicDiscountFactor", new LogNaturalDiscountFactorInterpolator1D());
 
   //-------------------------------------------------------------------------
   /**

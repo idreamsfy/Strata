@@ -155,6 +155,10 @@ public final class DiscountIborIndexRates
 
   // compounded from discount factors
   private double simplyCompoundForwardRate(LocalDate startDate, LocalDate endDate, double accrualFactor) {
+    //    for (int i = 0; i < 200; i++) {
+    //      double time = 0.002 * i;
+    //      System.out.println(time + "\t" + ((SimpleDiscountFactors) discountFactors).discountFactor(time));
+    //    }
     return (discountFactors.discountFactor(startDate) / discountFactors.discountFactor(endDate) - 1) / accrualFactor;
   }
 

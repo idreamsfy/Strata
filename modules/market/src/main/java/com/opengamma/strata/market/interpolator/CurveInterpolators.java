@@ -70,6 +70,9 @@ public final class CurveInterpolators {
   public static final CurveInterpolator NATURAL_CUBIC_SPLINE =
       CurveInterpolator.of(StandardCurveInterpolators.NATURAL_CUBIC_SPLINE.getName());
 
+  public static final CurveInterpolator LOG_NATURAL_CUBIC_DISCOUNT_FACTOR =
+      CurveInterpolator.of(StandardCurveInterpolators.LOG_NATURAL_CUBIC_DISCOUNT_FACTOR.getName());
+
   //-------------------------------------------------------------------------
   /**
    * Restricted constructor.

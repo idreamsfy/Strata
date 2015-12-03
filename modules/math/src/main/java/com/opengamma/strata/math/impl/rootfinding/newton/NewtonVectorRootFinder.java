@@ -150,7 +150,7 @@ public class NewtonVectorRootFinder extends VectorRootFinder {
       quadraticBacktrack(p, function, data);
       int count = 0;
       while (data.getG1() > data.getG0() / (1 + ALPHA * data.getLambda0())) {
-        if (count > 5) {
+        if (count > 15) {
           return false;
         }
         cubicBacktrack(p, function, data);

@@ -370,28 +370,31 @@ public class CalibrationZeroRateUsd2OisIrsTest {
   }
 
   public void calibration_present_value_discountCurve() {
-    CurveInterpolator interp = CurveInterpolators.LOG_LINEAR;
-    CurveExtrapolator extrap = CurveExtrapolators.LOG_LINEAR;
-    CurveExtrapolator extrapLeft = CurveExtrapolators.QUADRATIC_LEFT;
+    CurveInterpolator interpDsc = CurveInterpolators.LOG_NATURAL_CUBIC_DISCOUNT_FACTOR;
+    CurveExtrapolator extrapDsc = CurveExtrapolators.INTERPOLATOR;
+    CurveExtrapolator extrapLeftDsc = CurveExtrapolators.INTERPOLATOR;
     InterpolatedNodalCurveDefinition dsc =
         InterpolatedNodalCurveDefinition.builder()
             .name(DSCON_CURVE_NAME)
             .xValueType(ValueType.YEAR_FRACTION)
             .yValueType(ValueType.DISCOUNT_FACTOR)
             .dayCount(CURVE_DC)
-            .interpolator(interp)
-            .extrapolatorLeft(extrapLeft)
-            .extrapolatorRight(extrap)
+            .interpolator(interpDsc)
+            .extrapolatorLeft(extrapLeftDsc)
+            .extrapolatorRight(extrapDsc)
             .nodes(DSC_NODES).build();
+    CurveInterpolator interp = CurveInterpolators.LOG_LINEAR;
+    CurveExtrapolator extrap = CurveExtrapolators.LOG_LINEAR;
+    CurveExtrapolator extrapLeft = CurveExtrapolators.QUADRATIC_LEFT;
     InterpolatedNodalCurveDefinition fwd =
         InterpolatedNodalCurveDefinition.builder()
             .name(FWD3_CURVE_NAME)
             .xValueType(ValueType.YEAR_FRACTION)
             .yValueType(ValueType.DISCOUNT_FACTOR)
             .dayCount(CURVE_DC)
-            .interpolator(INTERPOLATOR_LINEAR)
-            .extrapolatorLeft(extrapLeft)
-            .extrapolatorRight(extrap)
+            .interpolator(interpDsc)
+            .extrapolatorLeft(extrapDsc)
+            .extrapolatorRight(extrapLeftDsc)
             .nodes(FWD3_NODES).build();
     CurveGroupDefinition config =
         CurveGroupDefinition.builder()
