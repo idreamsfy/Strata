@@ -78,7 +78,7 @@ import com.opengamma.strata.product.swap.type.FixedOvernightSwapTemplate;
  * One curve is Discounting and Fed Fund forward and the other one is Libor 3M forward.
  */
 @Test
-public class CalibrationZeroRateUsd2OisIrsTest {
+public class CalibrationZeroRateAndDiscountFactorUsd2OisIrsTest {
 
   private static final LocalDate VALUATION_DATE = LocalDate.of(2015, 7, 21);
 
@@ -389,7 +389,7 @@ public class CalibrationZeroRateUsd2OisIrsTest {
             .xValueType(ValueType.YEAR_FRACTION)
             .yValueType(ValueType.DISCOUNT_FACTOR)
             .dayCount(CURVE_DC)
-            .interpolator(INTERPOLATOR_LINEAR)
+            .interpolator(interp)
             .extrapolatorLeft(extrapLeft)
             .extrapolatorRight(extrap)
             .nodes(FWD3_NODES).build();
