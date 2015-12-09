@@ -52,7 +52,7 @@ public final class MarketDataUtils {
     // market data into a new rates provider.
 
     return ImmutableRatesProvider.builder(marketData.getValuationDate())
-        .discountCurves(ImmutableMap.of(currency, curveOverride))
+        .discountCurve(currency, curveOverride)
         .indexCurves(indices.stream()
             .collect(toImmutableMap(Function.identity(), k -> curveOverride)))
         .timeSeries(indices.stream()
