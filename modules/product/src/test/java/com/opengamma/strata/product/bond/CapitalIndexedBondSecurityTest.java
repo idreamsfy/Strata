@@ -10,11 +10,11 @@ import static com.opengamma.strata.basics.currency.Currency.GBP;
 import static com.opengamma.strata.basics.date.HolidayCalendarIds.EUTA;
 import static com.opengamma.strata.basics.index.PriceIndices.GB_HICP;
 import static com.opengamma.strata.collect.TestHelper.assertSerialization;
-import static com.opengamma.strata.collect.TestHelper.assertThrowsIllegalArg;
 import static com.opengamma.strata.collect.TestHelper.coverBeanEquals;
 import static com.opengamma.strata.collect.TestHelper.coverImmutableBean;
 import static com.opengamma.strata.collect.TestHelper.date;
 import static com.opengamma.strata.product.bond.CapitalIndexedBondYieldConvention.GB_IL_FLOAT;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.testng.Assert.assertEquals;
 
 import java.time.LocalDate;
@@ -23,7 +23,6 @@ import org.testng.annotations.Test;
 
 import com.google.common.collect.ImmutableSet;
 import com.opengamma.strata.basics.ReferenceData;
-import com.opengamma.strata.basics.StandardId;
 import com.opengamma.strata.basics.currency.CurrencyAmount;
 import com.opengamma.strata.basics.date.BusinessDayAdjustment;
 import com.opengamma.strata.basics.date.BusinessDayConventions;
@@ -33,6 +32,7 @@ import com.opengamma.strata.basics.date.DaysAdjustment;
 import com.opengamma.strata.basics.schedule.Frequency;
 import com.opengamma.strata.basics.schedule.PeriodicSchedule;
 import com.opengamma.strata.basics.schedule.StubConvention;
+import com.opengamma.strata.product.LegalEntityId;
 import com.opengamma.strata.product.SecurityInfo;
 import com.opengamma.strata.product.SecurityPriceInfo;
 import com.opengamma.strata.product.TradeInfo;
@@ -50,7 +50,7 @@ public class CapitalIndexedBondSecurityTest {
   private static final SecurityPriceInfo PRICE_INFO = SecurityPriceInfo.of(0.1, CurrencyAmount.of(GBP, 25));
   private static final SecurityInfo INFO = SecurityInfo.of(PRODUCT.getSecurityId(), PRICE_INFO);
   private static final CapitalIndexedBondYieldConvention YIELD_CONVENTION = GB_IL_FLOAT;
-  private static final StandardId LEGAL_ENTITY = StandardId.of("OG-Ticker", "BUN EUR");
+  private static final LegalEntityId LEGAL_ENTITY = LegalEntityId.of("OG-Ticker", "BUN EUR");
   private static final double NOTIONAL = 1.0e7;
   private static final InflationRateCalculation RATE =
       InflationRateCalculation.of(GB_HICP, 3, PriceIndexCalculationMethod.MONTHLY, 120d);
@@ -75,7 +75,8 @@ public class CapitalIndexedBondSecurityTest {
   }
 
   public void test_builder_fail() {
-    assertThrowsIllegalArg(() -> CapitalIndexedBondSecurity.builder()
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> CapitalIndexedBondSecurity.builder()
         .info(INFO)
         .dayCount(DAY_COUNT)
         .rateCalculation(RATE)
@@ -87,7 +88,8 @@ public class CapitalIndexedBondSecurityTest {
         .yieldConvention(YIELD_CONVENTION)
         .exCouponPeriod(DaysAdjustment.ofBusinessDays(EX_COUPON_DAYS, EUTA, BUSINESS_ADJUST))
         .build());
-    assertThrowsIllegalArg(() -> CapitalIndexedBondSecurity.builder()
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> CapitalIndexedBondSecurity.builder()
         .info(INFO)
         .dayCount(DAY_COUNT)
         .rateCalculation(RATE)

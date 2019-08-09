@@ -11,6 +11,9 @@ import com.opengamma.strata.collect.named.ExtendedEnum;
  * Constants and implementations for standard Ibor indices.
  * <p>
  * Each constant returns a standard definition of the specified index.
+ * <p>
+ * If a floating rate has a constant here, then it is fully supported by Strata
+ * with example holiday calendar data.
  */
 public final class IborIndices {
   // constants are indirected via ENUM_LOOKUP to allow them to be replaced by config
@@ -221,7 +224,10 @@ public final class IborIndices {
    * The 2 week EURIBOR index.
    * <p>
    * The "Euro Interbank Offered Rate".
+   * 
+   * @deprecated Not published as of 2018-12-03
    */
+  @Deprecated
   public static final IborIndex EUR_EURIBOR_2W = IborIndex.of("EUR-EURIBOR-2W");
   /**
    * The 1 month EURIBOR index.
@@ -233,7 +239,10 @@ public final class IborIndices {
    * The 2 month EURIBOR index.
    * <p>
    * The "Euro Interbank Offered Rate".
+   * 
+   * @deprecated Not published as of 2018-12-03
    */
+  @Deprecated
   public static final IborIndex EUR_EURIBOR_2M = IborIndex.of("EUR-EURIBOR-2M");
   /**
    * The 3 month EURIBOR index.
@@ -251,7 +260,10 @@ public final class IborIndices {
    * The 9 month EURIBOR index.
    * <p>
    * The "Euro Interbank Offered Rate".
+   * 
+   * @deprecated Not published as of 2018-12-03
    */
+  @Deprecated
   public static final IborIndex EUR_EURIBOR_9M = IborIndex.of("EUR-EURIBOR-9M");
   /**
    * The 12 month EURIBOR index.
@@ -610,6 +622,44 @@ public final class IborIndices {
 
   //-------------------------------------------------------------------------
   /**
+   * The 1 month BKBM index.
+   * <p>
+   * The "New Zealand Bank Bill Benchmark Rate".
+   */
+  public static final IborIndex NZD_BKBM_1M = IborIndex.of("NZD-BKBM-1M");
+  /**
+   * The 2 month BKBM index.
+   * <p>
+   * The "New Zealand Bank Bill Benchmark Rate".
+   */
+  public static final IborIndex NZD_BKBM_2M = IborIndex.of("NZD-BKBM-2M");
+  /**
+   * The 3 month BKBM index.
+   * <p>
+   * The "New Zealand Bank Bill Benchmark Rate".
+   */
+  public static final IborIndex NZD_BKBM_3M = IborIndex.of("NZD-BKBM-3M");
+  /**
+   * The 4 month BKBM index.
+   * <p>
+   * The "New Zealand Bank Bill Benchmark Rate".
+   */
+  public static final IborIndex NZD_BKBM_4M = IborIndex.of("NZD-BKBM-4M");
+  /**
+   * The 5 month BKBM index.
+   * <p>
+   * The "New Zealand Bank Bill Benchmark Rate".
+   */
+  public static final IborIndex NZD_BKBM_5M = IborIndex.of("NZD-BKBM-5M");
+  /**
+   * The 6 month BKBM index.
+   * <p>
+   * The "New Zealand Bank Bill Benchmark Rate".
+   */
+  public static final IborIndex NZD_BKBM_6M = IborIndex.of("NZD-BKBM-6M");
+
+  //-------------------------------------------------------------------------
+  /**
    * The 1 week WIBOR index.
    * <p>
    * The "Polish Interbank Offered Rate".
@@ -642,7 +692,7 @@ public final class IborIndices {
 
   //-------------------------------------------------------------------------
   /**
-   * The 1 WEEK STIBOR index.
+   * The 1 week STIBOR index.
    * <p>
    * The "Swedish Interbank Offered Rate".
    */

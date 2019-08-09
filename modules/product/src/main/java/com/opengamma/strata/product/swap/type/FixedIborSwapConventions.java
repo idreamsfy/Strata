@@ -10,7 +10,7 @@ import com.opengamma.strata.collect.named.ExtendedEnum;
 /**
  * Market standard Fixed-Ibor swap conventions.
  * <p>
- * http://www.opengamma.com/sites/default/files/interest-rate-instruments-and-market-conventions.pdf
+ * https://developers.opengamma.com/quantitative-research/Interest-Rate-Instruments-and-Market-Conventions.pdf
  */
 public final class FixedIborSwapConventions {
 
@@ -56,6 +56,25 @@ public final class FixedIborSwapConventions {
    */
   public static final FixedIborSwapConvention EUR_FIXED_1Y_EURIBOR_6M =
       FixedIborSwapConvention.of(StandardFixedIborSwapConventions.EUR_FIXED_1Y_EURIBOR_6M.getName());
+
+  //-------------------------------------------------------------------------
+  /**
+   * The 'EUR-FIXED-1Y-LIBOR-3M' swap convention.
+   * <p>
+   * EUR(1Y) vanilla fixed vs LIBOR 3M swap.
+   * The fixed leg pays yearly with day count '30U/360'.
+   */
+  public static final FixedIborSwapConvention EUR_FIXED_1Y_LIBOR_3M =
+      FixedIborSwapConvention.of(StandardFixedIborSwapConventions.EUR_FIXED_1Y_LIBOR_3M.getName());
+
+  /**
+   * The 'EUR-FIXED-1Y-LIBOR-6M' swap convention.
+   * <p>
+   * EUR(>1Y) vanilla fixed vs LIBOR 6M swap.
+   * The fixed leg pays yearly with day count '30U/360'.
+   */
+  public static final FixedIborSwapConvention EUR_FIXED_1Y_LIBOR_6M =
+      FixedIborSwapConvention.of(StandardFixedIborSwapConventions.EUR_FIXED_1Y_LIBOR_6M.getName());
 
   //-------------------------------------------------------------------------
   /**

@@ -14,7 +14,7 @@ import static com.opengamma.strata.basics.currency.Currency.GBP;
 import static com.opengamma.strata.basics.currency.Currency.USD;
 import static com.opengamma.strata.collect.TestHelper.assertJodaConvert;
 import static com.opengamma.strata.collect.TestHelper.assertSerialization;
-import static com.opengamma.strata.collect.TestHelper.assertThrowsIllegalArg;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
@@ -25,11 +25,15 @@ import java.util.Set;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
+import com.google.common.collect.ImmutableSet;
+
 /**
  * Test {@link CurrencyPair}.
  */
 @Test
 public class CurrencyPairTest {
+
+  private static final Object ANOTHER_TYPE = "";
 
   //-----------------------------------------------------------------------
   public void test_getAvailable() {
@@ -45,6 +49,7 @@ public class CurrencyPairTest {
     assertEquals(test.getBase(), GBP);
     assertEquals(test.getCounter(), USD);
     assertEquals(test.isIdentity(), false);
+    assertEquals(test.toSet(), ImmutableSet.of(GBP, USD));
     assertEquals(test.toString(), "GBP/USD");
   }
 
@@ -53,6 +58,7 @@ public class CurrencyPairTest {
     assertEquals(test.getBase(), USD);
     assertEquals(test.getCounter(), GBP);
     assertEquals(test.isIdentity(), false);
+    assertEquals(test.toSet(), ImmutableSet.of(GBP, USD));
     assertEquals(test.toString(), "USD/GBP");
   }
 
@@ -65,14 +71,14 @@ public class CurrencyPairTest {
   }
 
   public void test_of_CurrencyCurrency_null() {
-    assertThrowsIllegalArg(() -> CurrencyPair.of(null, USD));
-    assertThrowsIllegalArg(() -> CurrencyPair.of(USD, null));
-    assertThrowsIllegalArg(() -> CurrencyPair.of(null, null));
+    assertThatIllegalArgumentException().isThrownBy(() -> CurrencyPair.of(null, USD));
+    assertThatIllegalArgumentException().isThrownBy(() -> CurrencyPair.of(USD, null));
+    assertThatIllegalArgumentException().isThrownBy(() -> CurrencyPair.of(null, null));
   }
 
   //-------------------------------------------------------------------------
   @DataProvider(name = "parseGood")
-  Object[][] data_parseGood() {
+  public static Object[][] data_parseGood() {
     return new Object[][] {
         {"USD/EUR", USD, EUR},
         {"EUR/USD", EUR, USD},
@@ -87,7 +93,7 @@ public class CurrencyPairTest {
   }
 
   @DataProvider(name = "parseBad")
-  Object[][] data_parseBad() {
+  public static Object[][] data_parseBad() {
     return new Object[][] {
         {"AUD"},
         {"AUD/GB"},
@@ -99,9 +105,9 @@ public class CurrencyPairTest {
     };
   }
 
-  @Test(dataProvider = "parseBad", expectedExceptions = IllegalArgumentException.class)
+  @Test(dataProvider = "parseBad")
   public void test_parse_String_bad(String input) {
-    CurrencyPair.parse(input);
+    assertThatIllegalArgumentException().isThrownBy(() -> CurrencyPair.parse(input));
   }
 
   //-------------------------------------------------------------------------
@@ -132,7 +138,26 @@ public class CurrencyPairTest {
 
   public void test_contains_Currency_null() {
     CurrencyPair test = CurrencyPair.of(GBP, USD);
-    assertThrowsIllegalArg(() -> test.contains(null));
+    assertThatIllegalArgumentException().isThrownBy(() -> test.contains(null));
+  }
+
+  //-------------------------------------------------------------------------
+  public void test_other_Currency() {
+    CurrencyPair test = CurrencyPair.of(GBP, USD);
+    assertEquals(test.other(GBP), USD);
+    assertEquals(test.other(USD), GBP);
+    assertThatIllegalArgumentException().isThrownBy(() -> test.other(EUR));
+  }
+
+  public void test_other_Currency_same() {
+    CurrencyPair test = CurrencyPair.of(GBP, GBP);
+    assertEquals(test.other(GBP), GBP);
+    assertThatIllegalArgumentException().isThrownBy(() -> test.other(EUR));
+  }
+
+  public void test_other_Currency_null() {
+    CurrencyPair test = CurrencyPair.of(GBP, USD);
+    assertThatIllegalArgumentException().isThrownBy(() -> test.other(null));
   }
 
   //-------------------------------------------------------------------------
@@ -149,7 +174,7 @@ public class CurrencyPairTest {
 
   public void test_isInverse_CurrencyPair_null() {
     CurrencyPair test = CurrencyPair.of(GBP, USD);
-    assertThrowsIllegalArg(() -> test.isInverse(null));
+    assertThatIllegalArgumentException().isThrownBy(() -> test.isInverse(null));
   }
 
   //-------------------------------------------------------------------------
@@ -179,7 +204,7 @@ public class CurrencyPairTest {
 
   public void test_cross_CurrencyPair_null() {
     CurrencyPair test = CurrencyPair.of(GBP, USD);
-    assertThrowsIllegalArg(() -> test.cross(null));
+    assertThatIllegalArgumentException().isThrownBy(() -> test.cross(null));
   }
 
   //-----------------------------------------------------------------------
@@ -244,7 +269,7 @@ public class CurrencyPairTest {
 
   public void test_equals_bad() {
     CurrencyPair test = CurrencyPair.of(AUD, GBP);
-    assertFalse(test.equals(""));
+    assertFalse(test.equals(ANOTHER_TYPE));
     assertFalse(test.equals(null));
   }
 

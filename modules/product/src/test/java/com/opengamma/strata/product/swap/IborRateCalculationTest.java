@@ -11,13 +11,13 @@ import static com.opengamma.strata.basics.date.DayCounts.ACT_365F;
 import static com.opengamma.strata.basics.date.HolidayCalendarIds.GBLO;
 import static com.opengamma.strata.basics.index.IborIndices.GBP_LIBOR_1M;
 import static com.opengamma.strata.basics.index.IborIndices.GBP_LIBOR_1W;
+import static com.opengamma.strata.basics.index.IborIndices.GBP_LIBOR_2M;
 import static com.opengamma.strata.basics.index.IborIndices.GBP_LIBOR_3M;
 import static com.opengamma.strata.basics.index.IborIndices.GBP_LIBOR_6M;
 import static com.opengamma.strata.basics.schedule.Frequency.P1M;
 import static com.opengamma.strata.basics.schedule.Frequency.P3M;
 import static com.opengamma.strata.basics.schedule.RollConventions.DAY_5;
 import static com.opengamma.strata.collect.TestHelper.assertSerialization;
-import static com.opengamma.strata.collect.TestHelper.assertThrowsIllegalArg;
 import static com.opengamma.strata.collect.TestHelper.coverBeanEquals;
 import static com.opengamma.strata.collect.TestHelper.coverImmutableBean;
 import static com.opengamma.strata.collect.TestHelper.date;
@@ -27,6 +27,7 @@ import static com.opengamma.strata.product.swap.IborRateResetMethod.UNWEIGHTED;
 import static com.opengamma.strata.product.swap.IborRateResetMethod.WEIGHTED;
 import static com.opengamma.strata.product.swap.NegativeRateMethod.ALLOW_NEGATIVE;
 import static com.opengamma.strata.product.swap.NegativeRateMethod.NOT_NEGATIVE;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.testng.Assert.assertEquals;
 
 import java.time.LocalDate;
@@ -112,6 +113,11 @@ public class IborRateCalculationTest {
       .frequency(P1M)
       .rollConvention(DAY_5)
       .build();
+  private static final Schedule SINGLE_ACCRUAL_SCHEDULE_STUB = Schedule.builder()
+      .periods(ACCRUAL1STUB)
+      .frequency(P3M)
+      .rollConvention(DAY_5)
+      .build();
 
   //-------------------------------------------------------------------------
   public void test_of() {
@@ -168,7 +174,8 @@ public class IborRateCalculationTest {
   }
 
   public void test_builder_noIndex() {
-    assertThrowsIllegalArg(() -> IborRateCalculation.builder().build());
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> IborRateCalculation.builder().build());
   }
 
   //-------------------------------------------------------------------------
@@ -350,6 +357,22 @@ public class IborRateCalculationTest {
     ImmutableList<RateAccrualPeriod> periods =
         test.createAccrualPeriods(ACCRUAL_SCHEDULE_STUBS, ACCRUAL_SCHEDULE_STUBS, REF_DATA);
     assertEquals(periods, ImmutableList.of(rap1, rap2, rap3));
+  }
+
+  public void test_expand_singlePeriod_stubCalcsInitialStub_interpolated() {
+    IborRateCalculation test = IborRateCalculation.builder()
+        .dayCount(ACT_365F)
+        .index(GBP_LIBOR_2M)
+        .fixingDateOffset(MINUS_TWO_DAYS)
+        .initialStub(IborRateStubCalculation.ofIborInterpolatedRate(GBP_LIBOR_1W, GBP_LIBOR_1M))
+        .build();
+    RateAccrualPeriod rap1 = RateAccrualPeriod.builder(ACCRUAL1STUB)
+        .yearFraction(ACCRUAL1STUB.yearFraction(ACT_365F, ACCRUAL_SCHEDULE_STUBS))
+        .rateComputation(IborInterpolatedRateComputation.of(GBP_LIBOR_1W, GBP_LIBOR_1M, DATE_01_06, REF_DATA))
+        .build();
+    ImmutableList<RateAccrualPeriod> periods =
+        test.createAccrualPeriods(SINGLE_ACCRUAL_SCHEDULE_STUB, SINGLE_ACCRUAL_SCHEDULE_STUB, REF_DATA);
+    assertEquals(periods, ImmutableList.of(rap1));
   }
 
   //-------------------------------------------------------------------------

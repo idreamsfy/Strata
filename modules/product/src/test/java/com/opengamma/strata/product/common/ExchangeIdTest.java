@@ -7,7 +7,8 @@ package com.opengamma.strata.product.common;
 
 import static com.opengamma.strata.collect.TestHelper.assertSerialization;
 import static com.opengamma.strata.collect.TestHelper.coverPrivateConstructor;
-import static org.testng.Assert.assertEquals;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 
 import org.testng.annotations.Test;
 
@@ -19,21 +20,23 @@ public class ExchangeIdTest {
 
   public void test_of() {
     ExchangeId test = ExchangeId.of("GB");
-    assertEquals(test.getName(), "GB");
-    assertEquals(test.toString(), "GB");
+    assertThat(test.getName()).isEqualTo("GB");
+    assertThat(test).hasToString("GB");
+    assertThatIllegalArgumentException().isThrownBy(() -> CcpId.of(""));
   }
 
   //-------------------------------------------------------------------------
   public void test_equalsHashCode() {
     ExchangeId a = ExchangeId.of("ECAG");
-    ExchangeId a2 = ExchangeId.of("ECAG");
+    ExchangeId a2 = ExchangeIds.ECAG;
     ExchangeId b = ExchangeId.of("XLON");
-    assertEquals(a.hashCode(), a2.hashCode());
-    assertEquals(a.equals(a), true);
-    assertEquals(a.equals(a2), true);
-    assertEquals(a.equals(b), false);
-    assertEquals(a.equals(null), false);
-    assertEquals(a.equals("Rubbish"), false);
+    assertThat(a)
+        .isEqualTo(a)
+        .isEqualTo(a2)
+        .isNotEqualTo(b)
+        .isNotEqualTo("")
+        .isNotEqualTo(null)
+        .hasSameHashCodeAs(a2);
   }
 
   //-------------------------------------------------------------------------

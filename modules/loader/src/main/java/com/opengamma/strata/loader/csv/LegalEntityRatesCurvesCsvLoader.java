@@ -35,6 +35,7 @@ import com.opengamma.strata.collect.io.CsvFile;
 import com.opengamma.strata.collect.io.CsvRow;
 import com.opengamma.strata.collect.io.ResourceLocator;
 import com.opengamma.strata.collect.tuple.Pair;
+import com.opengamma.strata.loader.LoaderUtils;
 import com.opengamma.strata.market.ValueType;
 import com.opengamma.strata.market.curve.Curve;
 import com.opengamma.strata.market.curve.CurveGroupName;
@@ -268,8 +269,9 @@ public class LegalEntityRatesCurvesCsvLoader {
       CurveExtrapolator leftExtrap = CurveExtrapolator.of(leftExtrapolatorStr);
       CurveExtrapolator rightExtrap = CurveExtrapolator.of(rightExtrapolatorStr);
       // ONE_ONE day count is not used
+      DayCount dayCount = LoaderUtils.parseDayCount(dayCountStr);
       LoadedCurveSettings settings = LoadedCurveSettings.of(
-          curveName, ValueType.YEAR_FRACTION, valueType, DayCount.of(dayCountStr), interpolator, leftExtrap, rightExtrap);
+          curveName, ValueType.YEAR_FRACTION, valueType, dayCount, interpolator, leftExtrap, rightExtrap);
       builder.put(curveName, settings);
     }
     return builder.build();
@@ -289,9 +291,9 @@ public class LegalEntityRatesCurvesCsvLoader {
       String pointValueStr = row.getField(CURVE_POINT_VALUE);
       String pointLabel = row.getField(CURVE_POINT_LABEL);
 
-      LocalDate date = LocalDate.parse(dateStr);
+      LocalDate date = LoaderUtils.parseDate(dateStr);
       if (datePredicate.test(date)) {
-        LocalDate pointDate = LocalDate.parse(pointDateStr);
+        LocalDate pointDate = LoaderUtils.parseDate(pointDateStr);
         double pointValue = Double.valueOf(pointValueStr);
 
         LoadedCurveKey key = LoadedCurveKey.of(date, CurveName.of(curveNameStr));
@@ -333,7 +335,9 @@ public class LegalEntityRatesCurvesCsvLoader {
       String currencyStr = row.getField(GROUPS_CURRENCY);
       String curveNameStr = row.getField(GROUPS_CURVE_NAME);
       CurveName curveName = CurveName.of(curveNameStr);
-      createKey(curveName, CurveGroupName.of(curveGroupStr), curveTypeStr, referenceStr, currencyStr, repoGroups, legalEntityGroups);
+      createKey(
+          curveName,
+          CurveGroupName.of(curveGroupStr), curveTypeStr, referenceStr, currencyStr, repoGroups, legalEntityGroups);
     }
   }
 
@@ -352,7 +356,8 @@ public class LegalEntityRatesCurvesCsvLoader {
       repoGroups.computeIfAbsent(curveGroup, k -> new LinkedHashMap<>()).put(Pair.of(repoGroup, currency), curveName);
     } else if (ISSUER.equalsIgnoreCase(curveTypeStr.toLowerCase(Locale.ENGLISH))) {
       LegalEntityGroup legalEntiryGroup = LegalEntityGroup.of(referenceStr);
-      legalEntityGroups.computeIfAbsent(curveGroup, k -> new LinkedHashMap<>()).put(Pair.of(legalEntiryGroup, currency), curveName);
+      legalEntityGroups.computeIfAbsent(
+          curveGroup, k -> new LinkedHashMap<>()).put(Pair.of(legalEntiryGroup, currency), curveName);
     } else {
       throw new IllegalArgumentException(Messages.format("Unsupported curve type: {}", curveTypeStr));
     }

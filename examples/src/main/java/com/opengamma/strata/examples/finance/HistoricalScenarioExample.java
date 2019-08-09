@@ -47,14 +47,15 @@ import com.opengamma.strata.data.scenario.ScenarioMarketData;
 import com.opengamma.strata.examples.marketdata.ExampleMarketDataBuilder;
 import com.opengamma.strata.market.ShiftType;
 import com.opengamma.strata.market.curve.Curve;
-import com.opengamma.strata.market.curve.CurveGroup;
 import com.opengamma.strata.market.curve.CurveName;
-import com.opengamma.strata.market.curve.CurvePointShifts;
-import com.opengamma.strata.market.curve.CurvePointShiftsBuilder;
+import com.opengamma.strata.market.curve.RatesCurveGroup;
+import com.opengamma.strata.market.param.ParameterizedData;
+import com.opengamma.strata.market.param.PointShifts;
+import com.opengamma.strata.market.param.PointShiftsBuilder;
 import com.opengamma.strata.measure.Measures;
 import com.opengamma.strata.measure.StandardComponents;
+import com.opengamma.strata.product.AttributeType;
 import com.opengamma.strata.product.Trade;
-import com.opengamma.strata.product.TradeAttributeType;
 import com.opengamma.strata.product.TradeInfo;
 import com.opengamma.strata.product.common.PayReceive;
 import com.opengamma.strata.product.swap.IborRateCalculation;
@@ -112,7 +113,7 @@ public class HistoricalScenarioExample {
 
     // load the historical calibrated curves from which we will build our scenarios
     // these curves are provided in the example data environment
-    SortedMap<LocalDate, CurveGroup> historicalCurves = marketDataBuilder.loadAllRatesCurves();
+    SortedMap<LocalDate, RatesCurveGroup> historicalCurves = marketDataBuilder.loadAllRatesCurves();
 
     // sorted list of dates for the available series of curves
     // the entries in the P&L vector we produce will correspond to these dates
@@ -141,7 +142,7 @@ public class HistoricalScenarioExample {
   }
 
   private static ScenarioDefinition buildHistoricalScenarios(
-      Map<LocalDate, CurveGroup> historicalCurves,
+      Map<LocalDate, RatesCurveGroup> historicalCurves,
       List<LocalDate> scenarioDates) {
 
     // extract the curves to perturb
@@ -162,18 +163,15 @@ public class HistoricalScenarioExample {
 
     // create mappings which will cause the point shift perturbations generated above
     // to be applied to the correct curves
-    PerturbationMapping<Curve> discountCurveMappings = PerturbationMapping.of(
-        Curve.class,
+    PerturbationMapping<ParameterizedData> discountCurveMappings = PerturbationMapping.of(
         MarketDataFilter.ofName(CurveName.of("USD-Disc")),
         buildShifts(usdDiscountCurves));
 
-    PerturbationMapping<Curve> libor3mMappings = PerturbationMapping.of(
-        Curve.class,
+    PerturbationMapping<ParameterizedData> libor3mMappings = PerturbationMapping.of(
         MarketDataFilter.ofName(CurveName.of("USD-3ML")),
         buildShifts(libor3mCurves));
 
-    PerturbationMapping<Curve> libor6mMappings = PerturbationMapping.of(
-        Curve.class,
+    PerturbationMapping<ParameterizedData> libor6mMappings = PerturbationMapping.of(
         MarketDataFilter.ofName(CurveName.of("USD-6ML")),
         buildShifts(libor6mCurves));
 
@@ -184,8 +182,8 @@ public class HistoricalScenarioExample {
         libor6mMappings);
   }
 
-  private static CurvePointShifts buildShifts(List<Curve> historicalCurves) {
-    CurvePointShiftsBuilder builder = CurvePointShifts.builder(ShiftType.ABSOLUTE);
+  private static PointShifts buildShifts(List<Curve> historicalCurves) {
+    PointShiftsBuilder builder = PointShifts.builder(ShiftType.ABSOLUTE);
 
     for (int scenarioIndex = 1; scenarioIndex < historicalCurves.size(); scenarioIndex++) {
       Curve previousCurve = historicalCurves.get(scenarioIndex - 1);
@@ -259,7 +257,7 @@ public class HistoricalScenarioExample {
         .product(Swap.of(payLeg, receiveLeg))
         .info(TradeInfo.builder()
             .id(StandardId.of("example", "1"))
-            .addAttribute(TradeAttributeType.DESCRIPTION, "Libor 3m vs Libor 6m")
+            .addAttribute(AttributeType.DESCRIPTION, "Libor 3m vs Libor 6m")
             .counterparty(StandardId.of("example", "A"))
             .settlementDate(LocalDate.of(2015, 9, 11))
             .build())

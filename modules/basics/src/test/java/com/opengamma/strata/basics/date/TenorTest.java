@@ -7,30 +7,36 @@ package com.opengamma.strata.basics.date;
 
 import static com.opengamma.strata.basics.date.Tenor.TENOR_10M;
 import static com.opengamma.strata.basics.date.Tenor.TENOR_12M;
+import static com.opengamma.strata.basics.date.Tenor.TENOR_15M;
 import static com.opengamma.strata.basics.date.Tenor.TENOR_18M;
 import static com.opengamma.strata.basics.date.Tenor.TENOR_1D;
 import static com.opengamma.strata.basics.date.Tenor.TENOR_1M;
 import static com.opengamma.strata.basics.date.Tenor.TENOR_1W;
 import static com.opengamma.strata.basics.date.Tenor.TENOR_1Y;
+import static com.opengamma.strata.basics.date.Tenor.TENOR_21M;
 import static com.opengamma.strata.basics.date.Tenor.TENOR_2D;
 import static com.opengamma.strata.basics.date.Tenor.TENOR_2M;
 import static com.opengamma.strata.basics.date.Tenor.TENOR_2W;
 import static com.opengamma.strata.basics.date.Tenor.TENOR_2Y;
+import static com.opengamma.strata.basics.date.Tenor.TENOR_35Y;
 import static com.opengamma.strata.basics.date.Tenor.TENOR_3D;
 import static com.opengamma.strata.basics.date.Tenor.TENOR_3M;
 import static com.opengamma.strata.basics.date.Tenor.TENOR_3W;
 import static com.opengamma.strata.basics.date.Tenor.TENOR_3Y;
+import static com.opengamma.strata.basics.date.Tenor.TENOR_40Y;
+import static com.opengamma.strata.basics.date.Tenor.TENOR_45Y;
 import static com.opengamma.strata.basics.date.Tenor.TENOR_4M;
 import static com.opengamma.strata.basics.date.Tenor.TENOR_4Y;
+import static com.opengamma.strata.basics.date.Tenor.TENOR_50Y;
 import static com.opengamma.strata.basics.date.Tenor.TENOR_6W;
 import static com.opengamma.strata.collect.TestHelper.assertJodaConvert;
 import static com.opengamma.strata.collect.TestHelper.assertSerialization;
-import static com.opengamma.strata.collect.TestHelper.assertThrows;
-import static com.opengamma.strata.collect.TestHelper.assertThrowsIllegalArg;
 import static java.time.temporal.ChronoUnit.CENTURIES;
 import static java.time.temporal.ChronoUnit.DAYS;
 import static java.time.temporal.ChronoUnit.MONTHS;
 import static java.time.temporal.ChronoUnit.YEARS;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.testng.Assert.assertEquals;
 
 import java.time.LocalDate;
@@ -53,8 +59,10 @@ import com.google.common.collect.ImmutableList;
 @Test
 public class TenorTest {
 
+  private static final Object ANOTHER_TYPE = "";
+
   @DataProvider(name = "ofPeriod")
-  static Object[][] data_ofPeriod() {
+  public static Object[][] data_ofPeriod() {
     return new Object[][] {
         {Period.ofDays(1), Period.ofDays(1), "1D"},
         {Period.ofDays(7), Period.ofDays(7), "1W"},
@@ -79,7 +87,7 @@ public class TenorTest {
   }
 
   @DataProvider(name = "ofMonths")
-  static Object[][] data_ofMonths() {
+  public static Object[][] data_ofMonths() {
     return new Object[][] {
         {1, Period.ofMonths(1), "1M"},
         {2, Period.ofMonths(2), "2M"},
@@ -97,7 +105,7 @@ public class TenorTest {
   }
 
   @DataProvider(name = "ofYears")
-  static Object[][] data_ofYears() {
+  public static Object[][] data_ofYears() {
     return new Object[][] {
         {1, Period.ofYears(1), "1Y"},
         {2, Period.ofYears(2), "2Y"},
@@ -116,23 +124,30 @@ public class TenorTest {
     assertEquals(Tenor.ofDays(7), TENOR_1W);
     assertEquals(Tenor.ofWeeks(2), TENOR_2W);
     assertEquals(Tenor.ofMonths(1), TENOR_1M);
+    assertEquals(Tenor.ofMonths(15), TENOR_15M);
+    assertEquals(Tenor.ofMonths(18), TENOR_18M);
+    assertEquals(Tenor.ofMonths(21), TENOR_21M);
     assertEquals(Tenor.ofYears(1), TENOR_1Y);
+    assertEquals(Tenor.ofYears(35), TENOR_35Y);
+    assertEquals(Tenor.ofYears(40), TENOR_40Y);
+    assertEquals(Tenor.ofYears(45), TENOR_45Y);
+    assertEquals(Tenor.ofYears(50), TENOR_50Y);
   }
 
   public void test_of_notZero() {
-    assertThrowsIllegalArg(() -> Tenor.of(Period.ofDays(0)));
-    assertThrowsIllegalArg(() -> Tenor.ofDays(0));
-    assertThrowsIllegalArg(() -> Tenor.ofWeeks(0));
-    assertThrowsIllegalArg(() -> Tenor.ofMonths(0));
-    assertThrowsIllegalArg(() -> Tenor.ofYears(0));
+    assertThatIllegalArgumentException().isThrownBy(() -> Tenor.of(Period.ofDays(0)));
+    assertThatIllegalArgumentException().isThrownBy(() -> Tenor.ofDays(0));
+    assertThatIllegalArgumentException().isThrownBy(() -> Tenor.ofWeeks(0));
+    assertThatIllegalArgumentException().isThrownBy(() -> Tenor.ofMonths(0));
+    assertThatIllegalArgumentException().isThrownBy(() -> Tenor.ofYears(0));
   }
 
   public void test_of_notNegative() {
-    assertThrowsIllegalArg(() -> Tenor.of(Period.ofDays(-1)));
-    assertThrowsIllegalArg(() -> Tenor.ofDays(-1));
-    assertThrowsIllegalArg(() -> Tenor.ofWeeks(-1));
-    assertThrowsIllegalArg(() -> Tenor.ofMonths(-1));
-    assertThrowsIllegalArg(() -> Tenor.ofYears(-1));
+    assertThatIllegalArgumentException().isThrownBy(() -> Tenor.of(Period.ofDays(-1)));
+    assertThatIllegalArgumentException().isThrownBy(() -> Tenor.ofDays(-1));
+    assertThatIllegalArgumentException().isThrownBy(() -> Tenor.ofWeeks(-1));
+    assertThatIllegalArgumentException().isThrownBy(() -> Tenor.ofMonths(-1));
+    assertThatIllegalArgumentException().isThrownBy(() -> Tenor.ofYears(-1));
   }
 
   //-------------------------------------------------------------------------
@@ -141,7 +156,7 @@ public class TenorTest {
   }
 
   @DataProvider(name = "parseGood")
-  static Object[][] data_parseGood() {
+  public static Object[][] data_parseGood() {
     return new Object[][] {
         {"2D", TENOR_2D},
         {"2W", TENOR_2W},
@@ -164,7 +179,7 @@ public class TenorTest {
   }
 
   @DataProvider(name = "parseBad")
-  static Object[][] data_parseBad() {
+  public static Object[][] data_parseBad() {
     return new Object[][] {
         {""},
         {"2"},
@@ -173,9 +188,9 @@ public class TenorTest {
     };
   }
 
-  @Test(dataProvider = "parseBad", expectedExceptions = IllegalArgumentException.class)
+  @Test(dataProvider = "parseBad")
   public void test_parse_String_bad(String input) {
-    Tenor.parse(input);
+    assertThatIllegalArgumentException().isThrownBy(() -> Tenor.parse(input));
   }
 
   //-------------------------------------------------------------------------
@@ -188,7 +203,7 @@ public class TenorTest {
 
   //-------------------------------------------------------------------------
   @DataProvider(name = "normalized")
-  static Object[][] data_normalized() {
+  public static Object[][] data_normalized() {
     return new Object[][] {
         {Period.ofDays(1), Period.ofDays(1)},
         {Period.ofDays(7), Period.ofDays(7)},
@@ -212,7 +227,7 @@ public class TenorTest {
 
   //-------------------------------------------------------------------------
   @DataProvider(name = "based")
-  static Object[][] data_based() {
+  public static Object[][] data_based() {
     return new Object[][] {
         {Tenor.ofDays(1), false, false},
         {Tenor.ofDays(2), false, false},
@@ -259,7 +274,7 @@ public class TenorTest {
     assertEquals(TENOR_3D.get(DAYS), 3);
     assertEquals(LocalDate.of(2014, 6, 30).plus(TENOR_1W), LocalDate.of(2014, 7, 7));
     assertEquals(LocalDate.of(2014, 6, 30).minus(TENOR_1W), LocalDate.of(2014, 6, 23));
-    assertThrows(() -> TENOR_10M.get(CENTURIES), UnsupportedTemporalTypeException.class);
+    assertThatExceptionOfType(UnsupportedTemporalTypeException.class).isThrownBy(() -> TENOR_10M.get(CENTURIES));
   }
 
   //-------------------------------------------------------------------------
@@ -285,7 +300,16 @@ public class TenorTest {
         Tenor.ofDays(183),
         Tenor.ofDays(365),
         Tenor.ofYears(1),
-        Tenor.ofDays(366));
+        Tenor.ofDays(366),
+        Tenor.ofDays(730),
+        Tenor.ofYears(2),
+        Tenor.ofDays(731),
+        Tenor.ofDays(1095),
+        Tenor.ofYears(3),
+        Tenor.ofDays(1096),
+        Tenor.ofDays(1460),
+        Tenor.ofYears(4),
+        Tenor.ofDays(1461));
 
     List<Tenor> test = new ArrayList<>(tenors);
     Collections.shuffle(test);
@@ -315,7 +339,7 @@ public class TenorTest {
 
   public void test_equals_bad() {
     assertEquals(TENOR_3D.equals(null), false);
-    assertEquals(TENOR_3D.equals("String"), false);
+    assertEquals(TENOR_3D.equals(ANOTHER_TYPE), false);
     assertEquals(TENOR_3D.equals(new Object()), false);
   }
 

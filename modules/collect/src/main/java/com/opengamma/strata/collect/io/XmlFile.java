@@ -9,6 +9,7 @@ import java.io.InputStream;
 import java.io.UncheckedIOException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.ToIntFunction;
 
 import javax.xml.stream.XMLInputFactory;
 import javax.xml.stream.XMLStreamConstants;
@@ -40,6 +41,21 @@ import com.opengamma.strata.collect.Unchecked;
  * There are cases where this can be a problem, but most of the time lenient parsing is helpful.
  */
 public final class XmlFile {
+
+  // the XML factory
+  // originally recreated each time because of JDK-8028111, but use of Java 8u20 and Java 9+ now widespread
+  private static final XMLInputFactory XML_FACTORY;
+  static {
+    // see https://bugs.openjdk.java.net/browse/JDK-8183519 where JDK deprecated the wrong method
+    // to avoid a warning on 9 this code uses newInstance() even though newFactory() is more correct
+    // there is no difference in behavior between the two methods
+    XMLInputFactory factory = XMLInputFactory.newInstance();
+    factory.setProperty(XMLInputFactory.IS_COALESCING, true);
+    factory.setProperty(XMLInputFactory.IS_REPLACING_ENTITY_REFERENCES, true);
+    factory.setProperty(XMLInputFactory.IS_SUPPORTING_EXTERNAL_ENTITIES, false);
+    factory.setProperty(XMLInputFactory.SUPPORT_DTD, false);
+    XML_FACTORY = factory;
+  }
 
   /**
    * The root element.
@@ -89,7 +105,7 @@ public final class XmlFile {
     ArgChecker.notNull(source, "source");
     return Unchecked.wrap(() -> {
       try (InputStream in = source.openBufferedStream()) {
-        XMLStreamReader xmlReader = xmlInputFactory().createXMLStreamReader(in);
+        XMLStreamReader xmlReader = XML_FACTORY.createXMLStreamReader(in);
         try {
           HashMap<String, XmlElement> refs = new HashMap<>();
           XmlElement root = parse(xmlReader, refAttrName, refs);
@@ -101,11 +117,41 @@ public final class XmlFile {
     });
   }
 
+  /**
+   * Parses the element names and structure from the specified XML, filtering to reduce memory usage.
+   * <p>
+   * This parses the specified byte source expecting an XML file format.
+   * The filter function takes the element name and decides how many child levels should be returned in the response.
+   * Always returning {@code Integer.MAX_VALUE} will not filter the children.
+   * For example, a function could check if the name is "trade" and return only the immediate children by returning 1.
+   * 
+   * @param source  the XML source data
+   * @param filterFn  the filter function to use
+   * @return the parsed file
+   * @throws UncheckedIOException if an IO exception occurs
+   * @throws IllegalArgumentException if the file cannot be parsed
+   */
+  public static XmlElement parseElements(ByteSource source, ToIntFunction<String> filterFn) {
+    ArgChecker.notNull(source, "source");
+    ArgChecker.notNull(filterFn, "filterFn");
+    ToIntFunction<String> safeFilterFn = name -> Math.max(filterFn.applyAsInt(name), 0);
+    return Unchecked.wrap(() -> {
+      try (InputStream in = source.openBufferedStream()) {
+        XMLStreamReader xmlReader = XML_FACTORY.createXMLStreamReader(in);
+        try {
+          return parseElements(xmlReader, safeFilterFn, Integer.MAX_VALUE);
+        } finally {
+          xmlReader.close();
+        }
+      }
+    });
+  }
+
   //-------------------------------------------------------------------------
   /**
    * Parses the tree from the StAX stream reader, capturing references.
    * <p>
-   * The reader should be created using the factory returned from {@link #xmlInputFactory()}.
+   * The reader should be created using {@link #XML_FACTORY}.
    * <p>
    * This method supports capturing attribute references, such as an id/href pair.
    * Wherever the parser finds an attribute with the specified name, the element is added
@@ -159,6 +205,36 @@ public final class XmlFile {
     }
   }
 
+  // parses the element structure from the input, filtering as necessary
+  private static XmlElement parseElements(XMLStreamReader reader, ToIntFunction<String> filterFn, int currentLevel) {
+    try {
+      // parse start element
+      String elementName = parseElementName(reader);
+
+      // parse children or content
+      ImmutableList.Builder<XmlElement> childBuilder = ImmutableList.builder();
+      int event = reader.next();
+      while (event != XMLStreamConstants.END_ELEMENT) {
+        if (event == XMLStreamConstants.START_ELEMENT) {
+          int childLevel = currentLevel == Integer.MAX_VALUE ? filterFn.applyAsInt(elementName) : currentLevel - 1;
+          XmlElement child = parseElements(reader, filterFn, childLevel);
+          if (childLevel > 0) {
+            childBuilder.add(child);
+          }
+        }
+        event = reader.next();
+      }
+      ImmutableList<XmlElement> children = childBuilder.build();
+      XmlElement parsed = children.isEmpty() ?
+          XmlElement.ofContent(elementName, "") :
+          XmlElement.ofChildren(elementName, children);
+      return parsed;
+
+    } catch (XMLStreamException ex) {
+      throw new IllegalArgumentException(ex);
+    }
+  }
+
   // find the start element and parses the name
   private static String parseElementName(XMLStreamReader reader) throws XMLStreamException {
     int event = reader.getEventType();
@@ -182,18 +258,6 @@ public final class XmlFile {
       attrs = builder.build();
     }
     return attrs;
-  }
-
-  //-------------------------------------------------------------------------
-  // creates the XML input factory, recreated each time to avoid JDK-8028111
-  // this also provides some protection against hackers attacking XML
-  private static XMLInputFactory xmlInputFactory() {
-    XMLInputFactory factory = XMLInputFactory.newFactory();
-    factory.setProperty(XMLInputFactory.IS_COALESCING, true);
-    factory.setProperty(XMLInputFactory.IS_REPLACING_ENTITY_REFERENCES, true);
-    factory.setProperty(XMLInputFactory.IS_SUPPORTING_EXTERNAL_ENTITIES, false);
-    factory.setProperty(XMLInputFactory.SUPPORT_DTD, false);
-    return factory;
   }
 
   //-------------------------------------------------------------------------

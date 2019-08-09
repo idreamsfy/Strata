@@ -6,6 +6,8 @@
 package com.opengamma.strata.basics.currency;
 
 import java.io.Serializable;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.Locale;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -108,7 +110,7 @@ public final class Currency
    */
   public static final Currency BHD = of("BHD");
   /**
-   * The currency 'BRL' - Brazil Dollar.
+   * The currency 'BRL' - Brazilian Real.
    */
   public static final Currency BRL = of("BRL");
   /**
@@ -116,7 +118,11 @@ public final class Currency
    */
   public static final Currency CLP = of("CLP");
   /**
-   * The currency 'CNY' - Chinese Yuan.
+   * The currency 'CNH' - Chinese Offshore Yuan.
+   */
+  public static final Currency CNH = of("CNH");
+  /**
+   * The currency 'CNY' - Chinese Onshore Yuan.
    */
   public static final Currency CNY = of("CNY");
   /**
@@ -399,6 +405,31 @@ public final class Currency
    */
   public Currency getTriangulationCurrency() {
     return Currency.of(triangulationCurrency);
+  }
+
+  //-------------------------------------------------------------------------
+  /**
+   * Rounds the specified amount according to the minor units.
+   * <p>
+   * For example, 'USD' has 2 minor digits, so 63.347 will be rounded to 63.35.
+   * 
+   * @param amount  the amount to round
+   * @return the rounded amount
+   */
+  public double roundMinorUnits(double amount) {
+    return roundMinorUnits(BigDecimal.valueOf(amount)).doubleValue();
+  }
+
+  /**
+   * Rounds the specified amount according to the minor units.
+   * <p>
+   * For example, 'USD' has 2 minor digits, so 63.347 will be rounded to 63.35.
+   * 
+   * @param amount  the amount to round
+   * @return the rounded amount
+   */
+  public BigDecimal roundMinorUnits(BigDecimal amount) {
+    return amount.setScale(minorUnitDigits, RoundingMode.HALF_UP);
   }
 
   //-------------------------------------------------------------------------

@@ -7,6 +7,8 @@ package com.opengamma.strata.basics.location;
 
 import static com.opengamma.strata.collect.TestHelper.assertJodaConvert;
 import static com.opengamma.strata.collect.TestHelper.assertSerialization;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
+import static org.assertj.core.api.Assertions.assertThatNullPointerException;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertSame;
 import static org.testng.Assert.assertTrue;
@@ -22,9 +24,12 @@ import org.testng.annotations.Test;
 @Test
 public class CountryTest {
 
+  private static final Object ANOTHER_TYPE = "";
+
   //-----------------------------------------------------------------------
   public void test_constants() {
     assertEquals(Country.of("EU"), Country.EU);
+    assertEquals(Country.of("AT"), Country.AT);
     assertEquals(Country.of("BE"), Country.BE);
     assertEquals(Country.of("CH"), Country.CH);
     assertEquals(Country.of("CZ"), Country.CZ);
@@ -36,6 +41,7 @@ public class CountryTest {
     assertEquals(Country.of("GB"), Country.GB);
     assertEquals(Country.of("GR"), Country.GR);
     assertEquals(Country.of("HU"), Country.HU);
+    assertEquals(Country.of("IE"), Country.IE);
     assertEquals(Country.of("IS"), Country.IS);
     assertEquals(Country.of("IT"), Country.IT);
     assertEquals(Country.of("LU"), Country.LU);
@@ -98,7 +104,7 @@ public class CountryTest {
   }
 
   @DataProvider(name = "ofBad")
-  Object[][] data_ofBad() {
+  public static Object[][] data_ofBad() {
     return new Object[][] {
         {""},
         {"A"},
@@ -110,9 +116,9 @@ public class CountryTest {
     };
   }
 
-  @Test(dataProvider = "ofBad", expectedExceptions = IllegalArgumentException.class)
+  @Test(dataProvider = "ofBad")
   public void test_of_String_bad(String input) {
-    Country.of(input);
+    assertThatIllegalArgumentException().isThrownBy(() -> Country.of(input));
   }
 
   //-----------------------------------------------------------------------
@@ -135,7 +141,7 @@ public class CountryTest {
   }
 
   @DataProvider(name = "parseBad")
-  Object[][] data_parseBad() {
+  public static Object[][] data_parseBad() {
     return new Object[][] {
         {""},
         {"A"},
@@ -146,9 +152,9 @@ public class CountryTest {
     };
   }
 
-  @Test(dataProvider = "parseBad", expectedExceptions = IllegalArgumentException.class)
+  @Test(dataProvider = "parseBad")
   public void test_parse_String_bad(String input) {
-    Country.parse(input);
+    assertThatIllegalArgumentException().isThrownBy(() -> Country.parse(input));
   }
 
   //-----------------------------------------------------------------------
@@ -170,9 +176,9 @@ public class CountryTest {
     assertTrue(c.compareTo(b) > 0);
   }
 
-  @Test(expectedExceptions = NullPointerException.class)
+  @Test
   public void test_compareTo_null() {
-    Country.EU.compareTo(null);
+    assertThatNullPointerException().isThrownBy(() -> Country.EU.compareTo(null));
   }
 
   //-----------------------------------------------------------------------
@@ -198,7 +204,7 @@ public class CountryTest {
   public void test_equals_bad() {
     Country a = Country.GB;
     assertEquals(a.equals(null), false);
-    assertEquals(a.equals("String"), false);
+    assertEquals(a.equals(ANOTHER_TYPE), false);
     assertEquals(a.equals(new Object()), false);
   }
 

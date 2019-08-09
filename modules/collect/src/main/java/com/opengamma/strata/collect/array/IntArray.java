@@ -16,7 +16,6 @@ import java.util.ListIterator;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.RandomAccess;
-import java.util.Set;
 import java.util.function.IntBinaryOperator;
 import java.util.function.IntUnaryOperator;
 import java.util.stream.IntStream;
@@ -24,10 +23,8 @@ import java.util.stream.IntStream;
 import org.joda.beans.Bean;
 import org.joda.beans.BeanBuilder;
 import org.joda.beans.ImmutableBean;
-import org.joda.beans.JodaBeanUtils;
 import org.joda.beans.MetaBean;
 import org.joda.beans.MetaProperty;
-import org.joda.beans.Property;
 import org.joda.beans.PropertyStyle;
 import org.joda.beans.impl.BasicImmutableBeanBuilder;
 import org.joda.beans.impl.BasicMetaBean;
@@ -64,7 +61,7 @@ public final class IntArray
    */
   private static final long serialVersionUID = 1L;
   static {
-    JodaBeanUtils.registerMetaBean(Meta.META);
+    MetaBean.register(Meta.META);
   }
 
   /**
@@ -244,6 +241,18 @@ public final class IntArray
     int[] array = new int[size];
     Arrays.setAll(array, valueFunction);
     return new IntArray(array);
+  }
+
+  /**
+   * Obtains an instance with entries filled from a stream.
+   * <p>
+   * The stream is converted to an array using {@link IntStream#toArray()}.
+   * 
+   * @param stream  the stream of elements
+   * @return an array initialized using the stream
+   */
+  public static IntArray of(IntStream stream) {
+    return ofUnsafe(stream.toArray());
   }
 
   /**
@@ -540,7 +549,7 @@ public final class IntArray
    * The action receives both the index and the value.
    * For example, the action could print out the array.
    * <pre>
-   *   base.forEach((index, value) -> System.out.println(index + ": " + value));
+   *   base.forEach((index, value) -&gt; System.out.println(index + ": " + value));
    * </pre>
    * <p>
    * This instance is immutable and unaffected by this method.
@@ -669,7 +678,7 @@ public final class IntArray
    * The operator only receives the value.
    * For example, the operator could multiply and add each element.
    * <pre>
-   *   result = base.map(value -> value * 3 + 4);
+   *   result = base.map(value -&gt; value * 3 + 4);
    * </pre>
    * <p>
    * This instance is immutable and unaffected by this method.
@@ -692,7 +701,7 @@ public final class IntArray
    * The function receives both the index and the value.
    * For example, the operator could multiply the value by the index.
    * <pre>
-   *   result = base.mapWithIndex((index, value) -> index * value);
+   *   result = base.mapWithIndex((index, value) -&gt; index * value);
    * </pre>
    * <p>
    * This instance is immutable and unaffected by this method.
@@ -1030,16 +1039,6 @@ public final class IntArray
     return Meta.META;
   }
 
-  @Override
-  public <R> Property<R> property(String propertyName) {
-    return metaBean().<R>metaProperty(propertyName).createProperty(this);
-  }
-
-  @Override
-  public Set<String> propertyNames() {
-    return metaBean().metaPropertyMap().keySet();
-  }
-
   //-------------------------------------------------------------------------
   @Override
   public boolean equals(Object obj) {
@@ -1233,6 +1232,11 @@ public final class IntArray
     private static final ImmutableMap<String, MetaProperty<?>> MAP = ImmutableMap.of("array", ARRAY);
 
     private Meta() {
+    }
+
+    @Override
+    public boolean isBuildable() {
+      return true;
     }
 
     @Override

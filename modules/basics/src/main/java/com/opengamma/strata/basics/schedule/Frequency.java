@@ -318,7 +318,10 @@ public final class Frequency
   @FromString
   public static Frequency parse(String toParse) {
     ArgChecker.notNull(toParse, "toParse");
-    if (toParse.equalsIgnoreCase("Term") || toParse.equalsIgnoreCase("0T") || toParse.equalsIgnoreCase("1T")) {
+    if (toParse.equalsIgnoreCase("Term") ||
+        toParse.equalsIgnoreCase("T") ||
+        toParse.equalsIgnoreCase("0T") ||
+        toParse.equalsIgnoreCase("1T")) {
       return TERM;
     }
     String prefixed = toParse.startsWith("P") ? toParse : "P" + toParse;
@@ -347,8 +350,8 @@ public final class Frequency
    */
   private Frequency(Period period, String name) {
     ArgChecker.notNull(period, "period");
-    ArgChecker.isFalse(period.isZero(), "Period must not be zero");
-    ArgChecker.isFalse(period.isNegative(), "Period must not be negative");
+    ArgChecker.isFalse(period.isZero(), "Frequency period must not be zero");
+    ArgChecker.isFalse(period.isNegative(), "Frequency period must not be negative");
     this.period = period;
     this.name = name;
     // calculate events per year

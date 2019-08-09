@@ -28,7 +28,7 @@ import com.opengamma.strata.product.swap.OvernightAccrualMethod;
 /**
  * Market standard Fixed-Overnight swap conventions.
  * <p>
- * http://www.opengamma.com/sites/default/files/interest-rate-instruments-and-market-conventions.pdf
+ * https://developers.opengamma.com/quantitative-research/Interest-Rate-Instruments-and-Market-Conventions.pdf
  */
 final class StandardOvernightIborSwapConventions {
 
@@ -39,7 +39,7 @@ final class StandardOvernightIborSwapConventions {
    * The spot date offset is 2 days and the cut-off period is 2 days.
    */
   public static final OvernightIborSwapConvention USD_FED_FUND_AA_LIBOR_3M =
-      makeConvention("USD-FED-FUND-AA-LIBOR-3M", USD_FED_FUND, USD_LIBOR_3M, ACT_360, P3M, 0, 2, AVERAGED, 2);
+      makeConvention("USD-FED-FUND-AA-LIBOR-3M", USD_FED_FUND, USD_LIBOR_3M, ACT_360, P3M, 0, 2, AVERAGED);
 
   /**
    * GBP Sonia compounded 1Y v LIBOR 3M .
@@ -48,7 +48,7 @@ final class StandardOvernightIborSwapConventions {
    * The spot date offset is 0 days and payment offset is 0 days.
    */
   public static final OvernightIborSwapConvention GBP_SONIA_OIS_1Y_LIBOR_3M =
-      makeConvention("GBP-SONIA-OIS-1Y-LIBOR-3M", GBP_SONIA, GBP_LIBOR_3M, ACT_365F, P12M, 0, 0, COMPOUNDED, 0);
+      makeConvention("GBP-SONIA-OIS-1Y-LIBOR-3M", GBP_SONIA, GBP_LIBOR_3M, ACT_365F, P12M, 0, 0, COMPOUNDED);
 
   //-------------------------------------------------------------------------
   // build conventions
@@ -60,12 +60,10 @@ final class StandardOvernightIborSwapConventions {
       Frequency frequency,
       int paymentLag,
       int cutOffDays,
-      OvernightAccrualMethod accrual,
-      int spotLag) {
+      OvernightAccrualMethod accrual) {
 
     HolidayCalendarId calendarOn = onIndex.getFixingCalendar();
     DaysAdjustment paymentDateOffset = DaysAdjustment.ofBusinessDays(paymentLag, calendarOn);
-    DaysAdjustment spotDateOffset = DaysAdjustment.ofBusinessDays(spotLag, calendarOn);
     return ImmutableOvernightIborSwapConvention.of(
         name,
         OvernightRateSwapLegConvention.builder()
@@ -74,11 +72,10 @@ final class StandardOvernightIborSwapConventions {
             .accrualFrequency(frequency)
             .paymentFrequency(frequency)
             .paymentDateOffset(paymentDateOffset)
-            .stubConvention(StubConvention.SHORT_INITIAL)
+            .stubConvention(StubConvention.SMART_INITIAL)
             .rateCutOffDays(cutOffDays)
             .build(),
-        IborRateSwapLegConvention.of(iborIndex),
-        spotDateOffset);
+        IborRateSwapLegConvention.of(iborIndex));
   }
 
   //-------------------------------------------------------------------------

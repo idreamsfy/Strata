@@ -7,7 +7,7 @@ package com.opengamma.strata.basics.currency;
 
 import static com.opengamma.strata.collect.TestHelper.assertJodaConvert;
 import static com.opengamma.strata.collect.TestHelper.assertSerialization;
-import static com.opengamma.strata.collect.TestHelper.assertThrowsIllegalArg;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
@@ -27,6 +27,7 @@ public class CurrencyAmountTest {
   private static final double AMT2 = 200;
   private static final CurrencyAmount CCY_AMOUNT = CurrencyAmount.of(CCY1, AMT1);
   private static final CurrencyAmount CCY_AMOUNT_NEGATIVE = CurrencyAmount.of(CCY1, -AMT1);
+  private static final Object ANOTHER_TYPE = "";
 
   public void test_fixture() {
     assertEquals(CCY_AMOUNT.getCurrency(), CCY1);
@@ -38,10 +39,13 @@ public class CurrencyAmountTest {
     CurrencyAmount test = CurrencyAmount.zero(Currency.USD);
     assertEquals(test.getCurrency(), Currency.USD);
     assertEquals(test.getAmount(), 0d, 0);
+    assertTrue(test.isZero());
+    assertFalse(test.isPositive());
+    assertFalse(test.isNegative());
   }
 
   public void test_zero_Currency_nullCurrency() {
-    assertThrowsIllegalArg(() -> CurrencyAmount.zero(null));
+    assertThatIllegalArgumentException().isThrownBy(() -> CurrencyAmount.zero(null));
   }
 
   //-------------------------------------------------------------------------
@@ -49,10 +53,35 @@ public class CurrencyAmountTest {
     CurrencyAmount test = CurrencyAmount.of(Currency.USD, AMT1);
     assertEquals(test.getCurrency(), Currency.USD);
     assertEquals(test.getAmount(), AMT1, 0);
+    assertFalse(test.isZero());
+    assertTrue(test.isPositive());
+    assertFalse(test.isNegative());
+  }
+
+  public void test_of_Currency_negative() {
+    CurrencyAmount test = CurrencyAmount.of(Currency.USD, -1);
+    assertEquals(test.getCurrency(), Currency.USD);
+    assertEquals(test.getAmount(), -1, 0);
+    assertFalse(test.isZero());
+    assertFalse(test.isPositive());
+    assertTrue(test.isNegative());
+  }
+
+  public void test_of_Currency_negativeZero() {
+    CurrencyAmount test = CurrencyAmount.of(Currency.USD, -0d);
+    assertEquals(test.getCurrency(), Currency.USD);
+    assertEquals(Double.doubleToLongBits(test.getAmount()), Double.doubleToLongBits(0d));
+    assertTrue(test.isZero());
+    assertFalse(test.isPositive());
+    assertFalse(test.isNegative());
+  }
+  
+  public void test_of_Currency_NaN() {
+    assertThatIllegalArgumentException().isThrownBy(() -> CurrencyAmount.of(Currency.USD, Double.NaN));
   }
 
   public void test_of_Currency_nullCurrency() {
-    assertThrowsIllegalArg(() -> CurrencyAmount.of((Currency) null, AMT1));
+    assertThatIllegalArgumentException().isThrownBy(() -> CurrencyAmount.of((Currency) null, AMT1));
   }
 
   //-------------------------------------------------------------------------
@@ -63,7 +92,7 @@ public class CurrencyAmountTest {
   }
 
   public void test_of_String_nullCurrency() {
-    assertThrowsIllegalArg(() -> CurrencyAmount.of((String) null, AMT1));
+    assertThatIllegalArgumentException().isThrownBy(() -> CurrencyAmount.of((String) null, AMT1));
   }
 
   //-------------------------------------------------------------------------
@@ -73,7 +102,7 @@ public class CurrencyAmountTest {
   }
 
   @DataProvider(name = "parseGood")
-  Object[][] data_parseGood() {
+  public static Object[][] data_parseGood() {
     return new Object[][] {
         {"AUD 100.001", Currency.AUD, 100.001d},
         {"AUD 321.123", Currency.AUD, 321.123d},
@@ -90,7 +119,7 @@ public class CurrencyAmountTest {
   }
 
   @DataProvider(name = "parseBad")
-  Object[][] data_parseBad() {
+  public static Object[][] data_parseBad() {
     return new Object[][] {
         {"AUD"},
         {"AUD aa"},
@@ -102,7 +131,7 @@ public class CurrencyAmountTest {
 
   @Test(dataProvider = "parseBad")
   public void test_parse_String_bad(String input) {
-    assertThrowsIllegalArg(() -> CurrencyAmount.parse(input));
+    assertThatIllegalArgumentException().isThrownBy(() -> CurrencyAmount.parse(input));
   }
 
   //-------------------------------------------------------------------------
@@ -113,11 +142,11 @@ public class CurrencyAmountTest {
   }
 
   public void test_plus_CurrencyAmount_null() {
-    assertThrowsIllegalArg(() -> CCY_AMOUNT.plus(null));
+    assertThatIllegalArgumentException().isThrownBy(() -> CCY_AMOUNT.plus(null));
   }
 
   public void test_plus_CurrencyAmount_wrongCurrency() {
-    assertThrowsIllegalArg(() -> CCY_AMOUNT.plus(CurrencyAmount.of(CCY2, AMT2)));
+    assertThatIllegalArgumentException().isThrownBy(() -> CCY_AMOUNT.plus(CurrencyAmount.of(CCY2, AMT2)));
   }
 
   public void test_plus_double() {
@@ -133,11 +162,11 @@ public class CurrencyAmountTest {
   }
 
   public void test_minus_CurrencyAmount_null() {
-    assertThrowsIllegalArg(() -> CCY_AMOUNT.minus(null));
+    assertThatIllegalArgumentException().isThrownBy(() -> CCY_AMOUNT.minus(null));
   }
 
   public void test_minus_CurrencyAmount_wrongCurrency() {
-    assertThrowsIllegalArg(() -> CCY_AMOUNT.minus(CurrencyAmount.of(CCY2, AMT2)));
+    assertThatIllegalArgumentException().isThrownBy(() -> CCY_AMOUNT.minus(CurrencyAmount.of(CCY2, AMT2)));
   }
 
   public void test_minus_double() {
@@ -178,7 +207,7 @@ public class CurrencyAmountTest {
   public void test_convertedTo_explicitRate() {
     assertEquals(CCY_AMOUNT.convertedTo(CCY2, 2.5d), CurrencyAmount.of(CCY2, AMT1 * 2.5d));
     assertEquals(CCY_AMOUNT.convertedTo(CCY1, 1d), CCY_AMOUNT);
-    assertThrowsIllegalArg(() -> CCY_AMOUNT.convertedTo(CCY1, 1.5d));
+    assertThatIllegalArgumentException().isThrownBy(() -> CCY_AMOUNT.convertedTo(CCY1, 1.5d));
   }
 
   public void test_convertedTo_rateProvider() {
@@ -204,7 +233,7 @@ public class CurrencyAmountTest {
   }
 
   public void test_equals_bad() {
-    assertFalse(CCY_AMOUNT.equals(""));
+    assertFalse(CCY_AMOUNT.equals(ANOTHER_TYPE));
     assertFalse(CCY_AMOUNT.equals(null));
   }
 

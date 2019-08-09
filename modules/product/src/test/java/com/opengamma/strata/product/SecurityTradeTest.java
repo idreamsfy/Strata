@@ -36,6 +36,9 @@ public class SecurityTradeTest {
     assertEquals(test.getSecurityId(), SECURITY_ID);
     assertEquals(test.getQuantity(), QUANTITY);
     assertEquals(test.getPrice(), PRICE);
+    assertEquals(test.withInfo(TRADE_INFO).getInfo(), TRADE_INFO);
+    assertEquals(test.withQuantity(129).getQuantity(), 129d, 0d);
+    assertEquals(test.withPrice(129).getPrice(), 129d, 0d);
   }
 
   public void test_builder() {
@@ -47,9 +50,20 @@ public class SecurityTradeTest {
   }
 
   //-------------------------------------------------------------------------
-  public void test_resolve() {
+  public void test_summarize() {
+    SecurityTrade trade = sut();
+    PortfolioItemSummary expected = PortfolioItemSummary.builder()
+        .portfolioItemType(PortfolioItemType.TRADE)
+        .productType(ProductType.SECURITY)
+        .description("Id x 100")
+        .build();
+    assertEquals(trade.summarize(), expected);
+  }
+
+  //-------------------------------------------------------------------------
+  public void test_resolveTarget() {
     GenericSecurity security = GenericSecurityTest.sut();
-    Trade test = sut().resolveSecurity(ImmutableReferenceData.of(SECURITY_ID, security));
+    Trade test = sut().resolveTarget(ImmutableReferenceData.of(SECURITY_ID, security));
     GenericSecurityTrade expected = GenericSecurityTrade.of(TRADE_INFO, security, QUANTITY, PRICE);
     assertEquals(test, expected);
   }

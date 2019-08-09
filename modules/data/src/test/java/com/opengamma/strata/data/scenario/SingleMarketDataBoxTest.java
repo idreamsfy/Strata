@@ -5,25 +5,30 @@
  */
 package com.opengamma.strata.data.scenario;
 
-import static com.opengamma.strata.collect.TestHelper.assertThrows;
 import static java.util.stream.Collectors.toList;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
+import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 
 import java.util.List;
 
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Test;
 
 import com.google.common.collect.ImmutableList;
 
-@Test
+/**
+ * Test {@link SingleMarketDataBox}.
+ */
 public class SingleMarketDataBoxTest {
 
+  @Test
   public void isSingleOrScenarioValue() {
     MarketDataBox<Integer> box = MarketDataBox.ofSingleValue(27);
     assertThat(box.isSingleValue()).isTrue();
     assertThat(box.isScenarioValue()).isFalse();
   }
 
+  @Test
   public void getSingleValue() {
     MarketDataBox<Integer> box = MarketDataBox.ofSingleValue(27);
     assertThat(box.getSingleValue()).isEqualTo(27);
@@ -32,23 +37,29 @@ public class SingleMarketDataBoxTest {
   /**
    * Test that the box always returns the same value for any non-negative scenario index.
    */
+  @Test
   public void getValue() {
     MarketDataBox<Integer> box = MarketDataBox.ofSingleValue(27);
     assertThat(box.getValue(0)).isEqualTo(27);
     assertThat(box.getValue(Integer.MAX_VALUE)).isEqualTo(27);
-    assertThrows(() -> box.getValue(-1), IllegalArgumentException.class);
+    assertThatIllegalArgumentException().isThrownBy(() -> box.getValue(-1));
   }
 
+  @Test
   public void getScenarioValue() {
     MarketDataBox<Integer> box = MarketDataBox.ofSingleValue(27);
-    assertThrows(box::getScenarioValue, IllegalStateException.class, "This box does not contain a scenario value");
+    assertThatIllegalStateException()
+        .isThrownBy(box::getScenarioValue)
+        .withMessage("This box does not contain a scenario value");
   }
 
+  @Test
   public void getScenarioCount() {
     MarketDataBox<Integer> box = MarketDataBox.ofSingleValue(27);
     assertThat(box.getScenarioCount()).isEqualTo(-1);
   }
 
+  @Test
   public void map() {
     MarketDataBox<Integer> box = MarketDataBox.ofSingleValue(27);
     MarketDataBox<Integer> result = box.map(v -> v * 2);
@@ -58,6 +69,7 @@ public class SingleMarketDataBoxTest {
   /**
    * Tests that applying a function multiple times to the value creates a box of scenario values.
    */
+  @Test
   public void mapWithIndex() {
     MarketDataBox<Integer> box = MarketDataBox.ofSingleValue(27);
     MarketDataBox<Integer> scenarioBox = box.mapWithIndex(3, (v, idx) -> v + idx);
@@ -68,6 +80,7 @@ public class SingleMarketDataBoxTest {
     assertThat(scenarioBox.getValue(2)).isEqualTo(29);
   }
 
+  @Test
   public void combineWithSingleBox() {
     MarketDataBox<Integer> box = MarketDataBox.ofSingleValue(27);
     MarketDataBox<Integer> otherBox = MarketDataBox.ofSingleValue(15);
@@ -76,6 +89,7 @@ public class SingleMarketDataBoxTest {
     assertThat(resultBox.getValue(0)).isEqualTo(42);
   }
 
+  @Test
   public void combineWithScenarioBox() {
     MarketDataBox<Integer> box = MarketDataBox.ofSingleValue(27);
     MarketDataBox<Integer> otherBox = MarketDataBox.ofScenarioValues(15, 16, 17);
@@ -87,11 +101,13 @@ public class SingleMarketDataBoxTest {
     assertThat(resultBox.getValue(2)).isEqualTo(44);
   }
 
+  @Test
   public void getMarketDataType() {
     MarketDataBox<Integer> box = MarketDataBox.ofSingleValue(27);
     assertThat(box.getMarketDataType()).isEqualTo(Integer.class);
   }
 
+  @Test
   public void stream() {
     MarketDataBox<Integer> box = MarketDataBox.ofSingleValue(27);
     List<Integer> list = box.stream().collect(toList());

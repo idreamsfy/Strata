@@ -9,10 +9,10 @@ import static com.opengamma.strata.basics.currency.Currency.EUR;
 import static com.opengamma.strata.basics.currency.Currency.GBP;
 import static com.opengamma.strata.basics.date.HolidayCalendarIds.EUTA;
 import static com.opengamma.strata.collect.TestHelper.assertSerialization;
-import static com.opengamma.strata.collect.TestHelper.assertThrowsIllegalArg;
 import static com.opengamma.strata.collect.TestHelper.coverBeanEquals;
 import static com.opengamma.strata.collect.TestHelper.coverImmutableBean;
 import static com.opengamma.strata.collect.TestHelper.date;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.testng.Assert.assertEquals;
 
 import java.time.LocalDate;
@@ -21,7 +21,6 @@ import org.testng.annotations.Test;
 
 import com.google.common.collect.ImmutableSet;
 import com.opengamma.strata.basics.ReferenceData;
-import com.opengamma.strata.basics.StandardId;
 import com.opengamma.strata.basics.currency.CurrencyAmount;
 import com.opengamma.strata.basics.date.BusinessDayAdjustment;
 import com.opengamma.strata.basics.date.BusinessDayConventions;
@@ -31,6 +30,8 @@ import com.opengamma.strata.basics.date.DaysAdjustment;
 import com.opengamma.strata.basics.schedule.Frequency;
 import com.opengamma.strata.basics.schedule.PeriodicSchedule;
 import com.opengamma.strata.basics.schedule.StubConvention;
+import com.opengamma.strata.product.LegalEntityId;
+import com.opengamma.strata.product.PositionInfo;
 import com.opengamma.strata.product.SecurityInfo;
 import com.opengamma.strata.product.SecurityPriceInfo;
 import com.opengamma.strata.product.TradeInfo;
@@ -46,7 +47,7 @@ public class FixedCouponBondSecurityTest {
   private static final SecurityPriceInfo PRICE_INFO = SecurityPriceInfo.of(0.1, CurrencyAmount.of(GBP, 25));
   private static final SecurityInfo INFO = SecurityInfo.of(PRODUCT.getSecurityId(), PRICE_INFO);
   private static final FixedCouponBondYieldConvention YIELD_CONVENTION = FixedCouponBondYieldConvention.DE_BONDS;
-  private static final StandardId LEGAL_ENTITY = StandardId.of("OG-Ticker", "BUN EUR");
+  private static final LegalEntityId LEGAL_ENTITY = LegalEntityId.of("OG-Ticker", "BUN EUR");
   private static final double NOTIONAL = 1.0e7;
   private static final double FIXED_RATE = 0.015;
   private static final DaysAdjustment DATE_OFFSET = DaysAdjustment.ofBusinessDays(3, EUTA);
@@ -69,7 +70,8 @@ public class FixedCouponBondSecurityTest {
   }
 
   public void test_builder_fail() {
-    assertThrowsIllegalArg(() -> FixedCouponBondSecurity.builder()
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> FixedCouponBondSecurity.builder()
         .info(INFO)
         .dayCount(DAY_COUNT)
         .fixedRate(FIXED_RATE)
@@ -81,7 +83,8 @@ public class FixedCouponBondSecurityTest {
         .yieldConvention(YIELD_CONVENTION)
         .exCouponPeriod(DaysAdjustment.ofBusinessDays(EX_COUPON_DAYS, EUTA, BUSINESS_ADJUST))
         .build());
-    assertThrowsIllegalArg(() -> FixedCouponBondSecurity.builder()
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> FixedCouponBondSecurity.builder()
         .info(INFO)
         .dayCount(DAY_COUNT)
         .fixedRate(FIXED_RATE)
@@ -106,6 +109,24 @@ public class FixedCouponBondSecurityTest {
         .price(123.50)
         .build();
     assertEquals(test.createTrade(tradeInfo, 100, 123.50, ReferenceData.empty()), expectedTrade);
+  }
+
+  public void test_createPosition() {
+    FixedCouponBondSecurity test = sut();
+    PositionInfo positionInfo = PositionInfo.empty();
+    FixedCouponBondPosition expectedPosition1 = FixedCouponBondPosition.builder()
+        .info(positionInfo)
+        .product(PRODUCT)
+        .longQuantity(100)
+        .build();
+    assertEquals(test.createPosition(positionInfo, 100, ReferenceData.empty()), expectedPosition1);
+    FixedCouponBondPosition expectedPosition2 = FixedCouponBondPosition.builder()
+        .info(positionInfo)
+        .product(PRODUCT)
+        .longQuantity(100)
+        .shortQuantity(50)
+        .build();
+    assertEquals(test.createPosition(positionInfo, 100, 50, ReferenceData.empty()), expectedPosition2);
   }
 
   //-------------------------------------------------------------------------

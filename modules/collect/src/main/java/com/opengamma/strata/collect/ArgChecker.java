@@ -6,8 +6,10 @@
 package com.opengamma.strata.collect;
 
 import java.util.Collection;
+import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.regex.Pattern;
 
 import com.google.common.base.CharMatcher;
@@ -118,7 +120,7 @@ public final class ArgChecker {
    * This will typically be the result of a caller-specific check.
    * For example:
    * <pre>
-   *  ArgChecker.isTrue(value > check, "Value must be greater than check: {}", value);
+   *  ArgChecker.isTrue(value &gt; check, "Value must be greater than check: {}", value);
    * </pre>
    * <p>
    * This returns {@code void}, and not the value being checked, as there is
@@ -147,7 +149,7 @@ public final class ArgChecker {
    * This will typically be the result of a caller-specific check.
    * For example:
    * <pre>
-   *  ArgChecker.isTrue(value > check, "Value must be greater than check: {}", value);
+   *  ArgChecker.isTrue(value &gt; check, "Value must be greater than check: {}", value);
    * </pre>
    * <p>
    * This returns {@code void}, and not the value being checked, as there is
@@ -683,6 +685,73 @@ public final class ArgChecker {
     return argument;
   }
 
+  //-----------------------------------------------------------------------
+  /**
+   * Checks that the specified argument array is non-null and does not contain any duplicate values.
+   * <p>
+   * Given the input argument, this returns only if it is non-null and does not contain duplicate values.
+   * For example, in a constructor:
+   * <pre>
+   *  this.values = ArgChecker.noDuplicates(values, "values");
+   * </pre>
+   * <p>
+   * If you know the argument is sorted increasing then {@link #noDuplicatesSorted(double[], String)} might be more
+   * performant.
+   *
+   * @param argument  the argument to check, null or duplicate values throws an exception
+   * @param name  the name of the argument to use in the error message, not null
+   * @return the input {@code argument}, not null
+   * @throws IllegalArgumentException if the input is null or contains duplicate values
+   */
+  public static double[] noDuplicates(double[] argument, String name) {
+    notNull(argument, name);
+    if (argument.length > 1) {
+      Set<Double> seen = new LinkedHashSet<>();
+      for (double v : argument) {
+        if (!seen.add(v)) {
+          throw new IllegalArgumentException(noDuplicatesArrayMsg(name));
+        }
+      }
+    }
+    return argument;
+  }
+
+  // extracted to aid inlining performance
+  private static String noDuplicatesArrayMsg(String name) {
+    return "Argument array '" + name + "' must not contain duplicates";
+  }
+
+  /**
+   * Checks that the specified argument array is non-null, sorted, and does not contain any duplicate values.
+   * <p>
+   * Given the input argument, this returns only if it is non-null, sorted, and does not contain duplicate values.
+   * For example, in a constructor:
+   * <pre>
+   *  this.values = ArgChecker.noDuplicatesSorted(values, "values");
+   * </pre>
+   *
+   * @param argument  the argument to check, null, out of order or duplicate values throws an exception
+   * @param name  the name of the argument to use in the error message, not null
+   * @return the input {@code argument}, not null
+   * @throws IllegalArgumentException if the input is null, unsorted, or contains duplicate values
+   */
+  public static double[] noDuplicatesSorted(double[] argument, String name) {
+    notNull(argument, name);
+    for (int i = 1; i < argument.length; i++) {
+      if (argument[i] == argument[i - 1]) {
+        throw new IllegalArgumentException(noDuplicatesArrayMsg(name));
+      } else if (argument[i] < argument[i - 1]) {
+        throw new IllegalArgumentException(noDuplicatesSortedArrayMsg(name));
+      }
+    }
+    return argument;
+  }
+
+  // extracted to aid inlining performance
+  private static String noDuplicatesSortedArrayMsg(String name) {
+    return "Argument array '" + name + "' must be sorted and not contain duplicates";
+  }
+
   //-------------------------------------------------------------------------
   /**
    * Checks that the argument is not negative.
@@ -750,6 +819,33 @@ public final class ArgChecker {
       throw new IllegalArgumentException(notNegativeMsg(name));
     }
     return argument;
+  }
+
+  //-------------------------------------------------------------------------
+  /**
+   * Checks that the argument is a number and not NaN.
+   * <p>
+   * Given the input argument, this returns only if it is an actual number.
+   * For example, in a constructor:
+   * <pre>
+   *  this.amount = ArgChecker.notNaN(amount, "amount");
+   * </pre>
+   *
+   * @param argument  the argument to check
+   * @param name  the name of the argument to use in the error message, not null
+   * @return the input {@code argument}
+   * @throws IllegalArgumentException if the input is NaN
+   */
+  public static double notNaN(double argument, String name) {
+    if (Double.isNaN(argument)) {
+      throw new IllegalArgumentException(notNaNMsg(name));
+    }
+    return argument;
+  }
+
+  // extracted to aid inlining performance
+  private static String notNaNMsg(String name) {
+    return "Argument '" + name + "' must not be NaN";
   }
 
   //-------------------------------------------------------------------------
@@ -848,6 +944,28 @@ public final class ArgChecker {
   }
 
   //-------------------------------------------------------------------------
+  /**
+   * Checks that the argument is not equal to zero.
+   * <p>
+   * Given the input argument, this returns only if it is not zero.
+   * Both positive and negative zero are checked.
+   * For example, in a constructor:
+   * <pre>
+   *  this.amount = ArgChecker.notZero(amount, "amount");
+   * </pre>
+   *
+   * @param argument  the value to check
+   * @param name  the name of the argument to use in the error message, not null
+   * @return the input {@code argument}
+   * @throws IllegalArgumentException if the argument is zero
+   */
+  public static double notZero(double argument, String name) {
+    if (argument == 0d || argument == -0d) {
+      throw new IllegalArgumentException("Argument '" + name + "' must not be zero");
+    }
+    return argument;
+  }
+
   /**
    * Checks that the argument is not equal to zero to within a given accuracy.
    * <p>
@@ -1038,7 +1156,7 @@ public final class ArgChecker {
     notNull(obj2, name2);
     if (obj1.compareTo(obj2) >= 0) {
       throw new IllegalArgumentException(
-          Messages.format("Invalid order: Expected '{}' < '{}', but found: '{}' >= '{}", name1, name2, obj1, obj2));
+          Messages.format("Invalid order: Expected '{}' < '{}', but found: '{}' >= '{}'", name1, name2, obj1, obj2));
     }
   }
 
@@ -1059,7 +1177,7 @@ public final class ArgChecker {
     notNull(obj2, name2);
     if (obj1.compareTo(obj2) > 0) {
       throw new IllegalArgumentException(
-          Messages.format("Invalid order: Expected '{}' <= '{}', but found: '{}' > '{}", name1, name2, obj1, obj2));
+          Messages.format("Invalid order: Expected '{}' <= '{}', but found: '{}' > '{}'", name1, name2, obj1, obj2));
     }
   }
 

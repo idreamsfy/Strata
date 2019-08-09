@@ -12,9 +12,15 @@ import static org.testng.Assert.assertEquals;
 
 import org.testng.annotations.Test;
 
+import com.opengamma.strata.basics.ImmutableReferenceData;
 import com.opengamma.strata.basics.StandardId;
 import com.opengamma.strata.basics.currency.Currency;
+import com.opengamma.strata.product.GenericSecurity;
+import com.opengamma.strata.product.GenericSecurityPosition;
+import com.opengamma.strata.product.PortfolioItemSummary;
+import com.opengamma.strata.product.PortfolioItemType;
 import com.opengamma.strata.product.PositionInfo;
+import com.opengamma.strata.product.ProductType;
 
 /**
  * Test {@link EtdOptionPosition}.
@@ -24,6 +30,8 @@ public class EtdOptionPositionTest {
 
   private static final PositionInfo POSITION_INFO = PositionInfo.of(StandardId.of("A", "B"));
   private static final EtdOptionSecurity SECURITY = EtdOptionSecurityTest.sut();
+  private static final int LONG_QUANTITY = 3000;
+  private static final int SHORT_QUANTITY = 2000;
 
   public void test_ofNet() {
     EtdOptionPosition test = EtdOptionPosition.ofNet(SECURITY, 1000);
@@ -31,6 +39,9 @@ public class EtdOptionPositionTest {
     assertEquals(test.getShortQuantity(), 0d, 0d);
     assertEquals(test.getSecurity(), SECURITY);
     assertEquals(test.getQuantity(), 1000d, 0d);
+    assertEquals(test.withInfo(POSITION_INFO).getInfo(), POSITION_INFO);
+    assertEquals(test.withQuantity(129).getQuantity(), 129d, 0d);
+    assertEquals(test.withQuantity(-129).getQuantity(), -129d, 0d);
   }
 
   public void test_ofNet_short() {
@@ -76,6 +87,29 @@ public class EtdOptionPositionTest {
   }
 
   //-------------------------------------------------------------------------
+  public void test_summarize() {
+    EtdOptionPosition trade = sut();
+    PortfolioItemSummary expected = PortfolioItemSummary.builder()
+        .id(POSITION_INFO.getId().orElse(null))
+        .portfolioItemType(PortfolioItemType.POSITION)
+        .productType(ProductType.ETD_OPTION)
+        .currencies(SECURITY.getCurrency())
+        .description(SECURITY.getSecurityId().getStandardId().getValue() + " x 1000, Jun17 P2")
+        .build();
+    assertEquals(trade.summarize(), expected);
+  }
+
+  //-------------------------------------------------------------------------
+  public void test_resolveTarget() {
+    EtdOptionPosition position = sut();
+    GenericSecurity resolvedSecurity = GenericSecurity.of(SECURITY.getInfo());
+    ImmutableReferenceData refData = ImmutableReferenceData.of(SECURITY.getSecurityId(), resolvedSecurity);
+    GenericSecurityPosition expected =
+        GenericSecurityPosition.ofLongShort(POSITION_INFO, resolvedSecurity, LONG_QUANTITY, SHORT_QUANTITY);
+    assertEquals(position.resolveTarget(refData), expected);
+  }
+
+  //-------------------------------------------------------------------------
   public void coverage() {
     coverImmutableBean(sut());
     coverBeanEquals(sut(), sut2());
@@ -90,8 +124,8 @@ public class EtdOptionPositionTest {
     return EtdOptionPosition.builder()
         .info(POSITION_INFO)
         .security(SECURITY)
-        .longQuantity(3000)
-        .shortQuantity(2000)
+        .longQuantity(LONG_QUANTITY)
+        .shortQuantity(SHORT_QUANTITY)
         .build();
   }
 

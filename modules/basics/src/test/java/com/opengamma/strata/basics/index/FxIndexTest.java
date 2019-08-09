@@ -7,15 +7,16 @@ package com.opengamma.strata.basics.index;
 
 import static com.opengamma.strata.basics.currency.Currency.EUR;
 import static com.opengamma.strata.basics.currency.Currency.GBP;
+import static com.opengamma.strata.basics.date.HolidayCalendarIds.EUTA;
 import static com.opengamma.strata.basics.date.HolidayCalendarIds.GBLO;
 import static com.opengamma.strata.basics.date.HolidayCalendarIds.NO_HOLIDAYS;
 import static com.opengamma.strata.basics.index.FxIndices.EUR_CHF_ECB;
 import static com.opengamma.strata.collect.TestHelper.assertJodaConvert;
 import static com.opengamma.strata.collect.TestHelper.assertSerialization;
-import static com.opengamma.strata.collect.TestHelper.assertThrowsIllegalArg;
 import static com.opengamma.strata.collect.TestHelper.coverImmutableBean;
 import static com.opengamma.strata.collect.TestHelper.coverPrivateConstructor;
 import static com.opengamma.strata.collect.TestHelper.date;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.testng.Assert.assertEquals;
 
 import org.joda.beans.ImmutableBean;
@@ -37,7 +38,7 @@ public class FxIndexTest {
 
   //-------------------------------------------------------------------------
   @DataProvider(name = "name")
-  static Object[][] data_name() {
+  public static Object[][] data_name() {
     return new Object[][] {
         {FxIndices.EUR_CHF_ECB, "EUR/CHF-ECB"},
         {FxIndices.EUR_GBP_ECB, "EUR/GBP-ECB"},
@@ -72,16 +73,18 @@ public class FxIndexTest {
   }
 
   public void test_of_lookup_notFound() {
-    assertThrowsIllegalArg(() -> FxIndex.of("Rubbish"));
+    assertThatIllegalArgumentException().isThrownBy(() -> FxIndex.of("Rubbish"));
   }
 
   public void test_of_lookup_null() {
-    assertThrowsIllegalArg(() -> FxIndex.of((String) null));
+    assertThatIllegalArgumentException().isThrownBy(() -> FxIndex.of((String) null));
   }
 
   //-------------------------------------------------------------------------
   public void test_ecb_eur_gbp_dates() {
     FxIndex test = FxIndices.EUR_GBP_ECB;
+    assertEquals(test.getFixingDateOffset(), DaysAdjustment.ofBusinessDays(-2, EUTA.combinedWith(GBLO)));
+    assertEquals(test.getMaturityDateOffset(), DaysAdjustment.ofBusinessDays(2, EUTA.combinedWith(GBLO)));
     assertEquals(test.calculateMaturityFromFixing(date(2014, 10, 13), REF_DATA), date(2014, 10, 15));
     assertEquals(test.calculateFixingFromMaturity(date(2014, 10, 15), REF_DATA), date(2014, 10, 13));
     // weekend
@@ -116,6 +119,16 @@ public class FxIndexTest {
     // input date is Sunday
     assertEquals(test.calculateMaturityFromFixing(date(2014, 10, 19), REF_DATA), date(2014, 10, 21));
     assertEquals(test.calculateFixingFromMaturity(date(2014, 10, 19), REF_DATA), date(2014, 10, 17));
+  }
+
+  public void test_cny() {
+    FxIndex test = FxIndex.of("USD/CNY-SAEC-CNY01");
+    assertEquals(test.getName(), "USD/CNY-SAEC-CNY01");
+  }
+
+  public void test_inr() {
+    FxIndex test = FxIndex.of("USD/INR-FBIL-INR01");
+    assertEquals(test.getName(), "USD/INR-FBIL-INR01");
   }
 
   //-------------------------------------------------------------------------

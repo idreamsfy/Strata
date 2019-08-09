@@ -34,8 +34,12 @@ public class GenericSecurityTradeTest {
     assertEquals(test.getSecurity(), SECURITY);
     assertEquals(test.getQuantity(), QUANTITY);
     assertEquals(test.getPrice(), PRICE);
+    assertEquals(test.getProduct(), SECURITY);
     assertEquals(test.getCurrency(), SECURITY.getCurrency());
     assertEquals(test.getSecurityId(), SECURITY.getSecurityId());
+    assertEquals(test.withInfo(TRADE_INFO).getInfo(), TRADE_INFO);
+    assertEquals(test.withQuantity(129).getQuantity(), 129d, 0d);
+    assertEquals(test.withPrice(129).getPrice(), 129d, 0d);
   }
 
   public void test_builder() {
@@ -56,6 +60,18 @@ public class GenericSecurityTradeTest {
 
   public void test_serialization() {
     assertSerialization(sut());
+  }
+
+  //-------------------------------------------------------------------------
+  public void test_summarize() {
+    GenericSecurityTrade trade = sut();
+    PortfolioItemSummary expected = PortfolioItemSummary.builder()
+        .portfolioItemType(PortfolioItemType.TRADE)
+        .productType(ProductType.SECURITY)
+        .currencies(SECURITY.getCurrency())
+        .description("1 x 100")
+        .build();
+    assertEquals(trade.summarize(), expected);
   }
 
   //-------------------------------------------------------------------------

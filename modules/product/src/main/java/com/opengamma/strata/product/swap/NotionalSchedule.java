@@ -11,17 +11,15 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
-import java.util.Set;
 
 import org.joda.beans.Bean;
-import org.joda.beans.BeanDefinition;
 import org.joda.beans.ImmutableBean;
-import org.joda.beans.ImmutablePreBuild;
-import org.joda.beans.ImmutableValidator;
 import org.joda.beans.JodaBeanUtils;
+import org.joda.beans.MetaBean;
 import org.joda.beans.MetaProperty;
-import org.joda.beans.Property;
-import org.joda.beans.PropertyDefinition;
+import org.joda.beans.gen.BeanDefinition;
+import org.joda.beans.gen.ImmutableValidator;
+import org.joda.beans.gen.PropertyDefinition;
 import org.joda.beans.impl.direct.DirectFieldsBeanBuilder;
 import org.joda.beans.impl.direct.DirectMetaBean;
 import org.joda.beans.impl.direct.DirectMetaProperty;
@@ -72,7 +70,8 @@ public final class NotionalSchedule
    * exchange of money between the counterparties.
    * <p>
    * When building the notional schedule, if an {@code FxResetCalculation} is present,
-   * then the notional exchange flags will be set to true.
+   * then at least one of the notional exchange flags should be set to true. If all notional
+   * exchange flags are false then an IllegalArgumentException is thrown.
    */
   @PropertyDefinition(get = "optional")
   private final FxResetCalculation fxReset;
@@ -172,15 +171,13 @@ public final class NotionalSchedule
             Messages.format("Currency {} must be one of those in the FxResetCalculation index {}",
                 currency, fxReset.getIndex()));
       }
-    }
-  }
 
-  @ImmutablePreBuild
-  private static void preBuild(Builder builder) {
-    if (builder.fxReset != null) {
-      builder.initialExchange = true;
-      builder.intermediateExchange = true;
-      builder.finalExchange = true;
+      if (!(initialExchange || intermediateExchange || finalExchange)) {
+        throw new IllegalArgumentException(
+            Messages.format(
+                "FxResetCalculation index {} was specified but schedule does not include any notional exchanges",
+                fxReset.getIndex()));
+      }
     }
   }
 
@@ -227,13 +224,19 @@ public final class NotionalSchedule
 
     boolean fxResetFound = payPeriods.stream().filter(pp -> pp.getFxResetObservation().isPresent()).findAny().isPresent();
     if (fxResetFound) {
-      if (intermediateExchange) {
-        return createFxResetEvents(payPeriods, initialExchangeDate, refData);
-      } else {
-        return ImmutableList.of();
-      }
+      return createFxResetEvents(
+          payPeriods,
+          initialExchangeDate,
+          initialExchange,
+          intermediateExchange,
+          finalExchange);
     } else if (initialExchange || intermediateExchange || finalExchange) {
-      return createStandardEvents(payPeriods, initialExchangeDate, initialExchange, intermediateExchange, finalExchange);
+      return createStandardEvents(
+          payPeriods,
+          initialExchangeDate,
+          initialExchange,
+          intermediateExchange,
+          finalExchange);
     } else {
       return ImmutableList.of();
     }
@@ -243,28 +246,47 @@ public final class NotionalSchedule
   private static ImmutableList<SwapPaymentEvent> createFxResetEvents(
       List<NotionalPaymentPeriod> payPeriods,
       LocalDate initialExchangeDate,
-      ReferenceData refData) {
+      boolean initialExchange,
+      boolean intermediateExchange,
+      boolean finalExchange) {
 
     ImmutableList.Builder<SwapPaymentEvent> events = ImmutableList.builder();
     for (int i = 0; i < payPeriods.size(); i++) {
       NotionalPaymentPeriod period = payPeriods.get(i);
       LocalDate startPaymentDate = (i == 0 ? initialExchangeDate : payPeriods.get(i - 1).getPaymentDate());
+
+      boolean includeStartPayment = i == 0 ? initialExchange : intermediateExchange;
+      boolean includeEndPayment = i == payPeriods.size() - 1 ? finalExchange : intermediateExchange;
+
       if (period.getFxResetObservation().isPresent()) {
+
         FxIndexObservation observation = period.getFxResetObservation().get();
+
         // notional out at start of period
-        events.add(FxResetNotionalExchange.of(
-            period.getNotionalAmount().negated(), startPaymentDate, observation));
+        if (includeStartPayment) {
+          events.add(FxResetNotionalExchange.of(
+              period.getNotionalAmount().negated(), startPaymentDate, observation));
+        }
+
         // notional in at end of period
-        events.add(FxResetNotionalExchange.of(
-            period.getNotionalAmount(), period.getPaymentDate(), observation));
+        if (includeEndPayment) {
+          events.add(FxResetNotionalExchange.of(
+              period.getNotionalAmount(), period.getPaymentDate(), observation));
+        }
       } else {
         // handle weird swap where only some periods have FX reset
+
         // notional out at start of period
-        events.add(NotionalExchange.of(
-            CurrencyAmount.of(period.getCurrency(), -period.getNotionalAmount().getAmount()), startPaymentDate));
+        if (includeStartPayment) {
+          events.add(NotionalExchange.of(
+              CurrencyAmount.of(period.getCurrency(), -period.getNotionalAmount().getAmount()), startPaymentDate));
+        }
         // notional in at end of period
-        events.add(NotionalExchange.of(
-            CurrencyAmount.of(period.getCurrency(), period.getNotionalAmount().getAmount()), period.getPaymentDate()));
+        if (includeEndPayment) {
+          events.add(NotionalExchange.of(
+              CurrencyAmount.of(period.getCurrency(), period.getNotionalAmount().getAmount()),
+              period.getPaymentDate()));
+        }
       }
     }
     return events.build();
@@ -301,7 +323,6 @@ public final class NotionalSchedule
   }
 
   //------------------------- AUTOGENERATED START -------------------------
-  ///CLOVER:OFF
   /**
    * The meta-bean for {@code NotionalSchedule}.
    * @return the meta-bean, not null
@@ -311,7 +332,7 @@ public final class NotionalSchedule
   }
 
   static {
-    JodaBeanUtils.registerMetaBean(NotionalSchedule.Meta.INSTANCE);
+    MetaBean.register(NotionalSchedule.Meta.INSTANCE);
   }
 
   /**
@@ -350,16 +371,6 @@ public final class NotionalSchedule
     return NotionalSchedule.Meta.INSTANCE;
   }
 
-  @Override
-  public <R> Property<R> property(String propertyName) {
-    return metaBean().<R>metaProperty(propertyName).createProperty(this);
-  }
-
-  @Override
-  public Set<String> propertyNames() {
-    return metaBean().metaPropertyMap().keySet();
-  }
-
   //-----------------------------------------------------------------------
   /**
    * Gets the currency of the swap leg associated with the notional.
@@ -386,7 +397,8 @@ public final class NotionalSchedule
    * exchange of money between the counterparties.
    * <p>
    * When building the notional schedule, if an {@code FxResetCalculation} is present,
-   * then the notional exchange flags will be set to true.
+   * then at least one of the notional exchange flags should be set to true. If all notional
+   * exchange flags are false then an IllegalArgumentException is thrown.
    * @return the optional value of the property, not null
    */
   public Optional<FxResetCalculation> getFxReset() {
@@ -754,39 +766,8 @@ public final class NotionalSchedule
       return this;
     }
 
-    /**
-     * @deprecated Use Joda-Convert in application code
-     */
-    @Override
-    @Deprecated
-    public Builder setString(String propertyName, String value) {
-      setString(meta().metaProperty(propertyName), value);
-      return this;
-    }
-
-    /**
-     * @deprecated Use Joda-Convert in application code
-     */
-    @Override
-    @Deprecated
-    public Builder setString(MetaProperty<?> property, String value) {
-      super.setString(property, value);
-      return this;
-    }
-
-    /**
-     * @deprecated Loop in application code
-     */
-    @Override
-    @Deprecated
-    public Builder setAll(Map<String, ? extends Object> propertyValueMap) {
-      super.setAll(propertyValueMap);
-      return this;
-    }
-
     @Override
     public NotionalSchedule build() {
-      preBuild(this);
       return new NotionalSchedule(
           currency,
           fxReset,
@@ -824,7 +805,8 @@ public final class NotionalSchedule
      * exchange of money between the counterparties.
      * <p>
      * When building the notional schedule, if an {@code FxResetCalculation} is present,
-     * then the notional exchange flags will be set to true.
+     * then at least one of the notional exchange flags should be set to true. If all notional
+     * exchange flags are false then an IllegalArgumentException is thrown.
      * @param fxReset  the new value
      * @return this, for chaining, not null
      */
@@ -906,6 +888,5 @@ public final class NotionalSchedule
 
   }
 
-  ///CLOVER:ON
   //-------------------------- AUTOGENERATED END --------------------------
 }

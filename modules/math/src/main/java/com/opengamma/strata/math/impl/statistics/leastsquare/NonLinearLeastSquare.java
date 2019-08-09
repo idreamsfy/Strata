@@ -5,6 +5,8 @@
  */
 package com.opengamma.strata.math.impl.statistics.leastsquare;
 
+import static com.opengamma.strata.math.MathUtils.pow2;
+
 import java.util.function.Function;
 
 import org.slf4j.Logger;
@@ -14,17 +16,16 @@ import com.opengamma.strata.collect.ArgChecker;
 import com.opengamma.strata.collect.array.DoubleArray;
 import com.opengamma.strata.collect.array.DoubleMatrix;
 import com.opengamma.strata.math.MathException;
-import com.opengamma.strata.math.impl.FunctionUtils;
 import com.opengamma.strata.math.impl.differentiation.VectorFieldFirstOrderDifferentiator;
 import com.opengamma.strata.math.impl.differentiation.VectorFieldSecondOrderDifferentiator;
 import com.opengamma.strata.math.impl.function.ParameterizedFunction;
-import com.opengamma.strata.math.impl.linearalgebra.Decomposition;
 import com.opengamma.strata.math.impl.linearalgebra.DecompositionFactory;
-import com.opengamma.strata.math.impl.linearalgebra.DecompositionResult;
 import com.opengamma.strata.math.impl.linearalgebra.SVDecompositionCommons;
 import com.opengamma.strata.math.impl.linearalgebra.SVDecompositionResult;
 import com.opengamma.strata.math.impl.matrix.MatrixAlgebra;
 import com.opengamma.strata.math.impl.matrix.MatrixAlgebraFactory;
+import com.opengamma.strata.math.linearalgebra.Decomposition;
+import com.opengamma.strata.math.linearalgebra.DecompositionResult;
 
 /**
  * Non linear least square calculator.
@@ -680,7 +681,7 @@ public class NonLinearLeastSquare {
     for (int i = 0; i < m; i++) {
       double sum = 0.0;
       for (int k = 0; k < n; k++) {
-        sum += FunctionUtils.square(jacobian.get(k, i));
+        sum += pow2(jacobian.get(k, i));
       }
       alpha[i] = sum;
     }

@@ -5,8 +5,8 @@
  */
 package com.opengamma.strata.calc.marketdata;
 
-import static com.opengamma.strata.collect.TestHelper.assertThrows;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 
 import java.util.Arrays;
 import java.util.List;
@@ -30,14 +30,11 @@ public class ScenarioDefinitionTest {
   private static final TestPerturbation PERTURBATION_B1 = new TestPerturbation(3, 4);
   private static final TestPerturbation PERTURBATION_C1 = new TestPerturbation(5, 6);
 
-  private static final PerturbationMapping<Object> MAPPING_A =
-      PerturbationMapping.of(Object.class, FILTER_A, PERTURBATION_A1);
+  private static final PerturbationMapping<Object> MAPPING_A = PerturbationMapping.of(FILTER_A, PERTURBATION_A1);
 
-  private static final PerturbationMapping<Object> MAPPING_B =
-      PerturbationMapping.of(Object.class, FILTER_B, PERTURBATION_B1);
+  private static final PerturbationMapping<Object> MAPPING_B = PerturbationMapping.of(FILTER_B, PERTURBATION_B1);
 
-  private static final PerturbationMapping<Object> MAPPING_C =
-      PerturbationMapping.of(Object.class, FILTER_C, PERTURBATION_C1);
+  private static final PerturbationMapping<Object> MAPPING_C = PerturbationMapping.of(FILTER_C, PERTURBATION_C1);
 
   public void ofMappings() {
     List<PerturbationMapping<Object>> mappings = ImmutableList.of(MAPPING_A, MAPPING_B, MAPPING_C);
@@ -60,32 +57,32 @@ public class ScenarioDefinitionTest {
    * are the wrong number. The mappings all have 2 perturbations which should mean 2 scenarios, but
    * there are 3 scenario names.
    */
-  @Test(expectedExceptions = IllegalArgumentException.class)
+  @Test
   public void ofMappingsWrongNumberOfScenarioNames() {
     List<PerturbationMapping<Object>> mappings = ImmutableList.of(MAPPING_A, MAPPING_B, MAPPING_C);
     List<String> scenarioNames = ImmutableList.of("foo", "bar", "baz");
-    ScenarioDefinition.ofMappings(mappings, scenarioNames);
+    assertThatIllegalArgumentException().isThrownBy(() -> ScenarioDefinition.ofMappings(mappings, scenarioNames));
   }
 
   /**
    * Tests that a scenario definition won't be built if the mappings don't have the same number of scenarios
    */
-  @Test(expectedExceptions = IllegalArgumentException.class)
+  @Test
   public void ofMappingsDifferentNumberOfScenarios() {
-    PerturbationMapping<Object> mappingC = PerturbationMapping.of(Object.class, FILTER_C, new TestPerturbation(27));
+    PerturbationMapping<Object> mappingC = PerturbationMapping.of(FILTER_C, new TestPerturbation(27));
     List<PerturbationMapping<Object>> mappings = ImmutableList.of(MAPPING_A, MAPPING_B, mappingC);
-    ScenarioDefinition.ofMappings(mappings);
+    assertThatIllegalArgumentException().isThrownBy(() -> ScenarioDefinition.ofMappings(mappings));
   }
 
   /**
    * Tests that a scenario definition won't be built if the mappings don't have the same number of scenarios
    */
-  @Test(expectedExceptions = IllegalArgumentException.class)
+  @Test
   public void ofMappingsWithNamesDifferentNumberOfScenarios() {
-    PerturbationMapping<Object> mappingC = PerturbationMapping.of(Object.class, FILTER_C, new TestPerturbation(27));
+    PerturbationMapping<Object> mappingC = PerturbationMapping.of(FILTER_C, new TestPerturbation(27));
     List<PerturbationMapping<Object>> mappings = ImmutableList.of(MAPPING_A, MAPPING_B, mappingC);
     List<String> scenarioNames = ImmutableList.of("foo", "bar");
-    ScenarioDefinition.ofMappings(mappings, scenarioNames);
+    assertThatIllegalArgumentException().isThrownBy(() -> ScenarioDefinition.ofMappings(mappings, scenarioNames));
   }
 
   public void repeatItems() {
@@ -110,8 +107,9 @@ public class ScenarioDefinitionTest {
   public void nonUniqueNames() {
     List<PerturbationMapping<Object>> mappings2 = ImmutableList.of(MAPPING_A, MAPPING_B, MAPPING_C);
     List<String> names2 = ImmutableList.of("foo", "foo");
-    String msg2 = "Scenario names must be unique but duplicates were found: foo";
-    assertThrows(() -> ScenarioDefinition.ofMappings(mappings2, names2), IllegalArgumentException.class, msg2);
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> ScenarioDefinition.ofMappings(mappings2, names2))
+        .withMessage("Scenario names must be unique but duplicates were found: foo");
   }
 
   //-------------------------------------------------------------------------
@@ -143,6 +141,11 @@ public class ScenarioDefinitionTest {
     @Override
     public int getScenarioCount() {
       return values.length;
+    }
+
+    @Override
+    public Class<Object> getMarketDataType() {
+      return Object.class;
     }
 
     @Override

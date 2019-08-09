@@ -10,21 +10,21 @@ import java.util.Arrays;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Objects;
-import java.util.Set;
 import java.util.function.BiFunction;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 
 import org.joda.beans.Bean;
 import org.joda.beans.BeanBuilder;
-import org.joda.beans.BeanDefinition;
 import org.joda.beans.ImmutableBean;
-import org.joda.beans.ImmutableValidator;
 import org.joda.beans.JodaBeanUtils;
+import org.joda.beans.MetaBean;
 import org.joda.beans.MetaProperty;
-import org.joda.beans.Property;
-import org.joda.beans.PropertyDefinition;
+import org.joda.beans.gen.BeanDefinition;
+import org.joda.beans.gen.ImmutableValidator;
+import org.joda.beans.gen.PropertyDefinition;
 import org.joda.beans.impl.direct.DirectMetaBean;
 import org.joda.beans.impl.direct.DirectMetaProperty;
 import org.joda.beans.impl.direct.DirectMetaPropertyMap;
@@ -50,10 +50,9 @@ import com.opengamma.strata.collect.Messages;
  * Application code using a result should also operate in a functional style.
  * Use {@link #map(Function)} and {@link #flatMap(Function)} in preference to
  * {@link #isSuccess()} and {@link #getValue()}.
- * <p>
  * <pre>
  *  Result{@literal <Foo>} intermediateResult = calculateIntermediateResult();
- *  return intermediateResult.flatMap(foo -> calculateFinalResult(foo, ...));
+ *  return intermediateResult.flatMap(foo -&gt; calculateFinalResult(foo, ...));
  * </pre>
  * <p>
  * Results can be generated using the factory methods on this class.
@@ -218,7 +217,12 @@ public final class Result<T>
    * @param messageArgs  the arguments for the message
    * @return a failure result
    */
-  public static <R> Result<R> failure(FailureReason reason, Exception exception, String message, Object... messageArgs) {
+  public static <R> Result<R> failure(
+      FailureReason reason,
+      Exception exception,
+      String message,
+      Object... messageArgs) {
+
     return new Result<>(Failure.of(reason, exception, message, messageArgs));
   }
 
@@ -434,11 +438,11 @@ public final class Result<T>
    * <p>
    * The following code shows where this method can be used. The code:
    * <blockquote><pre>
-   *   Set&lt;Result&lt;MyData>> results = goAndGatherData();
+   *   Set&lt;Result&lt;MyData&gt;&gt; results = goAndGatherData();
    *   if (Result.anyFailures(results)) {
    *     return Result.failure(results);
    *   } else {
-   *     Set&lt;FooData> combined =
+   *     Set&lt;FooData&gt; combined =
    *         results.stream()
    *             .map(Result::getValue)
    *             .map(MyData::transformToFoo)
@@ -448,8 +452,8 @@ public final class Result<T>
    * </pre></blockquote>
    * can be replaced with:
    * <blockquote><pre>
-   *   Set&lt;Result&lt;MyData>> results = goAndGatherData();
-   *   return Result.combine(results, myDataStream ->
+   *   Set&lt;Result&lt;MyData&gt;&gt; results = goAndGatherData();
+   *   return Result.combine(results, myDataStream -&gt;
    *       myDataStream
    *           .map(MyData::transformToFoo)
    *           .collect(toSet())
@@ -488,11 +492,11 @@ public final class Result<T>
    * <p>
    * The following code shows where this method can be used. The code:
    * <blockquote><pre>
-   *   Set&lt;Result&lt;MyData>> results = goAndGatherData();
+   *   Set&lt;Result&lt;MyData&gt;&gt; results = goAndGatherData();
    *   if (Result.anyFailures(results)) {
    *     return Result.failure(results);
    *   } else {
-   *     Set&lt;FooData> combined =
+   *     Set&lt;FooData&gt; combined =
    *         results.stream()
    *             .map(Result::getValue)
    *             .map(MyData::transformToFoo)
@@ -502,9 +506,9 @@ public final class Result<T>
    * </pre></blockquote>
    * can be replaced with:
    * <blockquote><pre>
-   *   Set&lt;Result&lt;MyData>> results = goAndGatherData();
-   *   return Result.flatCombine(results, myDataStream -> {
-   *     Set&lt;CombinedData> combined =
+   *   Set&lt;Result&lt;MyData&gt;&gt; results = goAndGatherData();
+   *   return Result.flatCombine(results, myDataStream -&gt; {
+   *     Set&lt;CombinedData&gt; combined =
    *         myDataStream
    *             .map(MyData::transformToFoo)
    *             .collect(toSet());
@@ -581,6 +585,17 @@ public final class Result<T>
   }
 
   /**
+   * Executes the given consumer if the result represents a successful call and has a result available.
+   *
+   * @param consumer the consumer to be decorated
+   */
+  public void ifSuccess(Consumer<? super T> consumer) {
+    if (value != null) {
+      consumer.accept(value);
+    }
+  }
+
+  /**
    * Indicates if this result represents a failure.
    * <p>
    * This is the opposite of {@link #isSuccess()}.
@@ -589,6 +604,17 @@ public final class Result<T>
    */
   public boolean isFailure() {
     return failure != null;
+  }
+
+  /**
+   * Executes the given consumer if the result represents a failure.
+   *
+   * @param consumer the consumer to be decorated
+   */
+  public void ifFailure(Consumer<Failure> consumer) {
+    if (failure != null) {
+      consumer.accept(failure);
+    }
   }
 
   //-------------------------------------------------------------------------
@@ -688,7 +714,7 @@ public final class Result<T>
    * For example, it allows a {@code double} to be converted to a string:
    * <blockquote><pre>
    *   result = ...
-   *   return result.map(value -> Double.toString(value));
+   *   return result.map(value -&gt; Double.toString(value));
    * </pre></blockquote>
    *
    * @param <R>  the type of the value in the returned result
@@ -724,7 +750,7 @@ public final class Result<T>
    * For example,
    * <blockquote><pre>
    *   result = ...
-   *   return result.flatMap(value -> doSomething(value));
+   *   return result.flatMap(value -&gt; doSomething(value));
    * </pre></blockquote>
    *
    * @param <R>  the type of the value in the returned result
@@ -757,7 +783,7 @@ public final class Result<T>
    * <blockquote><pre>
    *   result1 = ...
    *   result2 = ...
-   *   return result1.combineWith(result2, (value1, value2) -> doSomething(value1, value2));
+   *   return result1.combineWith(result2, (value1, value2) -&gt; doSomething(value1, value2));
    * </pre></blockquote>
    *
    * @param other  another result
@@ -793,7 +819,6 @@ public final class Result<T>
   }
 
   //------------------------- AUTOGENERATED START -------------------------
-  ///CLOVER:OFF
   /**
    * The meta-bean for {@code Result}.
    * @return the meta-bean, not null
@@ -815,7 +840,7 @@ public final class Result<T>
   }
 
   static {
-    JodaBeanUtils.registerMetaBean(Result.Meta.INSTANCE);
+    MetaBean.register(Result.Meta.INSTANCE);
   }
 
   /**
@@ -835,16 +860,6 @@ public final class Result<T>
   @Override
   public Result.Meta<T> metaBean() {
     return Result.Meta.INSTANCE;
-  }
-
-  @Override
-  public <R> Property<R> property(String propertyName) {
-    return metaBean().<R>metaProperty(propertyName).createProperty(this);
-  }
-
-  @Override
-  public Set<String> propertyNames() {
-    return metaBean().metaPropertyMap().keySet();
   }
 
   //-----------------------------------------------------------------------
@@ -929,7 +944,7 @@ public final class Result<T>
 
     @Override
     public BeanBuilder<? extends Result<T>> builder() {
-      return new Result.Builder<T>();
+      return new Result.Builder<>();
     }
 
     @SuppressWarnings({"unchecked", "rawtypes" })
@@ -997,7 +1012,6 @@ public final class Result<T>
      * Restricted constructor.
      */
     private Builder() {
-      super(meta());
     }
 
     //-----------------------------------------------------------------------
@@ -1031,7 +1045,7 @@ public final class Result<T>
 
     @Override
     public Result<T> build() {
-      return new Result<T>(
+      return new Result<>(
           value,
           failure);
     }
@@ -1049,6 +1063,5 @@ public final class Result<T>
 
   }
 
-  ///CLOVER:ON
   //-------------------------- AUTOGENERATED END --------------------------
 }

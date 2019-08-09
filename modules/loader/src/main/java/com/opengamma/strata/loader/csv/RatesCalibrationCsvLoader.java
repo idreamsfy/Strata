@@ -9,7 +9,6 @@ import static com.opengamma.strata.collect.Guavate.toImmutableList;
 import static com.opengamma.strata.collect.Guavate.toImmutableMap;
 import static java.util.stream.Collectors.toList;
 
-import java.time.LocalDate;
 import java.time.Period;
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
@@ -35,14 +34,15 @@ import com.opengamma.strata.collect.io.CsvRow;
 import com.opengamma.strata.collect.io.ResourceLocator;
 import com.opengamma.strata.collect.io.UnicodeBom;
 import com.opengamma.strata.data.FieldName;
+import com.opengamma.strata.loader.LoaderUtils;
 import com.opengamma.strata.market.curve.CurveDefinition;
-import com.opengamma.strata.market.curve.CurveGroupDefinition;
 import com.opengamma.strata.market.curve.CurveGroupName;
 import com.opengamma.strata.market.curve.CurveName;
 import com.opengamma.strata.market.curve.CurveNode;
 import com.opengamma.strata.market.curve.CurveNodeClashAction;
 import com.opengamma.strata.market.curve.CurveNodeDate;
 import com.opengamma.strata.market.curve.CurveNodeDateOrder;
+import com.opengamma.strata.market.curve.RatesCurveGroupDefinition;
 import com.opengamma.strata.market.curve.SeasonalityDefinition;
 import com.opengamma.strata.market.curve.node.FixedIborSwapCurveNode;
 import com.opengamma.strata.market.curve.node.FixedInflationSwapCurveNode;
@@ -178,7 +178,7 @@ public final class RatesCalibrationCsvLoader {
    * @return the group definitions, mapped by name
    * @throws IllegalArgumentException if the files contain a duplicate entry
    */
-  public static ImmutableMap<CurveGroupName, CurveGroupDefinition> load(
+  public static ImmutableMap<CurveGroupName, RatesCurveGroupDefinition> load(
       ResourceLocator groupsResource,
       ResourceLocator settingsResource,
       ResourceLocator... curveNodeResources) {
@@ -197,7 +197,7 @@ public final class RatesCalibrationCsvLoader {
    * @return the group definitions, mapped by name
    * @throws IllegalArgumentException if the files contain a duplicate entry
    */
-  public static ImmutableMap<CurveGroupName, CurveGroupDefinition> load(
+  public static ImmutableMap<CurveGroupName, RatesCurveGroupDefinition> load(
       ResourceLocator groupsResource,
       ResourceLocator settingsResource,
       Collection<ResourceLocator> curveNodeResources) {
@@ -218,7 +218,7 @@ public final class RatesCalibrationCsvLoader {
    * @return the group definitions, mapped by name
    * @throws IllegalArgumentException if the files contain a duplicate entry
    */
-  public static ImmutableMap<CurveGroupName, CurveGroupDefinition> loadWithSeasonality(
+  public static ImmutableMap<CurveGroupName, RatesCurveGroupDefinition> loadWithSeasonality(
       ResourceLocator groupsResource,
       ResourceLocator settingsResource,
       ResourceLocator seasonalityResource,
@@ -244,7 +244,7 @@ public final class RatesCalibrationCsvLoader {
    * @return the group definitions, mapped by name
    * @throws IllegalArgumentException if the files contain a duplicate entry
    */
-  public static ImmutableMap<CurveGroupName, CurveGroupDefinition> parse(
+  public static ImmutableMap<CurveGroupName, RatesCurveGroupDefinition> parse(
       CharSource groupsCharSource,
       CharSource settingsCharSource,
       Collection<CharSource> curveNodeCharSources) {
@@ -264,7 +264,7 @@ public final class RatesCalibrationCsvLoader {
    * @return the group definitions, mapped by name
    * @throws IllegalArgumentException if the files contain a duplicate entry
    */
-  public static ImmutableMap<CurveGroupName, CurveGroupDefinition> parseWithSeasonality(
+  public static ImmutableMap<CurveGroupName, RatesCurveGroupDefinition> parseWithSeasonality(
       CharSource groupsCharSource,
       CharSource settingsCharSource,
       CharSource seasonalityResource,
@@ -276,14 +276,14 @@ public final class RatesCalibrationCsvLoader {
   }
 
   // parse based on pre-parsed seasonality
-  private static ImmutableMap<CurveGroupName, CurveGroupDefinition> parse0(
+  private static ImmutableMap<CurveGroupName, RatesCurveGroupDefinition> parse0(
       CharSource groupsCharSource,
       CharSource settingsCharSource,
       Map<CurveName, SeasonalityDefinition> seasonality,
       Collection<CharSource> curveNodeCharSources) {
 
     // load curve groups and settings
-    List<CurveGroupDefinition> curveGroups = CurveGroupDefinitionCsvLoader.parseCurveGroupDefinitions(groupsCharSource);
+    List<RatesCurveGroupDefinition> curveGroups = RatesCurveGroupDefinitionCsvLoader.parseCurveGroupDefinitions(groupsCharSource);
     Map<CurveName, LoadedCurveSettings> settingsMap = RatesCurvesCsvLoader.parseCurveSettings(settingsCharSource);
 
     // load curve definitions
@@ -340,7 +340,7 @@ public final class RatesCalibrationCsvLoader {
       return CurveNodeDate.END;
     }
     if (dateStr.length() == 10 && dateStr.charAt(4) == '-' && dateStr.charAt(7) == '-') {
-      return CurveNodeDate.of(LocalDate.parse(dateStr));
+      return CurveNodeDate.of(LoaderUtils.parseDate(dateStr));
     }
     String dateUpper = dateStr.toUpperCase(Locale.ENGLISH);
     if (dateUpper.equals("END")) {
@@ -591,7 +591,7 @@ public final class RatesCalibrationCsvLoader {
       CurveNodeDate date,
       CurveNodeDateOrder order) {
 
-    Matcher matcher = SIMPLE_YM_TIME_REGEX.matcher(timeStr.toUpperCase(Locale.ENGLISH));
+    Matcher matcher = SIMPLE_YMD_TIME_REGEX.matcher(timeStr.toUpperCase(Locale.ENGLISH));
     if (!matcher.matches()) {
       throw new IllegalArgumentException(Messages.format("Invalid time format for Fixed-Ibor swap: {}", timeStr));
     }

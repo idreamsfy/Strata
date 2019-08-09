@@ -12,15 +12,16 @@ import static com.opengamma.strata.basics.date.HolidayCalendarIds.GBLO;
 import static com.opengamma.strata.basics.index.IborIndices.GBP_LIBOR_3M;
 import static com.opengamma.strata.basics.index.IborIndices.GBP_LIBOR_6M;
 import static com.opengamma.strata.collect.TestHelper.assertSerialization;
-import static com.opengamma.strata.collect.TestHelper.assertThrowsIllegalArg;
 import static com.opengamma.strata.collect.TestHelper.coverBeanEquals;
 import static com.opengamma.strata.collect.TestHelper.coverImmutableBean;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.testng.Assert.assertEquals;
 
 import java.time.LocalDate;
 
 import org.testng.annotations.Test;
 
+import com.google.common.collect.ImmutableSet;
 import com.opengamma.strata.basics.ReferenceData;
 import com.opengamma.strata.basics.date.BusinessDayAdjustment;
 import com.opengamma.strata.basics.date.DaysAdjustment;
@@ -66,6 +67,9 @@ public class IborFixingDepositTest {
     assertEquals(test.getEndDate(), END_DATE);
     assertEquals(test.getIndex(), GBP_LIBOR_6M);
     assertEquals(test.getFixedRate(), RATE);
+    assertEquals(test.isCrossCurrency(), false);
+    assertEquals(test.allPaymentCurrencies(), ImmutableSet.of(GBP));
+    assertEquals(test.allCurrencies(), ImmutableSet.of(GBP));
   }
 
   public void test_builder_minimum() {
@@ -91,7 +95,8 @@ public class IborFixingDepositTest {
   }
 
   public void test_builder_wrongDates() {
-    assertThrowsIllegalArg(() -> IborFixingDeposit.builder()
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> IborFixingDeposit.builder()
         .buySell(SELL)
         .notional(NOTIONAL)
         .startDate(LocalDate.of(2015, 9, 19))

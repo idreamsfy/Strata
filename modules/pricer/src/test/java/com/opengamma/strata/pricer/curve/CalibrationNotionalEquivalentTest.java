@@ -31,7 +31,7 @@ import com.opengamma.strata.loader.csv.QuotesCsvLoader;
 import com.opengamma.strata.loader.csv.RatesCalibrationCsvLoader;
 import com.opengamma.strata.market.curve.Curve;
 import com.opengamma.strata.market.curve.CurveDefinition;
-import com.opengamma.strata.market.curve.CurveGroupDefinition;
+import com.opengamma.strata.market.curve.RatesCurveGroupDefinition;
 import com.opengamma.strata.market.curve.CurveGroupName;
 import com.opengamma.strata.market.curve.CurveInfoType;
 import com.opengamma.strata.market.curve.CurveName;
@@ -54,7 +54,7 @@ import com.opengamma.strata.product.swap.type.ThreeLegBasisSwapConventions;
 
 /**
  * Test the notional equivalent computation based on present value sensitivity to quote in 
- * the calibrated curves by {@link CurveCalibrator}.
+ * the calibrated curves by {@link RatesCurveCalibrator}.
  */  
 @Test
 public class CalibrationNotionalEquivalentTest {
@@ -70,7 +70,7 @@ public class CalibrationNotionalEquivalentTest {
   private static final String QUOTES_FILE = "quotes/quotes-20160229-eur.csv";
 
   private static final CalibrationMeasures CALIBRATION_MEASURES = CalibrationMeasures.PAR_SPREAD;
-  private static final CurveCalibrator CALIBRATOR = CurveCalibrator.of(1e-9, 1e-9, 100, CALIBRATION_MEASURES);
+  private static final RatesCurveCalibrator CALIBRATOR = RatesCurveCalibrator.of(1e-9, 1e-9, 100, CALIBRATION_MEASURES);
   private static final CalibrationMeasures PV_MEASURES = CalibrationMeasures.of(
       "PresentValue",
       PresentValueCalibrationMeasure.FRA_PV,
@@ -85,14 +85,14 @@ public class CalibrationNotionalEquivalentTest {
   private static final ResourceLocator QUOTES_RESOURCES = ResourceLocator.of(BASE_DIR + QUOTES_FILE);
   private static final ImmutableMap<QuoteId, Double> QUOTES = QuotesCsvLoader.load(VALUATION_DATE, QUOTES_RESOURCES);
   private static final ImmutableMarketData MARKET_QUOTES = ImmutableMarketData.of(VALUATION_DATE, QUOTES);
-  private static final CurveGroupDefinition GROUP_DEFINITION = RatesCalibrationCsvLoader
+  private static final RatesCurveGroupDefinition GROUP_DEFINITION = RatesCalibrationCsvLoader
       .load(ResourceLocator.of(BASE_DIR + GROUPS_FILE),
           ResourceLocator.of(BASE_DIR + SETTINGS_FILE),
           ResourceLocator.of(BASE_DIR + NODES_FILE))
       .get(CurveGroupName.of("EUR-DSCONOIS-E3BS-E6IRS"));
-  private static final CurveGroupDefinition GROUP_DEFINITION_NO_INFO = GROUP_DEFINITION.toBuilder()
+  private static final RatesCurveGroupDefinition GROUP_DEFINITION_NO_INFO = GROUP_DEFINITION.toBuilder()
       .computeJacobian(false).computePvSensitivityToMarketQuote(false).build();
-  private static final CurveGroupDefinition GROUP_DEFINITION_PV_SENSI = GROUP_DEFINITION.toBuilder()
+  private static final RatesCurveGroupDefinition GROUP_DEFINITION_PV_SENSI = GROUP_DEFINITION.toBuilder()
       .computeJacobian(true).computePvSensitivityToMarketQuote(true).build();
 
   private static final double TOLERANCE_PV = 1.0E-8;

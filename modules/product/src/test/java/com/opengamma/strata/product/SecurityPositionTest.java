@@ -5,6 +5,7 @@
  */
 package com.opengamma.strata.product;
 
+import static com.opengamma.strata.basics.currency.Currency.USD;
 import static com.opengamma.strata.collect.TestHelper.assertSerialization;
 import static com.opengamma.strata.collect.TestHelper.coverBeanEquals;
 import static com.opengamma.strata.collect.TestHelper.coverImmutableBean;
@@ -12,7 +13,9 @@ import static org.testng.Assert.assertEquals;
 
 import org.testng.annotations.Test;
 
+import com.opengamma.strata.basics.ImmutableReferenceData;
 import com.opengamma.strata.basics.StandardId;
+import com.opengamma.strata.basics.currency.CurrencyAmount;
 
 /**
  * Test {@link SecurityPosition}.
@@ -37,6 +40,9 @@ public class SecurityPositionTest {
     assertEquals(test.getLongQuantity(), QUANTITY);
     assertEquals(test.getShortQuantity(), 0d);
     assertEquals(test.getQuantity(), QUANTITY);
+    assertEquals(test.withInfo(POSITION_INFO).getInfo(), POSITION_INFO);
+    assertEquals(test.withQuantity(129).getQuantity(), 129d, 0d);
+    assertEquals(test.withQuantity(-129).getQuantity(), -129d, 0d);
   }
 
   public void test_ofNet_withInfo_positive() {
@@ -91,6 +97,28 @@ public class SecurityPositionTest {
     assertEquals(test.getLongQuantity(), LONG_QUANTITY);
     assertEquals(test.getShortQuantity(), SHORT_QUANTITY);
     assertEquals(test.getQuantity(), QUANTITY);
+  }
+
+  //-------------------------------------------------------------------------
+  public void test_summarize() {
+    SecurityPosition trade = sut();
+    PortfolioItemSummary expected = PortfolioItemSummary.builder()
+        .id(POSITION_INFO.getId().orElse(null))
+        .portfolioItemType(PortfolioItemType.POSITION)
+        .productType(ProductType.SECURITY)
+        .description("Id x 100")
+        .build();
+    assertEquals(trade.summarize(), expected);
+  }
+
+  //-------------------------------------------------------------------------
+  public void test_resolveTarget() {
+    SecurityPosition position = sut();
+    GenericSecurity resolvedSecurity = GenericSecurity.of(SecurityInfo.of(SECURITY_ID, 1, CurrencyAmount.of(USD, 0.01)));
+    ImmutableReferenceData refData = ImmutableReferenceData.of(SECURITY_ID, resolvedSecurity);
+    GenericSecurityPosition expected =
+        GenericSecurityPosition.ofLongShort(POSITION_INFO, resolvedSecurity, LONG_QUANTITY, SHORT_QUANTITY);
+    assertEquals(position.resolveTarget(refData), expected);
   }
 
   //-------------------------------------------------------------------------

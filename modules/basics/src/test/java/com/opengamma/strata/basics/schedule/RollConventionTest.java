@@ -10,16 +10,19 @@ import static com.opengamma.strata.basics.schedule.Frequency.P1M;
 import static com.opengamma.strata.basics.schedule.Frequency.P1W;
 import static com.opengamma.strata.basics.schedule.Frequency.P3M;
 import static com.opengamma.strata.basics.schedule.RollConventions.DAY_2;
+import static com.opengamma.strata.basics.schedule.RollConventions.DAY_29;
+import static com.opengamma.strata.basics.schedule.RollConventions.DAY_30;
 import static com.opengamma.strata.basics.schedule.RollConventions.DAY_THU;
 import static com.opengamma.strata.basics.schedule.RollConventions.EOM;
 import static com.opengamma.strata.basics.schedule.RollConventions.IMM;
 import static com.opengamma.strata.basics.schedule.RollConventions.IMMAUD;
+import static com.opengamma.strata.basics.schedule.RollConventions.IMMCAD;
 import static com.opengamma.strata.basics.schedule.RollConventions.IMMNZD;
 import static com.opengamma.strata.basics.schedule.RollConventions.NONE;
 import static com.opengamma.strata.basics.schedule.RollConventions.SFE;
+import static com.opengamma.strata.basics.schedule.RollConventions.TBILL;
 import static com.opengamma.strata.collect.TestHelper.assertJodaConvert;
 import static com.opengamma.strata.collect.TestHelper.assertSerialization;
-import static com.opengamma.strata.collect.TestHelper.assertThrowsIllegalArg;
 import static com.opengamma.strata.collect.TestHelper.coverEnum;
 import static com.opengamma.strata.collect.TestHelper.coverPrivateConstructor;
 import static com.opengamma.strata.collect.TestHelper.date;
@@ -34,18 +37,24 @@ import static java.time.Month.MARCH;
 import static java.time.Month.NOVEMBER;
 import static java.time.Month.OCTOBER;
 import static java.time.Month.SEPTEMBER;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertSame;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.temporal.TemporalAdjusters;
+import java.util.Locale;
+import java.util.Optional;
 
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
 import com.google.common.base.CaseFormat;
 import com.google.common.collect.ImmutableMap;
+import com.opengamma.strata.collect.named.ExtendedEnum;
 
 /**
  * Test {@link RollConvention}.
@@ -55,7 +64,7 @@ public class RollConventionTest {
 
   //-------------------------------------------------------------------------
   @DataProvider(name = "types")
-  static Object[][] data_types() {
+  public static Object[][] data_types() {
     RollConvention[] conv = StandardRollConventions.values();
     Object[][] result = new Object[conv.length][];
     for (int i = 0; i < conv.length; i++) {
@@ -66,12 +75,12 @@ public class RollConventionTest {
 
   @Test(dataProvider = "types")
   public void test_null(RollConvention type) {
-    assertThrowsIllegalArg(() -> type.adjust(null));
-    assertThrowsIllegalArg(() -> type.matches(null));
-    assertThrowsIllegalArg(() -> type.next(date(2014, JULY, 1), null));
-    assertThrowsIllegalArg(() -> type.next(null, P3M));
-    assertThrowsIllegalArg(() -> type.previous(date(2014, JULY, 1), null));
-    assertThrowsIllegalArg(() -> type.previous(null, P3M));
+    assertThatIllegalArgumentException().isThrownBy(() -> type.adjust(null));
+    assertThatIllegalArgumentException().isThrownBy(() -> type.matches(null));
+    assertThatIllegalArgumentException().isThrownBy(() -> type.next(date(2014, JULY, 1), null));
+    assertThatIllegalArgumentException().isThrownBy(() -> type.next(null, P3M));
+    assertThatIllegalArgumentException().isThrownBy(() -> type.previous(date(2014, JULY, 1), null));
+    assertThatIllegalArgumentException().isThrownBy(() -> type.previous(null, P3M));
   }
 
   //-------------------------------------------------------------------------
@@ -83,7 +92,7 @@ public class RollConventionTest {
 
   //-------------------------------------------------------------------------
   @DataProvider(name = "adjust")
-  static Object[][] data_adjust() {
+  public static Object[][] data_adjust() {
     return new Object[][] {
         {EOM, date(2014, AUGUST, 1), date(2014, AUGUST, 31)},
         {EOM, date(2014, AUGUST, 30), date(2014, AUGUST, 31)},
@@ -98,6 +107,13 @@ public class RollConventionTest {
         {IMM, date(2014, AUGUST, 21), date(2014, AUGUST, 20)},
         {IMM, date(2014, AUGUST, 31), date(2014, AUGUST, 20)},
         {IMM, date(2014, SEPTEMBER, 1), date(2014, SEPTEMBER, 17)},
+
+        {IMMCAD, date(2014, AUGUST, 1), date(2014, AUGUST, 18)},
+        {IMMCAD, date(2014, AUGUST, 6), date(2014, AUGUST, 18)},
+        {IMMCAD, date(2014, AUGUST, 7), date(2014, AUGUST, 18)},
+        {IMMCAD, date(2014, AUGUST, 8), date(2014, AUGUST, 18)},
+        {IMMCAD, date(2014, AUGUST, 31), date(2014, AUGUST, 18)},
+        {IMMCAD, date(2014, SEPTEMBER, 1), date(2014, SEPTEMBER, 15)},
 
         {IMMAUD, date(2014, AUGUST, 1), date(2014, AUGUST, 7)},
         {IMMAUD, date(2014, AUGUST, 6), date(2014, AUGUST, 7)},
@@ -126,6 +142,15 @@ public class RollConventionTest {
         {SFE, date(2014, SEPTEMBER, 1), date(2014, SEPTEMBER, 12)},
         {SFE, date(2014, OCTOBER, 1), date(2014, OCTOBER, 10)},
         {SFE, date(2014, NOVEMBER, 1), date(2014, NOVEMBER, 14)},
+
+        {TBILL, date(2014, AUGUST, 1), date(2014, AUGUST, 4)},
+        {TBILL, date(2014, AUGUST, 2), date(2014, AUGUST, 4)},
+        {TBILL, date(2014, AUGUST, 3), date(2014, AUGUST, 4)},
+        {TBILL, date(2014, AUGUST, 4), date(2014, AUGUST, 4)},
+        {TBILL, date(2014, AUGUST, 5), date(2014, AUGUST, 11)},
+        {TBILL, date(2014, AUGUST, 7), date(2014, AUGUST, 11)},
+        {TBILL, date(2018, AUGUST, 31), date(2018, SEPTEMBER, 4)},  // Tuesday due to holiday
+        {TBILL, date(2018, SEPTEMBER, 1), date(2018, SEPTEMBER, 4)},  // Tuesday due to holiday
     };
   }
 
@@ -136,7 +161,7 @@ public class RollConventionTest {
 
   //-------------------------------------------------------------------------
   @DataProvider(name = "matches")
-  static Object[][] data_matches() {
+  public static Object[][] data_matches() {
     return new Object[][] {
         {EOM, date(2014, AUGUST, 1), false},
         {EOM, date(2014, AUGUST, 30), false},
@@ -169,7 +194,7 @@ public class RollConventionTest {
 
   //-------------------------------------------------------------------------
   @DataProvider(name = "next")
-  static Object[][] data_next() {
+  public static Object[][] data_next() {
     return new Object[][] {
         {EOM, date(2014, AUGUST, 1), P1M, date(2014, SEPTEMBER, 30)},
         {EOM, date(2014, AUGUST, 30), P1M, date(2014, SEPTEMBER, 30)},
@@ -247,7 +272,7 @@ public class RollConventionTest {
 
   //-------------------------------------------------------------------------
   @DataProvider(name = "previous")
-  static Object[][] data_previous() {
+  public static Object[][] data_previous() {
     return new Object[][] {
         {EOM, date(2014, OCTOBER, 1), P1M, date(2014, SEPTEMBER, 30)},
         {EOM, date(2014, OCTOBER, 31), P1M, date(2014, SEPTEMBER, 30)},
@@ -369,8 +394,8 @@ public class RollConventionTest {
   }
 
   public void test_ofDayOfMonth_invalid() {
-    assertThrowsIllegalArg(() -> RollConvention.ofDayOfMonth(0));
-    assertThrowsIllegalArg(() -> RollConvention.ofDayOfMonth(32));
+    assertThatIllegalArgumentException().isThrownBy(() -> RollConvention.ofDayOfMonth(0));
+    assertThatIllegalArgumentException().isThrownBy(() -> RollConvention.ofDayOfMonth(32));
   }
 
   public void test_ofDayOfMonth_adjust_Day29() {
@@ -530,7 +555,7 @@ public class RollConventionTest {
 
   //-------------------------------------------------------------------------
   @DataProvider(name = "name")
-  static Object[][] data_name() {
+  public static Object[][] data_name() {
     return new Object[][] {
         {NONE, "None"},
         {EOM, "EOM"},
@@ -559,17 +584,61 @@ public class RollConventionTest {
   }
 
   @Test(dataProvider = "name")
+  public void test_lenientLookup_standardNames(RollConvention convention, String name) {
+    assertEquals(RollConvention.extendedEnum().findLenient(name.toLowerCase(Locale.ENGLISH)).get(), convention);
+  }
+
+  @Test(dataProvider = "name")
   public void test_extendedEnum(RollConvention convention, String name) {
     ImmutableMap<String, RollConvention> map = RollConvention.extendedEnum().lookupAll();
     assertEquals(map.get(name), convention);
   }
 
   public void test_of_lookup_notFound() {
-    assertThrowsIllegalArg(() -> RollConvention.of("Rubbish"));
+    assertThatIllegalArgumentException().isThrownBy(() -> RollConvention.of("Rubbish"));
   }
 
   public void test_of_lookup_null() {
-    assertThrowsIllegalArg(() -> RollConvention.of(null));
+    assertThatIllegalArgumentException().isThrownBy(() -> RollConvention.of(null));
+  }
+
+  //-------------------------------------------------------------------------
+  @DataProvider(name = "lenient")
+  public static Object[][] data_lenient() {
+    return new Object[][] {
+        {"2", DAY_2},
+        {"29", DAY_29},
+        {"Day29", DAY_29},
+        {"Day_29", DAY_29},
+        {"30", DAY_30},
+        {"Day30", DAY_30},
+        {"Day_30", DAY_30},
+        {"31", EOM},
+        {"Day31", EOM},
+        {"Day_31", EOM},
+        {"THU", DAY_THU},
+    };
+  }
+
+  @Test(dataProvider = "lenient")
+  public void test_lenientLookup_specialNames(String name, RollConvention convention) {
+    assertEquals(RollConvention.extendedEnum().findLenient(name.toLowerCase(Locale.ENGLISH)), Optional.of(convention));
+  }
+
+  public void test_lenientLookup_constants() throws IllegalAccessException {
+    Field[] fields = RollConventions.class.getDeclaredFields();
+    for (Field field : fields) {
+      if (Modifier.isPublic(field.getModifiers()) &&
+          Modifier.isStatic(field.getModifiers()) &&
+          Modifier.isFinal(field.getModifiers())) {
+
+        String name = field.getName();
+        Object value = field.get(null);
+        ExtendedEnum<RollConvention> ext = RollConvention.extendedEnum();
+        assertEquals(ext.findLenient(name), Optional.of(value));
+        assertEquals(ext.findLenient(name.toLowerCase(Locale.ENGLISH)), Optional.of(value));
+      }
+    }
   }
 
   //-------------------------------------------------------------------------

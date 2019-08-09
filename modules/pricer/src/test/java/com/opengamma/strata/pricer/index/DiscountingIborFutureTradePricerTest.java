@@ -5,7 +5,7 @@
  */
 package com.opengamma.strata.pricer.index;
 
-import static com.opengamma.strata.collect.TestHelper.assertThrowsIllegalArg;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
@@ -65,7 +65,7 @@ public class DiscountingIborFutureTradePricerTest {
 
   //-------------------------------------------------------------------------
   public void test_reference_price_after_trade_date() {
-    LocalDate tradeDate = FUTURE_TRADE.getInfo().getTradeDate().get();
+    LocalDate tradeDate = FUTURE_TRADE.getTradedPrice().get().getTradeDate();
     LocalDate valuationDate = tradeDate.plusDays(1);
     double settlementPrice = 0.995;
     double referencePrice = PRICER_TRADE.referencePrice(FUTURE_TRADE, valuationDate, settlementPrice);
@@ -73,16 +73,17 @@ public class DiscountingIborFutureTradePricerTest {
   }
 
   public void test_reference_price_on_trade_date() {
-    LocalDate tradeDate = FUTURE_TRADE.getInfo().getTradeDate().get();
+    LocalDate tradeDate = FUTURE_TRADE.getTradedPrice().get().getTradeDate();
     LocalDate valuationDate = tradeDate;
     double settlementPrice = 0.995;
     double referencePrice = PRICER_TRADE.referencePrice(FUTURE_TRADE, valuationDate, settlementPrice);
-    assertEquals(referencePrice, FUTURE_TRADE.getPrice());
+    assertEquals(referencePrice, FUTURE_TRADE.getTradedPrice().get().getPrice());
   }
 
   public void test_reference_price_val_date_not_null() {
     double settlementPrice = 0.995;
-    assertThrowsIllegalArg(() -> PRICER_TRADE.referencePrice(FUTURE_TRADE, null, settlementPrice));
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> PRICER_TRADE.referencePrice(FUTURE_TRADE, null, settlementPrice));
   }
 
   //-------------------------------------------------------------------------
@@ -90,7 +91,7 @@ public class DiscountingIborFutureTradePricerTest {
     IborIndexRates mockIbor = mock(IborIndexRates.class);
     SimpleRatesProvider prov = new SimpleRatesProvider();
     prov.setIborRates(mockIbor);
-    prov.setValuationDate(FUTURE_TRADE.getInfo().getTradeDate().get().plusDays(1));
+    prov.setValuationDate(FUTURE_TRADE.getTradedPrice().get().getTradeDate().plusDays(1));
     when(mockIbor.rate(FUTURE.getIborRate().getObservation())).thenReturn(RATE);
     double lastClosingPrice = 0.99;
     double parSpreadExpected = PRICER_TRADE.price(FUTURE_TRADE, prov) - lastClosingPrice;
@@ -102,11 +103,11 @@ public class DiscountingIborFutureTradePricerTest {
     IborIndexRates mockIbor = mock(IborIndexRates.class);
     SimpleRatesProvider prov = new SimpleRatesProvider();
     prov.setIborRates(mockIbor);
-    prov.setValuationDate(FUTURE_TRADE.getInfo().getTradeDate().get());
+    prov.setValuationDate(FUTURE_TRADE.getTradedPrice().get().getTradeDate());
     when(mockIbor.rate(FUTURE.getIborRate().getObservation())).thenReturn(RATE);
 
     double lastClosingPrice = 0.99;
-    double parSpreadExpected = PRICER_TRADE.price(FUTURE_TRADE, prov) - FUTURE_TRADE.getPrice();
+    double parSpreadExpected = PRICER_TRADE.price(FUTURE_TRADE, prov) - FUTURE_TRADE.getTradedPrice().get().getPrice();
     double parSpreadComputed = PRICER_TRADE.parSpread(FUTURE_TRADE, prov, lastClosingPrice);
     assertEquals(parSpreadComputed, parSpreadExpected, TOLERANCE_PRICE);
   }
@@ -116,7 +117,7 @@ public class DiscountingIborFutureTradePricerTest {
     IborIndexRates mockIbor = mock(IborIndexRates.class);
     SimpleRatesProvider prov = new SimpleRatesProvider();
     prov.setIborRates(mockIbor);
-    prov.setValuationDate(FUTURE_TRADE.getInfo().getTradeDate().get().plusDays(1));
+    prov.setValuationDate(FUTURE_TRADE.getTradedPrice().get().getTradeDate().plusDays(1));
     when(mockIbor.rate(FUTURE.getIborRate().getObservation())).thenReturn(RATE);
 
     double lastClosingPrice = 1.025;
@@ -132,12 +133,12 @@ public class DiscountingIborFutureTradePricerTest {
     IborIndexRates mockIbor = mock(IborIndexRates.class);
     SimpleRatesProvider prov = new SimpleRatesProvider();
     prov.setIborRates(mockIbor);
-    prov.setValuationDate(FUTURE_TRADE.getInfo().getTradeDate().get());
+    prov.setValuationDate(FUTURE_TRADE.getTradedPrice().get().getTradeDate());
     when(mockIbor.rate(FUTURE.getIborRate().getObservation())).thenReturn(RATE);
 
     double lastClosingPrice = 1.025;
     DiscountingIborFutureTradePricer pricerFn = DiscountingIborFutureTradePricer.DEFAULT;
-    double expected = ((1.0 - RATE) - FUTURE_TRADE.getPrice()) *
+    double expected = ((1.0 - RATE) - FUTURE_TRADE.getTradedPrice().get().getPrice()) *
         FUTURE.getAccrualFactor() * FUTURE.getNotional() * FUTURE_TRADE.getQuantity();
     CurrencyAmount computed = pricerFn.presentValue(FUTURE_TRADE, prov, lastClosingPrice);
     assertEquals(computed.getAmount(), expected, TOLERANCE_PV);

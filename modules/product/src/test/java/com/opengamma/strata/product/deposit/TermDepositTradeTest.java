@@ -20,7 +20,11 @@ import java.time.LocalDate;
 import org.testng.annotations.Test;
 
 import com.opengamma.strata.basics.ReferenceData;
+import com.opengamma.strata.basics.currency.Currency;
 import com.opengamma.strata.basics.date.BusinessDayAdjustment;
+import com.opengamma.strata.product.PortfolioItemSummary;
+import com.opengamma.strata.product.PortfolioItemType;
+import com.opengamma.strata.product.ProductType;
 import com.opengamma.strata.product.TradeInfo;
 import com.opengamma.strata.product.common.BuySell;
 
@@ -35,7 +39,7 @@ public class TermDepositTradeTest {
   private static final TermDeposit DEPOSIT = TermDeposit.builder()
       .buySell(BuySell.BUY)
       .currency(GBP)
-      .notional(100000000d)
+      .notional(100_000_000d)
       .startDate(LocalDate.of(2015, 1, 19))
       .endDate(LocalDate.of(2015, 7, 19))
       .businessDayAdjustment(BusinessDayAdjustment.of(MODIFIED_FOLLOWING, GBLO))
@@ -49,6 +53,7 @@ public class TermDepositTradeTest {
     TermDepositTrade test = TermDepositTrade.of(TRADE_INFO, DEPOSIT);
     assertEquals(test.getProduct(), DEPOSIT);
     assertEquals(test.getInfo(), TRADE_INFO);
+    assertEquals(test.withInfo(TRADE_INFO).getInfo(), TRADE_INFO);
   }
 
   public void test_builder() {
@@ -58,6 +63,22 @@ public class TermDepositTradeTest {
         .build();
     assertEquals(test.getProduct(), DEPOSIT);
     assertEquals(test.getInfo(), TRADE_INFO);
+  }
+
+  //-------------------------------------------------------------------------
+  public void test_summarize() {
+    TermDepositTrade trade = TermDepositTrade.builder()
+        .product(DEPOSIT)
+        .info(TRADE_INFO)
+        .build();
+    PortfolioItemSummary expected = PortfolioItemSummary.builder()
+        .id(TRADE_INFO.getId().orElse(null))
+        .portfolioItemType(PortfolioItemType.TRADE)
+        .productType(ProductType.TERM_DEPOSIT)
+        .currencies(Currency.GBP)
+        .description("6M GBP 100mm Deposit 2.5% : 19Jan15-19Jul15")
+        .build();
+    assertEquals(trade.summarize(), expected);
   }
 
   //-------------------------------------------------------------------------

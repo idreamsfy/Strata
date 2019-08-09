@@ -6,19 +6,22 @@
 package com.opengamma.strata.product.etd;
 
 import java.io.Serializable;
+import java.text.NumberFormat;
 import java.time.YearMonth;
+import java.time.format.DateTimeFormatter;
+import java.util.Locale;
 import java.util.Map;
 import java.util.NoSuchElementException;
-import java.util.Set;
+import java.util.Optional;
 
 import org.joda.beans.Bean;
-import org.joda.beans.BeanDefinition;
 import org.joda.beans.ImmutableBean;
-import org.joda.beans.ImmutableDefaults;
 import org.joda.beans.JodaBeanUtils;
+import org.joda.beans.MetaBean;
 import org.joda.beans.MetaProperty;
-import org.joda.beans.Property;
-import org.joda.beans.PropertyDefinition;
+import org.joda.beans.gen.BeanDefinition;
+import org.joda.beans.gen.ImmutableDefaults;
+import org.joda.beans.gen.PropertyDefinition;
 import org.joda.beans.impl.direct.DirectFieldsBeanBuilder;
 import org.joda.beans.impl.direct.DirectMetaBean;
 import org.joda.beans.impl.direct.DirectMetaProperty;
@@ -27,9 +30,9 @@ import org.joda.beans.impl.direct.DirectMetaPropertyMap;
 import com.opengamma.strata.basics.ReferenceData;
 import com.opengamma.strata.collect.ArgChecker;
 import com.opengamma.strata.collect.Messages;
+import com.opengamma.strata.product.PositionInfo;
 import com.opengamma.strata.product.SecurityId;
 import com.opengamma.strata.product.SecurityInfo;
-import com.opengamma.strata.product.Trade;
 import com.opengamma.strata.product.TradeInfo;
 import com.opengamma.strata.product.common.PutCall;
 
@@ -42,6 +45,9 @@ import com.opengamma.strata.product.common.PutCall;
 @BeanDefinition
 public final class EtdOptionSecurity
     implements EtdSecurity, ImmutableBean, Serializable {
+
+  /** YearMonth format. */
+  private static final DateTimeFormatter YM_FORMAT = DateTimeFormatter.ofPattern("MMMuu", Locale.UK);
 
   /**
    * The standard security information.
@@ -90,6 +96,18 @@ public final class EtdOptionSecurity
    */
   @PropertyDefinition
   private final double strikePrice;
+  /**
+   * The expiry year-month of the underlying instrument.
+   * <p>
+   * If an option has an underlying instrument, the expiry of that instrument can be specified here.
+   * For example, you can have an option expiring in March on the underlying March future, or on the underlying June future.
+   * Not all options have an underlying instrument, thus the property is optional.
+   * <p>
+   * In many cases, the expiry of the underlying instrument is the same as the expiry of the option.
+   * In this case, the expiry is often omitted, even though it probably should not be.
+   */
+  @PropertyDefinition(get = "optional")
+  private final YearMonth underlyingExpiryMonth;
 
   //-------------------------------------------------------------------------
   /**
@@ -100,7 +118,7 @@ public final class EtdOptionSecurity
    *
    * @param spec  the option contract specification
    * @param expiry  the expiry year-month of the option
-   * @param variant  the variant of the ETD, such as 'Monthly', 'Weekly, 'Daily' or 'Flex.
+   * @param variant  the variant of the ETD, such as 'Monthly', 'Weekly, 'Daily' or 'Flex'
    * @param version  the non-negative version, zero if versioning does not apply
    * @param putCall  whether the option is a put or call
    * @param strikePrice  the strike price of the option
@@ -115,12 +133,41 @@ public final class EtdOptionSecurity
       PutCall putCall,
       double strikePrice) {
 
+    return of(spec, expiry, variant, version, putCall, strikePrice, null);
+  }
+
+  /**
+   * Obtains an instance from a contract specification, expiry year-month, variant,
+   * version, put/call, strike price and underlying expiry.
+   * <p>
+   * The security identifier will be automatically created using {@link EtdIdUtils}.
+   * The specification must be for an option.
+   *
+   * @param spec  the option contract specification
+   * @param expiry  the expiry year-month of the option
+   * @param variant  the variant of the ETD, such as 'Monthly', 'Weekly, 'Daily' or 'Flex'
+   * @param version  the non-negative version, zero if versioning does not apply
+   * @param putCall  whether the option is a put or call
+   * @param strikePrice  the strike price of the option
+   * @param underlyingExpiryMonth  the expiry of the underlying instrument, such as a future, may be null
+   * @return an option security based on this contract specification
+   * @throws IllegalStateException if the product type of the contract specification is not {@code OPTION}
+   */
+  public static EtdOptionSecurity of(
+      EtdContractSpec spec,
+      YearMonth expiry,
+      EtdVariant variant,
+      int version,
+      PutCall putCall,
+      double strikePrice,
+      YearMonth underlyingExpiryMonth) {
+
     if (spec.getType() != EtdType.OPTION) {
       throw new IllegalStateException(
           Messages.format("Cannot create an EtdOptionSecurity from a contract specification of type '{}'", spec.getType()));
     }
-    SecurityId securityId =
-        EtdIdUtils.optionId(spec.getExchangeId(), spec.getContractCode(), expiry, variant, version, putCall, strikePrice);
+    SecurityId securityId = EtdIdUtils.optionId(
+        spec.getExchangeId(), spec.getContractCode(), expiry, variant, version, putCall, strikePrice, underlyingExpiryMonth);
     return EtdOptionSecurity.builder()
         .info(SecurityInfo.of(securityId, spec.getPriceInfo()))
         .contractSpecId(spec.getId())
@@ -129,6 +176,7 @@ public final class EtdOptionSecurity
         .version(version)
         .putCall(putCall)
         .strikePrice(strikePrice)
+        .underlyingExpiryMonth(underlyingExpiryMonth)
         .build();
   }
 
@@ -144,12 +192,17 @@ public final class EtdOptionSecurity
   }
 
   @Override
+  public EtdOptionSecurity withInfo(SecurityInfo info) {
+    return toBuilder().info(info).build();
+  }
+
+  @Override
   public EtdOptionSecurity createProduct(ReferenceData refData) {
     return this;
   }
 
   @Override
-  public Trade createTrade(TradeInfo tradeInfo, double quantity, double tradePrice, ReferenceData refData) {
+  public EtdOptionTrade createTrade(TradeInfo tradeInfo, double quantity, double tradePrice, ReferenceData refData) {
     return EtdOptionTrade.builder()
         .info(tradeInfo)
         .quantity(quantity)
@@ -158,8 +211,43 @@ public final class EtdOptionSecurity
         .build();
   }
 
+  @Override
+  public EtdOptionPosition createPosition(PositionInfo positionInfo, double quantity, ReferenceData refData) {
+    return EtdOptionPosition.ofNet(positionInfo, this, quantity);
+  }
+
+  @Override
+  public EtdOptionPosition createPosition(
+      PositionInfo positionInfo,
+      double longQuantity,
+      double shortQuantity,
+      ReferenceData refData) {
+
+    return EtdOptionPosition.ofLongShort(positionInfo, this, longQuantity, shortQuantity);
+  }
+
+  /**
+   * Summarizes this ETD option into string form.
+   *
+   * @return the summary description
+   */
+  public String summaryDescription() {
+    String putCallStr = putCall == PutCall.PUT ? "P" : "C";
+    String versionCode = version > 0 ? "V" + version + " " : "";
+
+    NumberFormat f = NumberFormat.getIntegerInstance(Locale.ENGLISH);
+    f.setGroupingUsed(false);
+    f.setMaximumFractionDigits(8);
+    String strikeStr = f.format(strikePrice).replace('-', 'M');
+
+    return expiry.format(YM_FORMAT) +
+        variant.getCode() + " " +
+        versionCode +
+        putCallStr +
+        strikeStr;
+  }
+
   //------------------------- AUTOGENERATED START -------------------------
-  ///CLOVER:OFF
   /**
    * The meta-bean for {@code EtdOptionSecurity}.
    * @return the meta-bean, not null
@@ -169,7 +257,7 @@ public final class EtdOptionSecurity
   }
 
   static {
-    JodaBeanUtils.registerMetaBean(EtdOptionSecurity.Meta.INSTANCE);
+    MetaBean.register(EtdOptionSecurity.Meta.INSTANCE);
   }
 
   /**
@@ -192,7 +280,8 @@ public final class EtdOptionSecurity
       EtdVariant variant,
       int version,
       PutCall putCall,
-      double strikePrice) {
+      double strikePrice,
+      YearMonth underlyingExpiryMonth) {
     JodaBeanUtils.notNull(info, "info");
     JodaBeanUtils.notNull(contractSpecId, "contractSpecId");
     JodaBeanUtils.notNull(expiry, "expiry");
@@ -206,21 +295,12 @@ public final class EtdOptionSecurity
     this.version = version;
     this.putCall = putCall;
     this.strikePrice = strikePrice;
+    this.underlyingExpiryMonth = underlyingExpiryMonth;
   }
 
   @Override
   public EtdOptionSecurity.Meta metaBean() {
     return EtdOptionSecurity.Meta.INSTANCE;
-  }
-
-  @Override
-  public <R> Property<R> property(String propertyName) {
-    return metaBean().<R>metaProperty(propertyName).createProperty(this);
-  }
-
-  @Override
-  public Set<String> propertyNames() {
-    return metaBean().metaPropertyMap().keySet();
   }
 
   //-----------------------------------------------------------------------
@@ -304,6 +384,22 @@ public final class EtdOptionSecurity
 
   //-----------------------------------------------------------------------
   /**
+   * Gets the expiry year-month of the underlying instrument.
+   * <p>
+   * If an option has an underlying instrument, the expiry of that instrument can be specified here.
+   * For example, you can have an option expiring in March on the underlying March future, or on the underlying June future.
+   * Not all options have an underlying instrument, thus the property is optional.
+   * <p>
+   * In many cases, the expiry of the underlying instrument is the same as the expiry of the option.
+   * In this case, the expiry is often omitted, even though it probably should not be.
+   * @return the optional value of the property, not null
+   */
+  public Optional<YearMonth> getUnderlyingExpiryMonth() {
+    return Optional.ofNullable(underlyingExpiryMonth);
+  }
+
+  //-----------------------------------------------------------------------
+  /**
    * Returns a builder that allows this bean to be mutated.
    * @return the mutable builder, not null
    */
@@ -324,7 +420,8 @@ public final class EtdOptionSecurity
           JodaBeanUtils.equal(variant, other.variant) &&
           (version == other.version) &&
           JodaBeanUtils.equal(putCall, other.putCall) &&
-          JodaBeanUtils.equal(strikePrice, other.strikePrice);
+          JodaBeanUtils.equal(strikePrice, other.strikePrice) &&
+          JodaBeanUtils.equal(underlyingExpiryMonth, other.underlyingExpiryMonth);
     }
     return false;
   }
@@ -339,12 +436,13 @@ public final class EtdOptionSecurity
     hash = hash * 31 + JodaBeanUtils.hashCode(version);
     hash = hash * 31 + JodaBeanUtils.hashCode(putCall);
     hash = hash * 31 + JodaBeanUtils.hashCode(strikePrice);
+    hash = hash * 31 + JodaBeanUtils.hashCode(underlyingExpiryMonth);
     return hash;
   }
 
   @Override
   public String toString() {
-    StringBuilder buf = new StringBuilder(256);
+    StringBuilder buf = new StringBuilder(288);
     buf.append("EtdOptionSecurity{");
     buf.append("info").append('=').append(info).append(',').append(' ');
     buf.append("contractSpecId").append('=').append(contractSpecId).append(',').append(' ');
@@ -352,7 +450,8 @@ public final class EtdOptionSecurity
     buf.append("variant").append('=').append(variant).append(',').append(' ');
     buf.append("version").append('=').append(version).append(',').append(' ');
     buf.append("putCall").append('=').append(putCall).append(',').append(' ');
-    buf.append("strikePrice").append('=').append(JodaBeanUtils.toString(strikePrice));
+    buf.append("strikePrice").append('=').append(strikePrice).append(',').append(' ');
+    buf.append("underlyingExpiryMonth").append('=').append(JodaBeanUtils.toString(underlyingExpiryMonth));
     buf.append('}');
     return buf.toString();
   }
@@ -403,6 +502,11 @@ public final class EtdOptionSecurity
     private final MetaProperty<Double> strikePrice = DirectMetaProperty.ofImmutable(
         this, "strikePrice", EtdOptionSecurity.class, Double.TYPE);
     /**
+     * The meta-property for the {@code underlyingExpiryMonth} property.
+     */
+    private final MetaProperty<YearMonth> underlyingExpiryMonth = DirectMetaProperty.ofImmutable(
+        this, "underlyingExpiryMonth", EtdOptionSecurity.class, YearMonth.class);
+    /**
      * The meta-properties.
      */
     private final Map<String, MetaProperty<?>> metaPropertyMap$ = new DirectMetaPropertyMap(
@@ -413,7 +517,8 @@ public final class EtdOptionSecurity
         "variant",
         "version",
         "putCall",
-        "strikePrice");
+        "strikePrice",
+        "underlyingExpiryMonth");
 
     /**
      * Restricted constructor.
@@ -438,6 +543,8 @@ public final class EtdOptionSecurity
           return putCall;
         case 50946231:  // strikePrice
           return strikePrice;
+        case 1929351536:  // underlyingExpiryMonth
+          return underlyingExpiryMonth;
       }
       return super.metaPropertyGet(propertyName);
     }
@@ -514,6 +621,14 @@ public final class EtdOptionSecurity
       return strikePrice;
     }
 
+    /**
+     * The meta-property for the {@code underlyingExpiryMonth} property.
+     * @return the meta-property, not null
+     */
+    public MetaProperty<YearMonth> underlyingExpiryMonth() {
+      return underlyingExpiryMonth;
+    }
+
     //-----------------------------------------------------------------------
     @Override
     protected Object propertyGet(Bean bean, String propertyName, boolean quiet) {
@@ -532,6 +647,8 @@ public final class EtdOptionSecurity
           return ((EtdOptionSecurity) bean).getPutCall();
         case 50946231:  // strikePrice
           return ((EtdOptionSecurity) bean).getStrikePrice();
+        case 1929351536:  // underlyingExpiryMonth
+          return ((EtdOptionSecurity) bean).underlyingExpiryMonth;
       }
       return super.propertyGet(bean, propertyName, quiet);
     }
@@ -560,6 +677,7 @@ public final class EtdOptionSecurity
     private int version;
     private PutCall putCall;
     private double strikePrice;
+    private YearMonth underlyingExpiryMonth;
 
     /**
      * Restricted constructor.
@@ -580,6 +698,7 @@ public final class EtdOptionSecurity
       this.version = beanToCopy.getVersion();
       this.putCall = beanToCopy.getPutCall();
       this.strikePrice = beanToCopy.getStrikePrice();
+      this.underlyingExpiryMonth = beanToCopy.underlyingExpiryMonth;
     }
 
     //-----------------------------------------------------------------------
@@ -600,6 +719,8 @@ public final class EtdOptionSecurity
           return putCall;
         case 50946231:  // strikePrice
           return strikePrice;
+        case 1929351536:  // underlyingExpiryMonth
+          return underlyingExpiryMonth;
         default:
           throw new NoSuchElementException("Unknown property: " + propertyName);
       }
@@ -629,6 +750,9 @@ public final class EtdOptionSecurity
         case 50946231:  // strikePrice
           this.strikePrice = (Double) newValue;
           break;
+        case 1929351536:  // underlyingExpiryMonth
+          this.underlyingExpiryMonth = (YearMonth) newValue;
+          break;
         default:
           throw new NoSuchElementException("Unknown property: " + propertyName);
       }
@@ -641,36 +765,6 @@ public final class EtdOptionSecurity
       return this;
     }
 
-    /**
-     * @deprecated Use Joda-Convert in application code
-     */
-    @Override
-    @Deprecated
-    public Builder setString(String propertyName, String value) {
-      setString(meta().metaProperty(propertyName), value);
-      return this;
-    }
-
-    /**
-     * @deprecated Use Joda-Convert in application code
-     */
-    @Override
-    @Deprecated
-    public Builder setString(MetaProperty<?> property, String value) {
-      super.setString(property, value);
-      return this;
-    }
-
-    /**
-     * @deprecated Loop in application code
-     */
-    @Override
-    @Deprecated
-    public Builder setAll(Map<String, ? extends Object> propertyValueMap) {
-      super.setAll(propertyValueMap);
-      return this;
-    }
-
     @Override
     public EtdOptionSecurity build() {
       return new EtdOptionSecurity(
@@ -680,7 +774,8 @@ public final class EtdOptionSecurity
           variant,
           version,
           putCall,
-          strikePrice);
+          strikePrice,
+          underlyingExpiryMonth);
     }
 
     //-----------------------------------------------------------------------
@@ -772,10 +867,27 @@ public final class EtdOptionSecurity
       return this;
     }
 
+    /**
+     * Sets the expiry year-month of the underlying instrument.
+     * <p>
+     * If an option has an underlying instrument, the expiry of that instrument can be specified here.
+     * For example, you can have an option expiring in March on the underlying March future, or on the underlying June future.
+     * Not all options have an underlying instrument, thus the property is optional.
+     * <p>
+     * In many cases, the expiry of the underlying instrument is the same as the expiry of the option.
+     * In this case, the expiry is often omitted, even though it probably should not be.
+     * @param underlyingExpiryMonth  the new value
+     * @return this, for chaining, not null
+     */
+    public Builder underlyingExpiryMonth(YearMonth underlyingExpiryMonth) {
+      this.underlyingExpiryMonth = underlyingExpiryMonth;
+      return this;
+    }
+
     //-----------------------------------------------------------------------
     @Override
     public String toString() {
-      StringBuilder buf = new StringBuilder(256);
+      StringBuilder buf = new StringBuilder(288);
       buf.append("EtdOptionSecurity.Builder{");
       buf.append("info").append('=').append(JodaBeanUtils.toString(info)).append(',').append(' ');
       buf.append("contractSpecId").append('=').append(JodaBeanUtils.toString(contractSpecId)).append(',').append(' ');
@@ -783,13 +895,13 @@ public final class EtdOptionSecurity
       buf.append("variant").append('=').append(JodaBeanUtils.toString(variant)).append(',').append(' ');
       buf.append("version").append('=').append(JodaBeanUtils.toString(version)).append(',').append(' ');
       buf.append("putCall").append('=').append(JodaBeanUtils.toString(putCall)).append(',').append(' ');
-      buf.append("strikePrice").append('=').append(JodaBeanUtils.toString(strikePrice));
+      buf.append("strikePrice").append('=').append(JodaBeanUtils.toString(strikePrice)).append(',').append(' ');
+      buf.append("underlyingExpiryMonth").append('=').append(JodaBeanUtils.toString(underlyingExpiryMonth));
       buf.append('}');
       return buf.toString();
     }
 
   }
 
-  ///CLOVER:ON
   //-------------------------- AUTOGENERATED END --------------------------
 }

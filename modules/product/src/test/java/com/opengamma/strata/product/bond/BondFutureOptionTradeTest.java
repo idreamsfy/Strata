@@ -14,7 +14,12 @@ import static org.testng.Assert.assertEquals;
 import org.testng.annotations.Test;
 
 import com.opengamma.strata.basics.ReferenceData;
+import com.opengamma.strata.basics.currency.Currency;
+import com.opengamma.strata.product.PortfolioItemSummary;
+import com.opengamma.strata.product.PortfolioItemType;
+import com.opengamma.strata.product.ProductType;
 import com.opengamma.strata.product.TradeInfo;
+import com.opengamma.strata.product.TradedPrice;
 
 /**
  * Test {@link BondFutureOptionTrade}. 
@@ -40,6 +45,22 @@ public class BondFutureOptionTradeTest {
     assertEquals(test.getProduct(), OPTION_PRODUCT);
     assertEquals(test.getQuantity(), QUANTITY);
     assertEquals(test.getPrice(), PRICE);
+    assertEquals(test.withInfo(TRADE_INFO).getInfo(), TRADE_INFO);
+    assertEquals(test.withQuantity(129).getQuantity(), 129d, 0d);
+    assertEquals(test.withPrice(129).getPrice(), 129d, 0d);
+  }
+
+  //-------------------------------------------------------------------------
+  public void test_summarize() {
+    BondFutureOptionTrade trade = sut();
+    PortfolioItemSummary expected = PortfolioItemSummary.builder()
+        .id(TRADE_INFO.getId().orElse(null))
+        .portfolioItemType(PortfolioItemType.TRADE)
+        .productType(ProductType.BOND_FUTURE_OPTION)
+        .currencies(Currency.USD)
+        .description("BondFutureOption x 1234")
+        .build();
+    assertEquals(trade.summarize(), expected);
   }
 
   //-------------------------------------------------------------------------
@@ -48,9 +69,36 @@ public class BondFutureOptionTradeTest {
         .info(TRADE_INFO)
         .product(OPTION_PRODUCT.resolve(REF_DATA))
         .quantity(QUANTITY)
-        .price(PRICE)
+        .tradedPrice(TradedPrice.of(TRADE_INFO.getTradeDate().get(), PRICE))
         .build();
     assertEquals(sut().resolve(REF_DATA), expected);
+  }
+
+  //-------------------------------------------------------------------------
+  public void test_withQuantity() {
+    BondFutureOptionTrade base = sut();
+    double quantity = 5432d;
+    BondFutureOptionTrade computed = base.withQuantity(quantity);
+    BondFutureOptionTrade expected = BondFutureOptionTrade.builder()
+        .info(TRADE_INFO)
+        .product(OPTION_PRODUCT)
+        .quantity(quantity)
+        .price(PRICE)
+        .build();
+    assertEquals(computed, expected);
+  }
+
+  public void test_withPrice() {
+    BondFutureOptionTrade base = sut();
+    double price = 0.05d;
+    BondFutureOptionTrade computed = base.withPrice(price);
+    BondFutureOptionTrade expected = BondFutureOptionTrade.builder()
+        .info(TRADE_INFO)
+        .product(OPTION_PRODUCT)
+        .quantity(QUANTITY)
+        .price(price)
+        .build();
+    assertEquals(computed, expected);
   }
 
   //-------------------------------------------------------------------------

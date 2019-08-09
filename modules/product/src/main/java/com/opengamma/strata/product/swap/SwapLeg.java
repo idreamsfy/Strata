@@ -78,14 +78,39 @@ public interface SwapLeg extends Resolvable<ResolvedSwapLeg> {
    */
   public abstract AdjustableDate getEndDate();
 
+  //-------------------------------------------------------------------------
   /**
-   * Gets the currency of the leg.
+   * Gets the payment currency of the leg.
    * <p>
-   * A swap leg has a single currency.
+   * A swap leg has a single payment currency.
    * 
-   * @return the currency of the leg
+   * @return the payment currency of the leg
    */
   public abstract Currency getCurrency();
+
+  /**
+   * Returns the set of currencies referred to by the leg.
+   * <p>
+   * This returns the complete set of currencies for the leg, not just the payment currencies.
+   * For example, if there is an FX reset, then this set contains both the currency of the
+   * payment and the currency of the notional.
+   * 
+   * @return the set of currencies referred to by this leg
+   */
+  public default ImmutableSet<Currency> allCurrencies() {
+    ImmutableSet.Builder<Currency> builder = ImmutableSet.builder();
+    collectCurrencies(builder);
+    return builder.build();
+  }
+
+  /**
+   * Collects all the currencies referred to by this leg.
+   * <p>
+   * This collects the complete set of currencies for the leg, not just the payment currencies.
+   * 
+   * @param builder  the builder to populate
+   */
+  public abstract void collectCurrencies(ImmutableSet.Builder<Currency> builder);
 
   //-------------------------------------------------------------------------
   /**
@@ -109,7 +134,7 @@ public interface SwapLeg extends Resolvable<ResolvedSwapLeg> {
    * A swap leg will typically refer to at least one index, such as 'GBP-LIBOR-3M'.
    * Each index that is referred to must be added to the specified builder.
    * 
-   * @param builder  the builder to use
+   * @param builder  the builder to populate
    */
   public abstract void collectIndices(ImmutableSet.Builder<Index> builder);
 

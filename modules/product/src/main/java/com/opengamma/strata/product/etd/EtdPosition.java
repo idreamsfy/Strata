@@ -7,8 +7,8 @@ package com.opengamma.strata.product.etd;
 
 import com.opengamma.strata.basics.currency.Currency;
 import com.opengamma.strata.product.Position;
+import com.opengamma.strata.product.PositionInfo;
 import com.opengamma.strata.product.SecurityId;
-import com.opengamma.strata.product.SecurityQuantity;
 
 /**
  * A position in an ETD, where the security is embedded ready for mark-to-market pricing.
@@ -23,7 +23,7 @@ import com.opengamma.strata.product.SecurityQuantity;
  * The net quantity is available via {@link #getQuantity()}.
  */
 public interface EtdPosition
-    extends Position, SecurityQuantity {
+    extends Position {
 
   /**
    * Gets the currency of the position.
@@ -98,5 +98,24 @@ public interface EtdPosition
    * @return the short quantity
    */
   public abstract double getShortQuantity();
+
+  //-------------------------------------------------------------------------
+  /**
+   * Returns an instance with the specified info.
+   * 
+   * @param info  the new info
+   * @return the instance with the specified info
+   */
+  @Override
+  public abstract EtdPosition withInfo(PositionInfo info);
+
+  /**
+   * Returns an instance with the specified quantity.
+   * 
+   * @param quantity  the new quantity
+   * @return the instance with the specified quantity
+   */
+  @Override
+  public abstract EtdPosition withQuantity(double quantity);
 
 }

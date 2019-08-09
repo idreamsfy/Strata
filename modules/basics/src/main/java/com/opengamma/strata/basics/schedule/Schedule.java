@@ -9,20 +9,20 @@ import static com.opengamma.strata.collect.Guavate.toImmutableList;
 
 import java.io.Serializable;
 import java.time.LocalDate;
+import java.time.Period;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
-import java.util.Set;
 
 import org.joda.beans.Bean;
-import org.joda.beans.BeanDefinition;
 import org.joda.beans.ImmutableBean;
 import org.joda.beans.JodaBeanUtils;
+import org.joda.beans.MetaBean;
 import org.joda.beans.MetaProperty;
-import org.joda.beans.Property;
-import org.joda.beans.PropertyDefinition;
+import org.joda.beans.gen.BeanDefinition;
+import org.joda.beans.gen.PropertyDefinition;
 import org.joda.beans.impl.direct.DirectFieldsBeanBuilder;
 import org.joda.beans.impl.direct.DirectMetaBean;
 import org.joda.beans.impl.direct.DirectMetaProperty;
@@ -104,11 +104,20 @@ public final class Schedule
   /**
    * Checks if this schedule represents a single 'Term' period.
    * <p>
-   * A 'Term' schedule has one period.
+   * A 'Term' schedule has one period and a frequency of 'Term'.
    * 
    * @return true if this is a 'Term' schedule
    */
   public boolean isTerm() {
+    return size() == 1 && frequency.equals(Frequency.TERM);
+  }
+
+  /**
+   * Checks if this schedule has a single period.
+   * 
+   * @return true if this is a single period
+   */
+  public boolean isSinglePeriod() {
     return size() == 1;
   }
 
@@ -171,12 +180,36 @@ public final class Schedule
     return getLastPeriod().getEndDate();
   }
 
+  /**
+   * Gets the unadjusted start date.
+   * <p>
+   * The start date before any business day adjustment.
+   * 
+   * @return the unadjusted schedule start date
+   */
+  public LocalDate getUnadjustedStartDate() {
+    return getFirstPeriod().getUnadjustedStartDate();
+  }
+
+  /**
+   * Gets the unadjusted end date.
+   * <p>
+   * The end date before any business day adjustment.
+   * 
+   * @return the unadjusted schedule end date
+   */
+  public LocalDate getUnadjustedEndDate() {
+    return getLastPeriod().getUnadjustedEndDate();
+  }
+
   //-------------------------------------------------------------------------
   /**
    * Gets the initial stub if it exists.
    * <p>
-   * There is an initial stub if there is more than one period and the first
-   * period is a stub.
+   * There is an initial stub if the first period is a stub and the frequency is not 'Term'.
+   * <p>
+   * A period will be allocated to one and only one of {@link #getInitialStub()},
+   * {@link #getRegularPeriods()} and {@link #getFinalStub()}.
    * 
    * @return the initial stub, empty if no initial stub
    */
@@ -194,6 +227,9 @@ public final class Schedule
    * <p>
    * There is a final stub if there is more than one period and the last
    * period is a stub.
+   * <p>
+   * A period will be allocated to one and only one of {@link #getInitialStub()},
+   * {@link #getRegularPeriods()} and {@link #getFinalStub()}.
    * 
    * @return the final stub, empty if no final stub
    */
@@ -203,7 +239,7 @@ public final class Schedule
 
   // checks if there is a final stub
   private boolean isFinalStub() {
-    return !isTerm() && !getLastPeriod().isRegular(frequency, rollConvention);
+    return !isSinglePeriod() && !getLastPeriod().isRegular(frequency, rollConvention);
   }
 
   /**
@@ -212,7 +248,11 @@ public final class Schedule
    * The regular periods exclude any initial or final stub.
    * In most cases, the periods returned will be regular, corresponding to the periodic
    * frequency and roll convention, however there are cases when this is not true.
+   * This includes the case where {@link #isTerm()} returns true.
    * See {@link SchedulePeriod#isRegular(Frequency, RollConvention)}.
+   * <p>
+   * A period will be allocated to one and only one of {@link #getInitialStub()},
+   * {@link #getRegularPeriods()} and {@link #getFinalStub()}.
    * 
    * @return the non-stub schedule periods
    */
@@ -223,6 +263,24 @@ public final class Schedule
     int startStub = isInitialStub() ? 1 : 0;
     int endStub = isFinalStub() ? 1 : 0;
     return (startStub == 0 && endStub == 0 ? periods : periods.subList(startStub, periods.size() - endStub));
+  }
+
+  /**
+   * Gets the complete list of unadjusted dates.
+   * <p>
+   * This returns a list including all the unadjusted period boundary dates.
+   * This is the same as a list containing the unadjusted start date of the schedule
+   * followed by the unadjusted end date of each period.
+   * 
+   * @return the list of unadjusted dates, in order
+   */
+  public ImmutableList<LocalDate> getUnadjustedDates() {
+    ImmutableList.Builder<LocalDate> dates = ImmutableList.builder();
+    dates.add(getUnadjustedStartDate());
+    for (SchedulePeriod period : periods) {
+      dates.add(period.getUnadjustedEndDate());
+    }
+    return dates.build();
   }
 
   //-------------------------------------------------------------------------
@@ -280,6 +338,92 @@ public final class Schedule
   }
 
   /**
+   * Merges this schedule to form a new schedule by combining the schedule periods.
+   * <p>
+   * This produces a schedule where some periods are merged together.
+   * For example, this could be used to convert a 3 monthly schedule into a 6 monthly schedule.
+   * <p>
+   * The merging is controlled by the group size, which defines the number of periods
+   * to merge together in the result. For example, to convert a 3 monthly schedule into
+   * a 6 monthly schedule the group size would be 2 (6 divided by 3).
+   * <p>
+   * A group size of zero or less will throw an exception.
+   * A group size of 1 will return this schedule providing that the specified start and end date match.
+   * A larger group size will return a schedule where each group of regular periods are merged.
+   * <p>
+   * The specified dates must be one of the dates of this schedule (unadjusted or adjusted).
+   * All periods of this schedule before the first regular start date, if any, will form a single period in the result.
+   * All periods of this schedule after the last regular start date, if any, will form a single period in the result.
+   * If this schedule has an initial or final stub, it may be merged with a regular period as part of the process.
+   * <p>
+   * For example, a schedule with an initial stub and 5 regular periods can be grouped by 2 if the
+   * specified {@code firstRegularStartDate} equals the end of the first regular period.
+   * 
+   * @param groupSize  the group size
+   * @param firstRegularStartDate  the unadjusted start date of the first regular payment period
+   * @param lastRegularEndDate  the unadjusted end date of the last regular payment period
+   * @return the merged schedule
+   * @throws IllegalArgumentException if the group size is zero or less
+   * @throws ScheduleException if the merged schedule cannot be created because the dates don't
+   *   match this schedule or the regular periods don't match the grouping size
+   */
+  public Schedule merge(int groupSize, LocalDate firstRegularStartDate, LocalDate lastRegularEndDate) {
+    ArgChecker.notNegativeOrZero(groupSize, "groupSize");
+    ArgChecker.inOrderOrEqual(firstRegularStartDate, lastRegularEndDate, "firstRegularStartDate", "lastRegularEndDate");
+    if (isSinglePeriod() || groupSize == 1) {
+      return this;
+    }
+    // determine stubs and regular
+    int startRegularIndex = -1;
+    int endRegularIndex = -1;
+    for (int i = 0; i < size(); i++) {
+      SchedulePeriod period = periods.get(i);
+      if (period.getUnadjustedStartDate().equals(firstRegularStartDate) || period.getStartDate().equals(firstRegularStartDate)) {
+        startRegularIndex = i;
+      }
+      if (period.getUnadjustedEndDate().equals(lastRegularEndDate) || period.getEndDate().equals(lastRegularEndDate)) {
+        endRegularIndex = i + 1;
+      }
+    }
+    if (startRegularIndex < 0) {
+      throw new ScheduleException(
+          "Unable to merge schedule, firstRegularStartDate {} does not match any date in the underlying schedule {}",
+          firstRegularStartDate,
+          getUnadjustedDates());
+    }
+    if (endRegularIndex < 0) {
+      throw new ScheduleException(
+          "Unable to merge schedule, lastRegularEndDate {} does not match any date in the underlying schedule {}",
+          lastRegularEndDate,
+          getUnadjustedDates());
+    }
+    int numberRegular = endRegularIndex - startRegularIndex;
+    if ((numberRegular % groupSize) != 0) {
+      Period newFrequency = frequency.getPeriod().multipliedBy(groupSize);
+      throw new ScheduleException(
+          "Unable to merge schedule, firstRegularStartDate {} and lastRegularEndDate {} cannot be used to " +
+              "create regular periods of frequency '{}'",
+          firstRegularStartDate, lastRegularEndDate, newFrequency);
+    }
+    List<SchedulePeriod> newSchedule = new ArrayList<>();
+    if (startRegularIndex > 0) {
+      newSchedule.add(createSchedulePeriod(periods.subList(0, startRegularIndex)));
+    }
+    for (int i = startRegularIndex; i < endRegularIndex; i += groupSize) {
+      newSchedule.add(createSchedulePeriod(periods.subList(i, i + groupSize)));
+    }
+    if (endRegularIndex < periods.size()) {
+      newSchedule.add(createSchedulePeriod(periods.subList(endRegularIndex, periods.size())));
+    }
+    // build schedule
+    return Schedule.builder()
+        .periods(newSchedule)
+        .frequency(Frequency.of(frequency.getPeriod().multipliedBy(groupSize)))
+        .rollConvention(rollConvention)
+        .build();
+  }
+
+  /**
    * Merges this schedule to form a new schedule by combining the regular schedule periods.
    * <p>
    * This produces a schedule where some periods are merged together.
@@ -307,7 +451,7 @@ public final class Schedule
    */
   public Schedule mergeRegular(int groupSize, boolean rollForwards) {
     ArgChecker.notNegativeOrZero(groupSize, "groupSize");
-    if (isTerm() || groupSize == 1) {
+    if (isSinglePeriod() || groupSize == 1) {
       return this;
     }
     List<SchedulePeriod> newSchedule = new ArrayList<>();
@@ -396,7 +540,6 @@ public final class Schedule
   }
 
   //------------------------- AUTOGENERATED START -------------------------
-  ///CLOVER:OFF
   /**
    * The meta-bean for {@code Schedule}.
    * @return the meta-bean, not null
@@ -406,7 +549,7 @@ public final class Schedule
   }
 
   static {
-    JodaBeanUtils.registerMetaBean(Schedule.Meta.INSTANCE);
+    MetaBean.register(Schedule.Meta.INSTANCE);
   }
 
   /**
@@ -437,16 +580,6 @@ public final class Schedule
   @Override
   public Schedule.Meta metaBean() {
     return Schedule.Meta.INSTANCE;
-  }
-
-  @Override
-  public <R> Property<R> property(String propertyName) {
-    return metaBean().<R>metaProperty(propertyName).createProperty(this);
-  }
-
-  @Override
-  public Set<String> propertyNames() {
-    return metaBean().metaPropertyMap().keySet();
   }
 
   //-----------------------------------------------------------------------
@@ -715,36 +848,6 @@ public final class Schedule
       return this;
     }
 
-    /**
-     * @deprecated Use Joda-Convert in application code
-     */
-    @Override
-    @Deprecated
-    public Builder setString(String propertyName, String value) {
-      setString(meta().metaProperty(propertyName), value);
-      return this;
-    }
-
-    /**
-     * @deprecated Use Joda-Convert in application code
-     */
-    @Override
-    @Deprecated
-    public Builder setString(MetaProperty<?> property, String value) {
-      super.setString(property, value);
-      return this;
-    }
-
-    /**
-     * @deprecated Loop in application code
-     */
-    @Override
-    @Deprecated
-    public Builder setAll(Map<String, ? extends Object> propertyValueMap) {
-      super.setAll(propertyValueMap);
-      return this;
-    }
-
     @Override
     public Schedule build() {
       return new Schedule(
@@ -821,6 +924,5 @@ public final class Schedule
 
   }
 
-  ///CLOVER:ON
   //-------------------------- AUTOGENERATED END --------------------------
 }

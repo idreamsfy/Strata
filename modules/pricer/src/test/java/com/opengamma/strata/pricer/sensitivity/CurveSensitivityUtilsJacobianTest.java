@@ -32,7 +32,7 @@ import com.opengamma.strata.data.ImmutableMarketData;
 import com.opengamma.strata.loader.csv.QuotesCsvLoader;
 import com.opengamma.strata.loader.csv.RatesCalibrationCsvLoader;
 import com.opengamma.strata.market.ValueType;
-import com.opengamma.strata.market.curve.CurveGroupDefinition;
+import com.opengamma.strata.market.curve.RatesCurveGroupDefinition;
 import com.opengamma.strata.market.curve.CurveGroupName;
 import com.opengamma.strata.market.curve.CurveInfoType;
 import com.opengamma.strata.market.curve.CurveName;
@@ -46,7 +46,7 @@ import com.opengamma.strata.market.observable.QuoteId;
 import com.opengamma.strata.market.param.CurrencyParameterSensitivities;
 import com.opengamma.strata.market.param.TenorParameterMetadata;
 import com.opengamma.strata.pricer.curve.CalibrationMeasures;
-import com.opengamma.strata.pricer.curve.CurveCalibrator;
+import com.opengamma.strata.pricer.curve.RatesCurveCalibrator;
 import com.opengamma.strata.pricer.deposit.DiscountingIborFixingDepositProductPricer;
 import com.opengamma.strata.pricer.rate.ImmutableRatesProvider;
 import com.opengamma.strata.pricer.rate.RatesProvider;
@@ -71,7 +71,7 @@ public class CurveSensitivityUtilsJacobianTest {
   private static final String QUOTES_PATH = "src/test/resources/quotes/";
 
   // Quotes
-  private static final CurveCalibrator CALIBRATOR = CurveCalibrator.standard();  
+  private static final RatesCurveCalibrator CALIBRATOR = RatesCurveCalibrator.standard();  
   private static final String QUOTES_FILE = "quotes-20151120-eur.csv";
   private static final Map<QuoteId, Double> MQ_INPUT = 
       QuotesCsvLoader.load(VALUATION_DATE, ImmutableList.of(ResourceLocator.of(QUOTES_PATH + QUOTES_FILE)));
@@ -82,7 +82,7 @@ public class CurveSensitivityUtilsJacobianTest {
   private static final String GROUPS_IN_1_FILE = "EUR-ALLIRS-group.csv";
   private static final String SETTINGS_IN_1_FILE = "EUR-ALLIRS-settings.csv";
   private static final String NODES_IN_1_FILE = "EUR-ALLIRS-STD-nodes.csv";
-  private static final CurveGroupDefinition GROUPS_IN_1 =
+  private static final RatesCurveGroupDefinition GROUPS_IN_1 =
       RatesCalibrationCsvLoader.load(
           ResourceLocator.of(CONFIG_PATH + GROUPS_IN_1_FILE),
           ResourceLocator.of(CONFIG_PATH + SETTINGS_IN_1_FILE),
@@ -231,7 +231,7 @@ public class CurveSensitivityUtilsJacobianTest {
   private static final String GROUPS_IN_2_FILE = "EUR-DSCONOIS-E6IRS-group.csv";
   private static final String SETTINGS_IN_2_FILE = "EUR-DSCONOIS-E6IRS-settings.csv";
   private static final String NODES_IN_2_FILE = "EUR-DSCONOIS-E6IRS-STD-nodes.csv";
-  private static final CurveGroupDefinition GROUPS_IN_2 =
+  private static final RatesCurveGroupDefinition GROUPS_IN_2 =
       RatesCalibrationCsvLoader.load(
           ResourceLocator.of(CONFIG_PATH + GROUPS_IN_2_FILE),
           ResourceLocator.of(CONFIG_PATH + SETTINGS_IN_2_FILE),

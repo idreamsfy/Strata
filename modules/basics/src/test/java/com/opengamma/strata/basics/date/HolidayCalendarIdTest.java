@@ -7,8 +7,9 @@ package com.opengamma.strata.basics.date;
 
 import static com.opengamma.strata.basics.date.HolidayCalendarIds.NO_HOLIDAYS;
 import static com.opengamma.strata.collect.TestHelper.assertSerialization;
-import static com.opengamma.strata.collect.TestHelper.assertThrows;
 import static com.opengamma.strata.collect.TestHelper.coverPrivateConstructor;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertSame;
 
@@ -20,12 +21,15 @@ import com.google.common.collect.ImmutableMap;
 import com.opengamma.strata.basics.ImmutableReferenceData;
 import com.opengamma.strata.basics.ReferenceData;
 import com.opengamma.strata.basics.ReferenceDataNotFoundException;
+import com.opengamma.strata.basics.currency.Currency;
 
 /**
  * Test {@link HolidayCalendarId}.
  */
 @Test
 public class HolidayCalendarIdTest {
+
+  private static final Object ANOTHER_TYPE = "";
 
   public void test_of_single() {
     HolidayCalendarId test = HolidayCalendarId.of("GB");
@@ -51,6 +55,13 @@ public class HolidayCalendarIdTest {
     assertEquals(test.toString(), "EU+GB");
   }
 
+  public void test_defaultByCurrency() {
+    assertEquals(HolidayCalendarId.defaultByCurrency(Currency.GBP), HolidayCalendarIds.GBLO);
+    assertEquals(HolidayCalendarId.defaultByCurrency(Currency.CZK), HolidayCalendarIds.CZPR);
+    assertEquals(HolidayCalendarId.defaultByCurrency(Currency.HKD), HolidayCalendarId.of("HKHK"));
+    assertThatIllegalArgumentException().isThrownBy(() -> HolidayCalendarId.defaultByCurrency(Currency.XAG));
+  }
+
   //-------------------------------------------------------------------------
   public void test_resolve_single() {
     HolidayCalendarId gb = HolidayCalendarId.of("GB");
@@ -58,7 +69,7 @@ public class HolidayCalendarIdTest {
     HolidayCalendar gbCal = HolidayCalendars.SAT_SUN;
     ReferenceData refData = ImmutableReferenceData.of(gb, gbCal);
     assertEquals(gb.resolve(refData), gbCal);
-    assertThrows(() -> eu.resolve(refData), ReferenceDataNotFoundException.class);
+    assertThatExceptionOfType(ReferenceDataNotFoundException.class).isThrownBy(() -> eu.resolve(refData));
     assertEquals(refData.getValue(gb), gbCal);
   }
 
@@ -127,7 +138,7 @@ public class HolidayCalendarIdTest {
     assertEquals(a.equals(a2), true);
     assertEquals(a.equals(b), false);
     assertEquals(a.equals(null), false);
-    assertEquals(a.equals("Rubbish"), false);
+    assertEquals(a.equals(ANOTHER_TYPE), false);
   }
 
   //-------------------------------------------------------------------------

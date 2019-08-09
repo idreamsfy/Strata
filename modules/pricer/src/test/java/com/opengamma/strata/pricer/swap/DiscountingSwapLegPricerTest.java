@@ -12,9 +12,9 @@ import static com.opengamma.strata.basics.date.DayCounts.ONE_ONE;
 import static com.opengamma.strata.basics.date.HolidayCalendarIds.GBLO;
 import static com.opengamma.strata.basics.date.Tenor.TENOR_10Y;
 import static com.opengamma.strata.basics.index.IborIndices.GBP_LIBOR_3M;
+import static com.opengamma.strata.basics.index.OvernightIndices.USD_FED_FUND;
 import static com.opengamma.strata.basics.index.PriceIndices.GB_RPI;
 import static com.opengamma.strata.basics.schedule.Frequency.P12M;
-import static com.opengamma.strata.collect.TestHelper.assertThrowsIllegalArg;
 import static com.opengamma.strata.collect.TestHelper.date;
 import static com.opengamma.strata.pricer.swap.SwapDummyData.FIXED_CMP_FLAT_SWAP_LEG_PAY_GBP;
 import static com.opengamma.strata.pricer.swap.SwapDummyData.FIXED_CMP_NONE_SWAP_LEG_PAY_GBP;
@@ -32,6 +32,7 @@ import static com.opengamma.strata.pricer.swap.SwapDummyData.IBOR_RATE_PAYMENT_P
 import static com.opengamma.strata.pricer.swap.SwapDummyData.IBOR_SWAP_LEG_REC_GBP;
 import static com.opengamma.strata.pricer.swap.SwapDummyData.IBOR_SWAP_LEG_REC_GBP_MULTI;
 import static com.opengamma.strata.pricer.swap.SwapDummyData.NOTIONAL_EXCHANGE_REC_GBP;
+import static com.opengamma.strata.pricer.swap.SwapDummyData.OIS;
 import static com.opengamma.strata.product.common.PayReceive.PAY;
 import static com.opengamma.strata.product.common.PayReceive.RECEIVE;
 import static com.opengamma.strata.product.swap.CompoundingMethod.STRAIGHT;
@@ -39,6 +40,7 @@ import static com.opengamma.strata.product.swap.PriceIndexCalculationMethod.INTE
 import static com.opengamma.strata.product.swap.PriceIndexCalculationMethod.MONTHLY;
 import static com.opengamma.strata.product.swap.SwapLegType.FIXED;
 import static com.opengamma.strata.product.swap.type.IborIborSwapConventions.USD_LIBOR_3M_LIBOR_6M;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
@@ -229,12 +231,14 @@ public class DiscountingSwapLegPricerTest {
 
   public void test_pvbp_fxReset() {
     DiscountingSwapLegPricer test = DiscountingSwapLegPricer.DEFAULT;
-    assertThrowsIllegalArg(() -> test.pvbp(FIXED_FX_RESET_SWAP_LEG_PAY_GBP, MOCK_PROV));
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> test.pvbp(FIXED_FX_RESET_SWAP_LEG_PAY_GBP, MOCK_PROV));
   }
 
   public void test_pvbp_compounding_none() {
     DiscountingSwapLegPricer test = DiscountingSwapLegPricer.DEFAULT;
-    assertThrowsIllegalArg(() -> test.pvbp(FIXED_CMP_NONE_SWAP_LEG_PAY_GBP, MOCK_PROV));
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> test.pvbp(FIXED_CMP_NONE_SWAP_LEG_PAY_GBP, MOCK_PROV));
   }
 
   //-------------------------------------------------------------------------
@@ -390,6 +394,38 @@ public class DiscountingSwapLegPricerTest {
     assertTrue(psAd.equalWithTolerance(psFd, TOLERANCE_DELTA));
   }
 
+  public void test_presentValueSensitivity_finiteDifference_on() {
+    ResolvedSwapLeg expSwapLeg = OIS.getLegs().get(1);
+    RatesProvider multicurve = RatesProviderDataSets.multiUsd(LocalDate.of(2017, 6, 28));
+    PointSensitivities point = PRICER_LEG.presentValueSensitivity(expSwapLeg, multicurve).build();
+    CurrencyParameterSensitivities psAd = multicurve.parameterSensitivity(point);
+    CurrencyParameterSensitivities psFd =
+        FINITE_DIFFERENCE_CALCULATOR.sensitivity(multicurve, (p) -> PRICER_LEG.presentValue(expSwapLeg, p));
+    ImmutableList<CurrencyParameterSensitivity> listAd = psAd.getSensitivities();
+    ImmutableList<CurrencyParameterSensitivity> listFd = psFd.getSensitivities();
+    assertEquals(listAd.size(), 1); // Only ON sensitivity
+    assertEquals(listFd.size(), 3); // Libor 6M sensitivity equal to 0 in Finite Difference
+    assertTrue(psAd.equalWithTolerance(psFd, TOLERANCE_DELTA));
+  }
+
+  /* Test on a holiday, with publication date of ON fixing after the valuation date. Requires sensitivity to a date in the past. */
+  public void test_presentValueSensitivity_finiteDifference_onholyday() {
+    ResolvedSwapLeg expSwapLeg = OIS.getLegs().get(1);
+    LocalDateDoubleTimeSeries ts = LocalDateDoubleTimeSeries.builder()
+        .put(LocalDate.of(2017, 6, 30), 0.0010).build();
+    ImmutableRatesProvider multicurve = RatesProviderDataSets.multiUsd(LocalDate.of(2017, 7, 4));
+    multicurve = multicurve.toBuilder().timeSeries(USD_FED_FUND, ts).build();
+    PointSensitivities point = PRICER_LEG.presentValueSensitivity(expSwapLeg, multicurve).build();
+    CurrencyParameterSensitivities psAd = multicurve.parameterSensitivity(point);
+    CurrencyParameterSensitivities psFd =
+        FINITE_DIFFERENCE_CALCULATOR.sensitivity(multicurve, (p) -> PRICER_LEG.presentValue(expSwapLeg, p));
+    ImmutableList<CurrencyParameterSensitivity> listAd = psAd.getSensitivities();
+    ImmutableList<CurrencyParameterSensitivity> listFd = psFd.getSensitivities();
+    assertEquals(listAd.size(), 1); // Only ON sensitivity
+    assertEquals(listFd.size(), 3); // Libor 6M sensitivity equal to 0 in Finite Difference
+    assertTrue(psAd.equalWithTolerance(psFd, TOLERANCE_DELTA));
+  }
+
   public void test_presentValueSensitivity_events() {
     ResolvedSwapLeg expSwapLeg = IBOR_SWAP_LEG_REC_GBP;
     PointSensitivities point = PRICER_LEG.presentValueSensitivityEventsInternal(expSwapLeg, RATES_GBP).build();
@@ -424,12 +460,14 @@ public class DiscountingSwapLegPricerTest {
 
   public void test_pvbpSensitivity_FxReset() {
     DiscountingSwapLegPricer test = DiscountingSwapLegPricer.DEFAULT;
-    assertThrowsIllegalArg(() -> test.pvbpSensitivity(FIXED_FX_RESET_SWAP_LEG_PAY_GBP, MOCK_PROV));
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> test.pvbpSensitivity(FIXED_FX_RESET_SWAP_LEG_PAY_GBP, MOCK_PROV));
   }
 
   public void test_pvbpSensitivity_Compounding() {
     DiscountingSwapLegPricer test = DiscountingSwapLegPricer.DEFAULT;
-    assertThrowsIllegalArg(() -> test.pvbpSensitivity(FIXED_CMP_NONE_SWAP_LEG_PAY_GBP, MOCK_PROV));
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> test.pvbpSensitivity(FIXED_CMP_NONE_SWAP_LEG_PAY_GBP, MOCK_PROV));
   }
 
   public void test_pvbpSensitivity_compounding_flat_ibor() {

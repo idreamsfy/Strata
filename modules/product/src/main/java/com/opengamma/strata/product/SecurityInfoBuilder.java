@@ -36,10 +36,17 @@ public final class SecurityInfoBuilder {
    * Security attributes, provide the ability to associate arbitrary information
    * with a security in a key-value map.
    */
-  private final Map<SecurityAttributeType<?>, Object> attributes = new HashMap<>();
+  private final Map<AttributeType<?>, Object> attributes = new HashMap<>();
 
   // creates an empty instance
   SecurityInfoBuilder() {
+  }
+
+  // creates a populated instance
+  SecurityInfoBuilder(SecurityId id, SecurityPriceInfo priceInfo, Map<AttributeType<?>, Object> attributes) {
+    this.id = id;
+    this.priceInfo = priceInfo;
+    this.attributes.putAll(attributes);
   }
 
   //-----------------------------------------------------------------------
@@ -76,16 +83,15 @@ public final class SecurityInfoBuilder {
    * The attribute is added using {@code Map.put(type, value)} semantics.
    * 
    * @param <T> the type of the value
-   * @param type  the type providing meaning to the value
-   * @param value  the value
+   * @param attributeType  the type providing meaning to the value
+   * @param attributeValue  the value
    * @return this, for chaining
    */
   @SuppressWarnings("unchecked")
-  public <T> SecurityInfoBuilder addAttribute(SecurityAttributeType<T> type, T value) {
-    ArgChecker.notNull(type, "type");
-    ArgChecker.notNull(value, "value");
-    // ImmutableMap.Builder would not provide Map.put semantics
-    attributes.put(type, value);
+  public <T> SecurityInfoBuilder addAttribute(AttributeType<T> attributeType, T attributeValue) {
+    ArgChecker.notNull(attributeType, "attributeType");
+    ArgChecker.notNull(attributeValue, "attributeValue");
+    attributes.put(attributeType, attributeType.toStoredForm(attributeValue));
     return this;
   }
 

@@ -14,6 +14,13 @@ import java.time.LocalDate;
 
 import org.testng.annotations.Test;
 
+import com.opengamma.strata.basics.ImmutableReferenceData;
+import com.opengamma.strata.product.GenericSecurity;
+import com.opengamma.strata.product.GenericSecurityTrade;
+import com.opengamma.strata.product.PortfolioItemSummary;
+import com.opengamma.strata.product.PortfolioItemType;
+import com.opengamma.strata.product.ProductType;
+import com.opengamma.strata.product.Trade;
 import com.opengamma.strata.product.TradeInfo;
 
 /**
@@ -32,6 +39,9 @@ public class EtdFutureTradeTest {
     assertEquals(test.getPrice(), 20d, 0d);
     assertEquals(test.getSecurityId(), SECURITY.getSecurityId());
     assertEquals(test.getCurrency(), SECURITY.getCurrency());
+    assertEquals(test.withInfo(TRADE_INFO).getInfo(), TRADE_INFO);
+    assertEquals(test.withQuantity(129).getQuantity(), 129d, 0d);
+    assertEquals(test.withPrice(129).getPrice(), 129d, 0d);
   }
 
   //-------------------------------------------------------------------------
@@ -42,6 +52,26 @@ public class EtdFutureTradeTest {
 
   public void test_serialization() {
     assertSerialization(sut());
+  }
+
+  //-------------------------------------------------------------------------
+  public void test_summarize() {
+    EtdFutureTrade trade = sut();
+    PortfolioItemSummary expected = PortfolioItemSummary.builder()
+        .portfolioItemType(PortfolioItemType.TRADE)
+        .productType(ProductType.ETD_FUTURE)
+        .currencies(SECURITY.getCurrency())
+        .description(SECURITY.getSecurityId().getStandardId().getValue() + " x 3000, Jun17")
+        .build();
+    assertEquals(trade.summarize(), expected);
+  }
+
+  //-------------------------------------------------------------------------
+  public void test_resolveTarget() {
+    GenericSecurity security = GenericSecurity.of(SECURITY.getInfo());
+    Trade test = sut().resolveTarget(ImmutableReferenceData.of(SECURITY.getSecurityId(), security));
+    GenericSecurityTrade expected = GenericSecurityTrade.of(TRADE_INFO, security, 3000, 20);
+    assertEquals(test, expected);
   }
 
   //-------------------------------------------------------------------------

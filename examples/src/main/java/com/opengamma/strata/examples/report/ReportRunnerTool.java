@@ -155,11 +155,12 @@ public final class ReportRunnerTool implements AutoCloseable {
     Report report = reportRunner.runReport(calculationResults, template);
 
     switch (format) {
-      case ASCII_TABLE:
-        report.writeAsciiTable(System.out);
-        break;
       case CSV:
         report.writeCsv(System.out);
+        break;
+      case ASCII_TABLE:
+      default:
+        report.writeAsciiTable(System.out);
         break;
     }
   }
@@ -198,7 +199,7 @@ public final class ReportRunnerTool implements AutoCloseable {
     ReferenceData refData = ReferenceData.standard();
 
     // calculate the results
-    CalculationTasks tasks = CalculationTasks.of(rules, trades, columns);
+    CalculationTasks tasks = CalculationTasks.of(rules, trades, columns, refData);
     MarketDataRequirements reqs = tasks.requirements(refData);
     MarketData calibratedMarketData = marketDataFactory().create(reqs, MarketDataConfig.empty(), marketData, refData);
     Results results = runner.getTaskRunner().calculate(tasks, calibratedMarketData, refData);

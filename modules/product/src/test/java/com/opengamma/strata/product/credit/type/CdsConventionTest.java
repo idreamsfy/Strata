@@ -16,10 +16,10 @@ import static com.opengamma.strata.basics.date.HolidayCalendarIds.SAT_SUN;
 import static com.opengamma.strata.basics.schedule.Frequency.P3M;
 import static com.opengamma.strata.basics.schedule.Frequency.P6M;
 import static com.opengamma.strata.collect.TestHelper.assertSerialization;
-import static com.opengamma.strata.collect.TestHelper.assertThrowsIllegalArg;
 import static com.opengamma.strata.collect.TestHelper.coverBeanEquals;
 import static com.opengamma.strata.collect.TestHelper.coverImmutableBean;
 import static com.opengamma.strata.product.common.BuySell.BUY;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.testng.Assert.assertEquals;
 
 import java.time.LocalDate;
@@ -76,7 +76,7 @@ public class CdsConventionTest {
     assertEquals(test.getRollConvention(), RollConventions.DAY_20);
     assertEquals(test.getSettlementDateOffset(), SETTLE_DAY_ADJ);
     assertEquals(test.getStepinDateOffset(), DaysAdjustment.ofCalendarDays(1));
-    assertEquals(test.getStubConvention(), StubConvention.SHORT_INITIAL);
+    assertEquals(test.getStubConvention(), StubConvention.SMART_INITIAL);
   }
 
   public void test_builder() {
@@ -129,7 +129,7 @@ public class CdsConventionTest {
                 .businessDayAdjustment(BUSI_ADJ_STD)
                 .startDateBusinessDayAdjustment(BUSI_ADJ_STD)
                 .endDateBusinessDayAdjustment(BusinessDayAdjustment.NONE)
-                .stubConvention(StubConvention.SHORT_INITIAL)
+                .stubConvention(StubConvention.SMART_INITIAL)
                 .rollConvention(RollConventions.DAY_20)
                 .build())
         .buySell(BUY)
@@ -173,7 +173,7 @@ public class CdsConventionTest {
 
   //-------------------------------------------------------------------------
   @DataProvider(name = "name")
-  static Object[][] data_name() {
+  public static Object[][] data_name() {
     return new Object[][] {
         {CdsConventions.USD_STANDARD, "USD-STANDARD"},
         {CdsConventions.JPY_US_GB_STANDARD, "JPY-US-GB-STANDARD"},
@@ -203,11 +203,13 @@ public class CdsConventionTest {
   }
 
   public void test_of_lookup_notFound() {
-    assertThrowsIllegalArg(() -> CdsConvention.of("Rubbish"));
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> CdsConvention.of("Rubbish"));
   }
 
   public void test_of_lookup_null() {
-    assertThrowsIllegalArg(() -> CdsConvention.of((String) null));
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> CdsConvention.of((String) null));
   }
 
   //-------------------------------------------------------------------------

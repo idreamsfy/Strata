@@ -6,7 +6,6 @@
 package com.opengamma.strata.product;
 
 import com.opengamma.strata.basics.ReferenceData;
-import com.opengamma.strata.basics.currency.Currency;
 
 /**
  * A trade that is directly based on a securitized product.
@@ -22,59 +21,37 @@ import com.opengamma.strata.basics.currency.Currency;
  * product representation completely models the trade.
  * <p>
  * Implementations of this interface must be immutable beans.
+ * 
+ * @param <P> the type of securitized product
  */
-public interface SecuritizedProductTrade
-    extends ProductTrade, SecurityQuantity {
+public interface SecuritizedProductTrade<P extends SecuritizedProduct>
+    extends ProductTrade, SecurityQuantityTrade, SecuritizedProductPortfolioItem<P> {
 
   /**
-   * Gets the product of the security that was traded.
+   * Returns an instance with the specified info.
    * 
-   * @return the product
+   * @param info  the new info
+   * @return the instance with the specified info
    */
   @Override
-  public abstract SecuritizedProduct getProduct();
+  public abstract SecuritizedProductTrade<P> withInfo(TradeInfo info);
 
   /**
-   * Gets the quantity that was traded.
-   * <p>
-   * This will be positive if buying and negative if selling.
+   * Returns an instance with the specified quantity.
    * 
-   * @return the quantity
+   * @param quantity  the new quantity
+   * @return the instance with the specified quantity
    */
   @Override
-  public abstract double getQuantity();
+  public abstract SecuritizedProductTrade<P> withQuantity(double quantity);
 
   /**
-   * Gets the price that was traded.
-   * <p>
-   * This is the unit price agreed when the trade occurred.
+   * Returns an instance with the specified price.
    * 
-   * @return the price
-   */
-  public abstract double getPrice();
-
-  //-------------------------------------------------------------------------
-  /**
-   * Gets the security identifier.
-   * <p>
-   * This identifier uniquely identifies the security within the system.
-   * 
-   * @return the security identifier
+   * @param price  the new price
+   * @return the instance with the specified price
    */
   @Override
-  public default SecurityId getSecurityId() {
-    return getProduct().getSecurityId();
-  }
-
-  /**
-   * Gets the currency of the trade.
-   * <p>
-   * This is typically the same as the currency of the product.
-   * 
-   * @return the trading currency
-   */
-  public default Currency getCurrency() {
-    return getProduct().getCurrency();
-  }
+  public abstract SecuritizedProductTrade<P> withPrice(double price);
 
 }

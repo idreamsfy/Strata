@@ -14,13 +14,13 @@ import static com.opengamma.strata.basics.date.HolidayCalendarIds.USNY;
 import static com.opengamma.strata.basics.index.PriceIndices.GB_RPI;
 import static com.opengamma.strata.basics.index.PriceIndices.US_CPI_U;
 import static com.opengamma.strata.collect.TestHelper.assertSerialization;
-import static com.opengamma.strata.collect.TestHelper.assertThrowsIllegalArg;
 import static com.opengamma.strata.collect.TestHelper.coverBeanEquals;
 import static com.opengamma.strata.collect.TestHelper.coverImmutableBean;
 import static com.opengamma.strata.product.bond.CapitalIndexedBondYieldConvention.GB_IL_FLOAT;
 import static com.opengamma.strata.product.bond.CapitalIndexedBondYieldConvention.US_IL_REAL;
 import static com.opengamma.strata.product.swap.PriceIndexCalculationMethod.INTERPOLATED;
 import static org.testng.Assert.assertEquals;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 
 import java.time.LocalDate;
 import java.time.Period;
@@ -30,7 +30,6 @@ import java.util.List;
 import org.testng.annotations.Test;
 
 import com.opengamma.strata.basics.ReferenceData;
-import com.opengamma.strata.basics.StandardId;
 import com.opengamma.strata.basics.date.BusinessDayAdjustment;
 import com.opengamma.strata.basics.date.BusinessDayConventions;
 import com.opengamma.strata.basics.date.DaysAdjustment;
@@ -41,6 +40,7 @@ import com.opengamma.strata.basics.schedule.StubConvention;
 import com.opengamma.strata.basics.value.ValueAdjustment;
 import com.opengamma.strata.basics.value.ValueSchedule;
 import com.opengamma.strata.basics.value.ValueStep;
+import com.opengamma.strata.product.LegalEntityId;
 import com.opengamma.strata.product.SecurityId;
 import com.opengamma.strata.product.rate.RateComputation;
 import com.opengamma.strata.product.swap.InflationRateCalculation;
@@ -76,7 +76,7 @@ public class CapitalIndexedBondTest {
       BusinessDayAdjustment.of(BusinessDayConventions.PRECEDING, USNY);
   private static final DaysAdjustment EX_COUPON = DaysAdjustment.ofCalendarDays(-7, EX_COUPON_ADJ);
   private static final DaysAdjustment SETTLE_OFFSET = DaysAdjustment.ofBusinessDays(2, USNY);
-  private static final StandardId LEGAL_ENTITY = StandardId.of("OG-Ticker", "US-Govt");
+  private static final LegalEntityId LEGAL_ENTITY = LegalEntityId.of("OG-Ticker", "US-Govt");
   private static final LocalDate START = LocalDate.of(2008, 1, 13);
   private static final LocalDate END = LocalDate.of(2010, 1, 13);
   private static final Frequency FREQUENCY = Frequency.P6M;
@@ -126,7 +126,8 @@ public class CapitalIndexedBondTest {
 
   public void test_builder_fail() {
     // negative settlement date offset
-    assertThrowsIllegalArg(() -> CapitalIndexedBond.builder()
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> CapitalIndexedBond.builder()
         .securityId(SECURITY_ID)
         .notional(NOTIONAL)
         .currency(USD)
@@ -139,7 +140,8 @@ public class CapitalIndexedBondTest {
         .accrualSchedule(SCHEDULE)
         .build());
     // positive ex-coupon days
-    assertThrowsIllegalArg(() -> CapitalIndexedBond.builder()
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> CapitalIndexedBond.builder()
         .securityId(SECURITY_ID)
         .notional(NOTIONAL)
         .currency(USD)
@@ -248,7 +250,7 @@ public class CapitalIndexedBondTest {
                 .firstIndexValue(124.556)
                 .build())
         .exCouponPeriod(EX_COUPON)
-        .legalEntityId(StandardId.of("OG-Ticker", "US-Govt-1"))
+        .legalEntityId(LegalEntityId.of("OG-Ticker", "US-Govt-1"))
         .yieldConvention(GB_IL_FLOAT)
         .settlementDateOffset(DaysAdjustment.ofBusinessDays(2, GBLO))
         .accrualSchedule(

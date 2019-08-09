@@ -12,12 +12,13 @@ import static com.opengamma.strata.basics.index.FxIndices.GBP_USD_WM;
 import static com.opengamma.strata.basics.index.IborIndices.USD_LIBOR_3M;
 import static com.opengamma.strata.basics.index.OvernightIndices.USD_FED_FUND;
 import static com.opengamma.strata.basics.index.PriceIndices.GB_RPI;
-import static com.opengamma.strata.collect.TestHelper.assertThrowsIllegalArg;
 import static com.opengamma.strata.collect.TestHelper.coverBeanEquals;
 import static com.opengamma.strata.collect.TestHelper.coverImmutableBean;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertSame;
+import static org.testng.Assert.assertThrows;
 
 import java.time.LocalDate;
 
@@ -26,12 +27,21 @@ import org.joda.beans.ser.JodaBeanSer;
 import org.testng.annotations.Test;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.opengamma.strata.basics.currency.CurrencyPair;
 import com.opengamma.strata.basics.currency.FxMatrix;
+import com.opengamma.strata.basics.index.IborIndex;
+import com.opengamma.strata.basics.index.ImmutablePriceIndex;
+import com.opengamma.strata.basics.index.OvernightIndex;
+import com.opengamma.strata.basics.index.PriceIndex;
+import com.opengamma.strata.basics.location.Country;
+import com.opengamma.strata.basics.schedule.Frequency;
 import com.opengamma.strata.collect.array.DoubleArray;
 import com.opengamma.strata.collect.timeseries.LocalDateDoubleTimeSeries;
 import com.opengamma.strata.market.curve.ConstantCurve;
 import com.opengamma.strata.market.curve.Curve;
+import com.opengamma.strata.market.curve.CurveGroupName;
+import com.opengamma.strata.market.curve.CurveId;
 import com.opengamma.strata.market.curve.Curves;
 import com.opengamma.strata.market.curve.InterpolatedNodalCurve;
 import com.opengamma.strata.market.curve.interpolator.CurveInterpolator;
@@ -87,8 +97,10 @@ public class ImmutableRatesProviderTest {
   public void test_discountFactors_notKnown() {
     ImmutableRatesProvider test = ImmutableRatesProvider.builder(VAL_DATE)
         .build();
-    assertThrowsIllegalArg(() -> test.discountFactors(GBP));
-    assertThrowsIllegalArg(() -> test.discountFactor(GBP, LocalDate.of(2014, 7, 30)));
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> test.discountFactors(GBP));
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> test.discountFactor(GBP, LocalDate.of(2014, 7, 30)));
   }
 
   //-------------------------------------------------------------------------
@@ -118,6 +130,7 @@ public class ImmutableRatesProviderTest {
         .build();
     assertEquals(test.fxIndexRates(GBP_USD_WM).getIndex(), GBP_USD_WM);
     assertEquals(test.fxIndexRates(GBP_USD_WM).getFixings(), ts);
+    assertEquals(test.getTimeSeriesIndices(), ImmutableSet.of(GBP_USD_WM));
   }
 
   //-------------------------------------------------------------------------
@@ -144,6 +157,34 @@ public class ImmutableRatesProviderTest {
         .build();
     assertEquals(test.iborIndexRates(USD_LIBOR_3M).getIndex(), USD_LIBOR_3M);
     assertEquals(test.iborIndexRates(USD_LIBOR_3M).getFixings(), ts);
+    assertEquals(test.getIborIndices(), ImmutableSet.of(USD_LIBOR_3M));
+    assertEquals(test.getTimeSeriesIndices(), ImmutableSet.of(USD_LIBOR_3M));
+  }
+
+  public void test_iborIndexRates_activeNotFound() {
+    ImmutableRatesProvider test = ImmutableRatesProvider.builder(VAL_DATE)
+        .build();
+    assertThrows(IllegalArgumentException.class, () -> test.iborIndexRates(USD_LIBOR_3M));
+  }
+
+  public void test_iborIndexRates_inactive() {
+    IborIndex inactiveIndex = IborIndex.of("USD-LIBOR-10M");
+    LocalDateDoubleTimeSeries ts = LocalDateDoubleTimeSeries.of(VAL_DATE, 0.62d);
+    ImmutableRatesProvider test = ImmutableRatesProvider.builder(VAL_DATE)
+        .timeSeries(inactiveIndex, ts)
+        .build();
+    assertEquals(test.iborIndexRates(inactiveIndex).getIndex(), inactiveIndex);
+    assertEquals(test.iborIndexRates(inactiveIndex).getFixings(), ts);
+    assertEquals(test.getIborIndices(), ImmutableSet.of());
+    assertEquals(test.getTimeSeriesIndices(), ImmutableSet.of(inactiveIndex));
+    assertEquals(test.iborIndexRates(inactiveIndex).getClass(), HistoricIborIndexRates.class);
+  }
+
+  public void test_iborIndexRates_inactiveNoTimeSeriesNotFound() {
+    IborIndex inactiveIndex = IborIndex.of("USD-LIBOR-10M");
+    ImmutableRatesProvider test = ImmutableRatesProvider.builder(VAL_DATE)
+        .build();
+    assertThrows(IllegalArgumentException.class, () -> test.iborIndexRates(inactiveIndex));
   }
 
   //-------------------------------------------------------------------------
@@ -155,6 +196,34 @@ public class ImmutableRatesProviderTest {
         .build();
     assertEquals(test.overnightIndexRates(USD_FED_FUND).getIndex(), USD_FED_FUND);
     assertEquals(test.overnightIndexRates(USD_FED_FUND).getFixings(), ts);
+    assertEquals(test.getOvernightIndices(), ImmutableSet.of(USD_FED_FUND));
+    assertEquals(test.getTimeSeriesIndices(), ImmutableSet.of(USD_FED_FUND));
+  }
+
+  public void test_overnightIndexRates_activeNotFound() {
+    ImmutableRatesProvider test = ImmutableRatesProvider.builder(VAL_DATE)
+        .build();
+    assertThrows(IllegalArgumentException.class, () -> test.overnightIndexRates(USD_FED_FUND));
+  }
+
+  public void test_overnightIndexRates_inactive() {
+    OvernightIndex inactiveIndex = OvernightIndex.of("CHF-TOIS");
+    LocalDateDoubleTimeSeries ts = LocalDateDoubleTimeSeries.of(VAL_DATE, 0.62d);
+    ImmutableRatesProvider test = ImmutableRatesProvider.builder(VAL_DATE)
+        .timeSeries(inactiveIndex, ts)
+        .build();
+    assertEquals(test.overnightIndexRates(inactiveIndex).getIndex(), inactiveIndex);
+    assertEquals(test.overnightIndexRates(inactiveIndex).getFixings(), ts);
+    assertEquals(test.getIborIndices(), ImmutableSet.of());
+    assertEquals(test.getTimeSeriesIndices(), ImmutableSet.of(inactiveIndex));
+    assertEquals(test.overnightIndexRates(inactiveIndex).getClass(), HistoricOvernightIndexRates.class);
+  }
+
+  public void test_overnightIndexRates_inactiveNoTimeSeriesNotFound() {
+    OvernightIndex inactiveIndex = OvernightIndex.of("CHF-TOIS");
+    ImmutableRatesProvider test = ImmutableRatesProvider.builder(VAL_DATE)
+        .build();
+    assertThrows(IllegalArgumentException.class, () -> test.overnightIndexRates(inactiveIndex));
   }
 
   //-------------------------------------------------------------------------
@@ -166,12 +235,68 @@ public class ImmutableRatesProviderTest {
         .build();
     assertEquals(test.priceIndexValues(GB_RPI).getIndex(), GB_RPI);
     assertEquals(test.priceIndexValues(GB_RPI).getFixings(), ts);
+    assertEquals(test.getPriceIndices(), ImmutableSet.of(GB_RPI));
+    assertEquals(test.getTimeSeriesIndices(), ImmutableSet.of(GB_RPI));
   }
 
-  public void test_priceIndexValues_notKnown() {
+  public void test_priceIndexValues_activeNotFound() {
     ImmutableRatesProvider test = ImmutableRatesProvider.builder(VAL_DATE)
         .build();
-    assertThrowsIllegalArg(() -> test.priceIndexValues(GB_RPI));
+    assertThrows(IllegalArgumentException.class, () -> test.priceIndexValues(GB_RPI));
+  }
+
+  public void test_priceIndexValues_inactive() {
+    PriceIndex inactiveIndex = ImmutablePriceIndex.builder()
+        .name("GBP-XXX")
+        .active(false)
+        .publicationFrequency(Frequency.P1M)
+        .currency(GBP)
+        .region(Country.GB)
+        .build();
+    LocalDateDoubleTimeSeries ts = LocalDateDoubleTimeSeries.of(VAL_DATE, 0.62d);
+    ImmutableRatesProvider test = ImmutableRatesProvider.builder(VAL_DATE)
+        .timeSeries(inactiveIndex, ts)
+        .build();
+    assertEquals(test.priceIndexValues(inactiveIndex).getIndex(), inactiveIndex);
+    assertEquals(test.priceIndexValues(inactiveIndex).getFixings(), ts);
+    assertEquals(test.getIborIndices(), ImmutableSet.of());
+    assertEquals(test.getTimeSeriesIndices(), ImmutableSet.of(inactiveIndex));
+    assertEquals(test.priceIndexValues(inactiveIndex).getClass(), HistoricPriceIndexValues.class);
+  }
+
+  public void test_priceIndexValues_inactiveNoTimeSeriesNotFound() {
+    PriceIndex inactiveIndex = ImmutablePriceIndex.builder()
+        .name("GBP-XXX")
+        .active(false)
+        .publicationFrequency(Frequency.P1M)
+        .currency(GBP)
+        .region(Country.GB)
+        .build();
+    ImmutableRatesProvider test = ImmutableRatesProvider.builder(VAL_DATE)
+        .build();
+    assertThrows(IllegalArgumentException.class, () -> test.priceIndexValues(inactiveIndex));
+  }
+
+  //-------------------------------------------------------------------------
+  public void test_getCurves() {
+    ImmutableRatesProvider test = ImmutableRatesProvider.builder(VAL_DATE)
+        .discountCurve(GBP, DISCOUNT_CURVE_GBP)
+        .discountCurve(USD, DISCOUNT_CURVE_USD)
+        .build();
+    assertEquals(test.getCurves().size(), 2);
+    assertEquals(test.getCurves().get(DISCOUNT_CURVE_GBP.getName()), DISCOUNT_CURVE_GBP);
+    assertEquals(test.getCurves().get(DISCOUNT_CURVE_USD.getName()), DISCOUNT_CURVE_USD);
+  }
+
+  public void test_getCurves_withGroup() {
+    ImmutableRatesProvider test = ImmutableRatesProvider.builder(VAL_DATE)
+        .discountCurve(GBP, DISCOUNT_CURVE_GBP)
+        .discountCurve(USD, DISCOUNT_CURVE_USD)
+        .build();
+    CurveGroupName group = CurveGroupName.of("GRP");
+    assertEquals(test.getCurves(group).size(), 2);
+    assertEquals(test.getCurves(group).get(CurveId.of(group, DISCOUNT_CURVE_GBP.getName())), DISCOUNT_CURVE_GBP);
+    assertEquals(test.getCurves(group).get(CurveId.of(group, DISCOUNT_CURVE_USD.getName())), DISCOUNT_CURVE_USD);
   }
 
   //-------------------------------------------------------------------------

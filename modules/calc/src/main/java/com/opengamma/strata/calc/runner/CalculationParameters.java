@@ -9,19 +9,20 @@ import static com.opengamma.strata.collect.Guavate.toImmutableList;
 import static com.opengamma.strata.collect.Guavate.toImmutableMap;
 
 import java.io.Serializable;
+import java.lang.invoke.MethodHandles;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.stream.Stream;
 
-import org.joda.beans.BeanDefinition;
 import org.joda.beans.ImmutableBean;
 import org.joda.beans.JodaBeanUtils;
 import org.joda.beans.MetaBean;
-import org.joda.beans.Property;
-import org.joda.beans.PropertyDefinition;
+import org.joda.beans.TypedMetaBean;
+import org.joda.beans.gen.BeanDefinition;
+import org.joda.beans.gen.ImmutableConstructor;
+import org.joda.beans.gen.PropertyDefinition;
 import org.joda.beans.impl.light.LightMetaBean;
 
 import com.google.common.collect.ImmutableList;
@@ -57,6 +58,10 @@ public final class CalculationParameters implements ImmutableBean, Serializable 
    */
   @PropertyDefinition(validate = "notNull")
   private final ImmutableMap<Class<? extends CalculationParameter>, CalculationParameter> parameters;
+  /**
+   * The aliases.
+   */
+  private final ImmutableMap<Class<? extends CalculationParameter>, Class<? extends CalculationParameter>> aliases;
 
   //-------------------------------------------------------------------------
   /**
@@ -73,6 +78,9 @@ public final class CalculationParameters implements ImmutableBean, Serializable 
    * <p>
    * The list will be converted to a {@code Map} using {@link CalculationParameter#queryType()}.
    * Each parameter must refer to a different query type.
+   * <p>
+   * If a parameter implements an interface that also extends {@link CalculationParameter},
+   * that type will also be able to be searched for (unless it has been directly registered).
    * 
    * @param parameters  the parameters
    * @return the calculation parameters
@@ -90,6 +98,9 @@ public final class CalculationParameters implements ImmutableBean, Serializable 
    * <p>
    * The list will be converted to a {@code Map} using {@link CalculationParameter#queryType()}.
    * Each parameter must refer to a different query type.
+   * <p>
+   * If a parameter implements an interface that also extends {@link CalculationParameter},
+   * that type will also be able to be searched for (unless it has been directly registered).
    * 
    * @param parameters  the parameters
    * @return the calculation parameters
@@ -108,6 +119,28 @@ public final class CalculationParameters implements ImmutableBean, Serializable 
       return EMPTY;
     }
     return new CalculationParameters(map);
+  }
+
+  // the input map is treated as being ordered
+  @ImmutableConstructor
+  private CalculationParameters(Map<Class<? extends CalculationParameter>, CalculationParameter> parameters) {
+    JodaBeanUtils.notNull(parameters, "parameters");
+    this.parameters = ImmutableMap.copyOf(parameters);
+    // find parameters that are super-interfaces of the specified objects
+    Map<Class<? extends CalculationParameter>, Class<? extends CalculationParameter>> aliases = new HashMap<>();
+    for (Class<? extends CalculationParameter> type : parameters.keySet()) {
+      Class<?>[] interfaces = type.getInterfaces();
+      for (Class<?> iface : interfaces) {
+        if (iface != CalculationParameter.class &&
+            CalculationParameter.class.isAssignableFrom(iface) &&
+            !parameters.containsKey(iface)) {
+          // first registration wins with aliases
+          Class<? extends CalculationParameter> aliasType = iface.asSubclass(CalculationParameter.class);
+          aliases.putIfAbsent(aliasType, type);
+        }
+      }
+    }
+    this.aliases = ImmutableMap.copyOf(aliases);
   }
 
   //-------------------------------------------------------------------------
@@ -185,6 +218,8 @@ public final class CalculationParameters implements ImmutableBean, Serializable 
   //-------------------------------------------------------------------------
   /**
    * Finds the parameter that matches the specified query type.
+   * <p>
+   * This method may throw an exception if the parameters have not been filtered.
    * 
    * @param <T>  the type of the parameter
    * @param type  the query type to find
@@ -192,11 +227,14 @@ public final class CalculationParameters implements ImmutableBean, Serializable 
    */
   @SuppressWarnings("unchecked")
   public <T extends CalculationParameter> Optional<T> findParameter(Class<T> type) {
-    return Optional.ofNullable((T) parameters.get(type));
+    Class<? extends CalculationParameter> lookupType = aliases.getOrDefault(type, type);
+    return Optional.ofNullable(type.cast(parameters.get(lookupType)));
   }
 
   /**
    * Returns the parameter that matches the specified query type throwing an exception if not available.
+   * <p>
+   * This method may throw an exception if the parameters have not been filtered.
    *
    * @param <T>  the type of the parameter
    * @param type  the query type to return
@@ -205,31 +243,36 @@ public final class CalculationParameters implements ImmutableBean, Serializable 
    */
   @SuppressWarnings("unchecked")
   public <T extends CalculationParameter> T getParameter(Class<T> type) {
-    T calculationParameter = (T) parameters.get(type);
-
+    Class<? extends CalculationParameter> lookupType = aliases.getOrDefault(type, type);
+    Object calculationParameter = parameters.get(lookupType);
     if (calculationParameter == null) {
       throw new IllegalArgumentException("No parameter found for query type " + type.getName());
     }
-    return calculationParameter;
+    return type.cast(calculationParameter);
   }
 
   //------------------------- AUTOGENERATED START -------------------------
-  ///CLOVER:OFF
   /**
    * The meta-bean for {@code CalculationParameters}.
    */
-  private static final MetaBean META_BEAN = LightMetaBean.of(CalculationParameters.class);
+  private static final TypedMetaBean<CalculationParameters> META_BEAN =
+      LightMetaBean.of(
+          CalculationParameters.class,
+          MethodHandles.lookup(),
+          new String[] {
+              "parameters"},
+          ImmutableMap.of());
 
   /**
    * The meta-bean for {@code CalculationParameters}.
    * @return the meta-bean, not null
    */
-  public static MetaBean meta() {
+  public static TypedMetaBean<CalculationParameters> meta() {
     return META_BEAN;
   }
 
   static {
-    JodaBeanUtils.registerMetaBean(META_BEAN);
+    MetaBean.register(META_BEAN);
   }
 
   /**
@@ -237,25 +280,9 @@ public final class CalculationParameters implements ImmutableBean, Serializable 
    */
   private static final long serialVersionUID = 1L;
 
-  private CalculationParameters(
-      Map<Class<? extends CalculationParameter>, CalculationParameter> parameters) {
-    JodaBeanUtils.notNull(parameters, "parameters");
-    this.parameters = ImmutableMap.copyOf(parameters);
-  }
-
   @Override
-  public MetaBean metaBean() {
+  public TypedMetaBean<CalculationParameters> metaBean() {
     return META_BEAN;
-  }
-
-  @Override
-  public <R> Property<R> property(String propertyName) {
-    return metaBean().<R>metaProperty(propertyName).createProperty(this);
-  }
-
-  @Override
-  public Set<String> propertyNames() {
-    return metaBean().metaPropertyMap().keySet();
   }
 
   //-----------------------------------------------------------------------
@@ -296,6 +323,5 @@ public final class CalculationParameters implements ImmutableBean, Serializable 
     return buf.toString();
   }
 
-  ///CLOVER:ON
   //-------------------------- AUTOGENERATED END --------------------------
 }

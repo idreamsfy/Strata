@@ -7,9 +7,11 @@ package com.opengamma.strata.product.common;
 
 import static com.opengamma.strata.collect.TestHelper.assertJodaConvert;
 import static com.opengamma.strata.collect.TestHelper.assertSerialization;
-import static com.opengamma.strata.collect.TestHelper.assertThrowsIllegalArg;
 import static com.opengamma.strata.collect.TestHelper.coverEnum;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.testng.Assert.assertEquals;
+
+import java.util.Locale;
 
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
@@ -36,9 +38,14 @@ public class PutCallTest {
     assertEquals(PutCall.CALL.isCall(), true);
   }
 
+  public void test_opposite() {
+    assertEquals(PutCall.PUT.opposite(), PutCall.CALL);
+    assertEquals(PutCall.CALL.opposite(), PutCall.PUT);
+  }
+
   //-------------------------------------------------------------------------
   @DataProvider(name = "name")
-  static Object[][] data_name() {
+  public static Object[][] data_name() {
     return new Object[][] {
         {PutCall.PUT, "Put"},
         {PutCall.CALL, "Call"},
@@ -55,12 +62,24 @@ public class PutCallTest {
     assertEquals(PutCall.of(name), convention);
   }
 
+  @Test(dataProvider = "name")
+  public void test_of_lookupUpperCase(PutCall convention, String name) {
+    assertEquals(PutCall.of(name.toUpperCase(Locale.ENGLISH)), convention);
+  }
+
+  @Test(dataProvider = "name")
+  public void test_of_lookupLowerCase(PutCall convention, String name) {
+    assertEquals(PutCall.of(name.toLowerCase(Locale.ENGLISH)), convention);
+  }
+
   public void test_of_lookup_notFound() {
-    assertThrowsIllegalArg(() -> PutCall.of("Rubbish"));
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> PutCall.of("Rubbish"));
   }
 
   public void test_of_lookup_null() {
-    assertThrowsIllegalArg(() -> PutCall.of(null));
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> PutCall.of(null));
   }
 
   //-------------------------------------------------------------------------

@@ -5,13 +5,14 @@
  */
 package com.opengamma.strata.product.index;
 
+import static com.opengamma.strata.basics.currency.Currency.USD;
 import static com.opengamma.strata.collect.TestHelper.assertSerialization;
-import static com.opengamma.strata.collect.TestHelper.assertThrowsIllegalArg;
 import static com.opengamma.strata.collect.TestHelper.coverBeanEquals;
 import static com.opengamma.strata.collect.TestHelper.coverImmutableBean;
 import static com.opengamma.strata.collect.TestHelper.date;
 import static com.opengamma.strata.product.common.PutCall.CALL;
 import static com.opengamma.strata.product.common.PutCall.PUT;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.testng.Assert.assertEquals;
 
 import java.time.LocalDate;
@@ -21,6 +22,7 @@ import java.time.ZonedDateTime;
 
 import org.testng.annotations.Test;
 
+import com.google.common.collect.ImmutableSet;
 import com.opengamma.strata.basics.ReferenceData;
 import com.opengamma.strata.basics.value.Rounding;
 import com.opengamma.strata.product.SecurityId;
@@ -57,10 +59,14 @@ public class IborFutureOptionTest {
     assertEquals(test.getUnderlyingFuture(), FUTURE);
     assertEquals(test.getCurrency(), FUTURE.getCurrency());
     assertEquals(test.getIndex(), FUTURE.getIndex());
+    assertEquals(test.isCrossCurrency(), false);
+    assertEquals(test.allPaymentCurrencies(), ImmutableSet.of(USD));
+    assertEquals(test.allCurrencies(), ImmutableSet.of(USD));
   }
 
   public void test_builder_expiryNotAfterTradeDate() {
-    assertThrowsIllegalArg(() -> IborFutureOption.builder()
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> IborFutureOption.builder()
         .securityId(SECURITY_ID)
         .putCall(CALL)
         .expiryDate(LAST_TRADE_DATE)
@@ -72,7 +78,8 @@ public class IborFutureOptionTest {
   }
 
   public void test_builder_badPrice() {
-    assertThrowsIllegalArg(() -> sut().toBuilder().strikePrice(2.1).build());
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> sut().toBuilder().strikePrice(2.1).build());
   }
 
   //-------------------------------------------------------------------------

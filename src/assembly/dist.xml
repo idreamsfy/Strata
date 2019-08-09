@@ -12,48 +12,46 @@
     <fileSet>
       <includes>
         <include>LICENSE.txt</include>
+        <include>NOTICE.txt</include>
         <include>README.md</include>
-        <include>pom.xml</include>
       </includes>
     </fileSet>
     <fileSet>
-      <directory>${project.build.directory}/site/apidocs</directory>
+      <directory>modules/target/site/apidocs</directory>
       <outputDirectory>apidocs</outputDirectory>
       <includes>
         <include>**/*</include>
       </includes>
     </fileSet>
     <fileSet>
-      <directory>examples/${project.build.directory}</directory>
+      <directory>examples/target</directory>
       <outputDirectory>lib</outputDirectory>
       <includes>
         <include>strata-examples-${version}.jar</include>
       </includes>
     </fileSet>
     <fileSet>
-      <directory>examples/${project.build.directory}</directory>
+      <directory>examples/target</directory>
       <outputDirectory>src</outputDirectory>
       <includes>
         <include>strata-examples-${version}-sources.jar</include>
       </includes>
     </fileSet>
+    <!-- strata-report extracts the dependencies, as moduleSets doesn't seem to work correctly -->
+    <fileSet>
+      <directory>modules/report/target/dependency</directory>
+      <outputDirectory>lib</outputDirectory>
+      <includes>
+        <include>*.jar</include>
+      </includes>
+    </fileSet>
+    <!-- strata-report extracts the dependencies, as moduleSets doesn't seem to work correctly -->
+    <fileSet>
+      <directory>modules/report/target/dependency-sources</directory>
+      <outputDirectory>src</outputDirectory>
+      <includes>
+        <include>*.jar</include>
+      </includes>
+    </fileSet>
   </fileSets>
-  <moduleSets>
-    <moduleSet>
-      <useAllReactorProjects>true</useAllReactorProjects>
-      <binaries>
-        <outputDirectory>lib</outputDirectory>
-        <unpack>false</unpack>
-      </binaries>
-    </moduleSet>
-    <moduleSet>
-      <useAllReactorProjects>true</useAllReactorProjects>
-      <binaries>
-        <attachmentClassifier>sources</attachmentClassifier>
-        <includeDependencies>false</includeDependencies>
-        <outputDirectory>src</outputDirectory>
-        <unpack>false</unpack>
-      </binaries>
-    </moduleSet>
-  </moduleSets>
 </assembly>

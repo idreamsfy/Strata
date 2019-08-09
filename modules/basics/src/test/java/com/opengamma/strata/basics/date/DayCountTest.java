@@ -29,15 +29,18 @@ import static com.opengamma.strata.basics.schedule.Frequency.P3M;
 import static com.opengamma.strata.basics.schedule.Frequency.P6M;
 import static com.opengamma.strata.collect.TestHelper.assertJodaConvert;
 import static com.opengamma.strata.collect.TestHelper.assertSerialization;
-import static com.opengamma.strata.collect.TestHelper.assertThrows;
-import static com.opengamma.strata.collect.TestHelper.assertThrowsIllegalArg;
-import static com.opengamma.strata.collect.TestHelper.assertThrowsRuntime;
 import static com.opengamma.strata.collect.TestHelper.coverEnum;
 import static com.opengamma.strata.collect.TestHelper.coverPrivateConstructor;
 import static com.opengamma.strata.collect.TestHelper.date;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.testng.Assert.assertEquals;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.time.LocalDate;
+import java.util.Locale;
+import java.util.Optional;
 
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
@@ -45,6 +48,7 @@ import org.testng.annotations.Test;
 import com.google.common.collect.ImmutableMap;
 import com.opengamma.strata.basics.date.DayCount.ScheduleInfo;
 import com.opengamma.strata.basics.schedule.Frequency;
+import com.opengamma.strata.collect.named.ExtendedEnum;
 
 /**
  * Test {@link DayCount}.
@@ -61,7 +65,7 @@ public class DayCountTest {
 
   //-------------------------------------------------------------------------
   @DataProvider(name = "types")
-  static Object[][] data_types() {
+  public static Object[][] data_types() {
     StandardDayCounts[] conv = StandardDayCounts.values();
     Object[][] result = new Object[conv.length][];
     for (int i = 0; i < conv.length; i++) {
@@ -72,18 +76,18 @@ public class DayCountTest {
 
   @Test(dataProvider = "types")
   public void test_null(DayCount type) {
-    assertThrowsRuntime(() -> type.yearFraction(null, JAN_01));
-    assertThrowsRuntime(() -> type.yearFraction(JAN_01, null));
-    assertThrowsRuntime(() -> type.yearFraction(null, null));
-    assertThrowsRuntime(() -> type.days(null, JAN_01));
-    assertThrowsRuntime(() -> type.days(JAN_01, null));
-    assertThrowsRuntime(() -> type.days(null, null));
+    assertThatExceptionOfType(RuntimeException.class).isThrownBy(() -> type.yearFraction(null, JAN_01));
+    assertThatExceptionOfType(RuntimeException.class).isThrownBy(() -> type.yearFraction(JAN_01, null));
+    assertThatExceptionOfType(RuntimeException.class).isThrownBy(() -> type.yearFraction(null, null));
+    assertThatExceptionOfType(RuntimeException.class).isThrownBy(() -> type.days(null, JAN_01));
+    assertThatExceptionOfType(RuntimeException.class).isThrownBy(() -> type.days(JAN_01, null));
+    assertThatExceptionOfType(RuntimeException.class).isThrownBy(() -> type.days(null, null));
   }
 
   @Test(dataProvider = "types")
   public void test_wrongOrder(DayCount type) {
-    assertThrowsIllegalArg(() -> type.yearFraction(JAN_02, JAN_01));
-    assertThrowsIllegalArg(() -> type.days(JAN_02, JAN_01));
+    assertThatIllegalArgumentException().isThrownBy(() -> type.yearFraction(JAN_02, JAN_01));
+    assertThatIllegalArgumentException().isThrownBy(() -> type.days(JAN_02, JAN_01));
   }
 
   @Test(dataProvider = "types")
@@ -116,12 +120,12 @@ public class DayCountTest {
 
   //-------------------------------------------------------------------------
   // use flag to make it clearer when an adjustment is happening
-  private static Double SIMPLE_30_360 = new Double(Double.NaN);
+  private static Double SIMPLE_30_360 = Double.NaN;
 
   private static int SIMPLE_30_360Days = 0;
 
   @DataProvider(name = "yearFraction")
-  static Object[][] data_yearFraction() {
+  public static Object[][] data_yearFraction() {
     return new Object[][] {
         {ONE_ONE, 2011, 12, 28, 2012, 2, 28, 1d},
         {ONE_ONE, 2011, 12, 28, 2012, 2, 29, 1d},
@@ -370,7 +374,7 @@ public class DayCountTest {
 
   //-------------------------------------------------------------------------
   @DataProvider(name = "days")
-  static Object[][] data_days() {
+  public static Object[][] data_days() {
     return new Object[][] {
         {ONE_ONE, 2011, 12, 28, 2012, 2, 28, 1},
         {ONE_ONE, 2011, 12, 28, 2012, 2, 29, 1},
@@ -575,7 +579,7 @@ public class DayCountTest {
 
   //-------------------------------------------------------------------------
   @DataProvider(name = "30U360")
-  static Object[][] data_30U360() {
+  public static Object[][] data_30U360() {
     return new Object[][] {
         {2011, 12, 28, 2012, 2, 28, SIMPLE_30_360, SIMPLE_30_360},
         {2011, 12, 28, 2012, 2, 29, SIMPLE_30_360, SIMPLE_30_360},
@@ -646,7 +650,7 @@ public class DayCountTest {
 
   //-------------------------------------------------------------------------
   @DataProvider(name = "30E360ISDA")
-  static Object[][] data_30E360ISDA() {
+  public static Object[][] data_30E360ISDA() {
     return new Object[][] {
         {2011, 12, 28, 2012, 2, 28, SIMPLE_30_360, SIMPLE_30_360},
         {2011, 12, 28, 2012, 2, 29, calc360(2011, 12, 28, 2012, 2, 30), SIMPLE_30_360},
@@ -707,7 +711,7 @@ public class DayCountTest {
   // 4) In all cases, the rule has strange effects when interest through a period encounters
   // February 29th and the denominator suddenly changes from 365 to 366 for the rest of the year
   @DataProvider(name = "ACTACTAFB")
-  static Object[][] data_ACTACTAFB() {
+  public static Object[][] data_ACTACTAFB() {
     return new Object[][] {
         // example from the original French specification
         {1994, 2, 10, 1997, 6, 30, 140d / 365d + 3},
@@ -797,7 +801,7 @@ public class DayCountTest {
 
   //-------------------------------------------------------------------------
   @DataProvider(name = "ACT365L")
-  static Object[][] data_ACT365L() {
+  public static Object[][] data_ACT365L() {
     return new Object[][] {
         {2011, 12, 28, 2012, 2, 28, P12M, 2012, 2, 28, 62d / 365d},
         {2011, 12, 28, 2012, 2, 28, P12M, 2012, 2, 29, 62d / 366d},
@@ -1009,7 +1013,7 @@ public class DayCountTest {
 
   //-------------------------------------------------------------------------
   @DataProvider(name = "name")
-  static Object[][] data_name() {
+  public static Object[][] data_name() {
     return new Object[][] {
         {ONE_ONE, "1/1"},
         {ACT_ACT_ISDA, "Act/Act ISDA"},
@@ -1049,17 +1053,141 @@ public class DayCountTest {
   }
 
   @Test(dataProvider = "name")
+  public void test_lenientLookup_standardNames(DayCount convention, String name) {
+    assertEquals(DayCount.extendedEnum().findLenient(name.toLowerCase(Locale.ENGLISH)).get(), convention);
+  }
+
+  @Test(dataProvider = "name")
   public void test_extendedEnum(DayCount convention, String name) {
     ImmutableMap<String, DayCount> map = DayCount.extendedEnum().lookupAll();
     assertEquals(map.get(name), convention);
   }
 
   public void test_of_lookup_notFound() {
-    assertThrowsIllegalArg(() -> DayCount.of("Rubbish"));
+    assertThatIllegalArgumentException().isThrownBy(() -> DayCount.of("Rubbish"));
   }
 
   public void test_of_lookup_null() {
-    assertThrowsRuntime(() -> DayCount.of(null));
+    assertThatExceptionOfType(RuntimeException.class).isThrownBy(() -> DayCount.of(null));
+  }
+
+  //-------------------------------------------------------------------------
+  @DataProvider(name = "lenient")
+  public static Object[][] data_lenient() {
+    return new Object[][] {
+        {"Actual/Actual", ACT_ACT_ISDA},
+        {"Act/Act", ACT_ACT_ISDA},
+        {"A/A", ACT_ACT_ISDA},
+        {"Actual/Actual ISDA", ACT_ACT_ISDA},
+        {"A/A ISDA", ACT_ACT_ISDA},
+        {"Actual/Actual ISDA", ACT_ACT_ISDA},
+        {"A/A (ISDA)", ACT_ACT_ISDA},
+        {"Act/Act (ISDA)", ACT_ACT_ISDA},
+        {"Actual/Actual (ISDA)", ACT_ACT_ISDA},
+        {"Act/Act", ACT_ACT_ISDA},
+        {"Actual/Actual (Historical)", ACT_ACT_ISDA},
+
+        {"A/A ICMA", ACT_ACT_ICMA},
+        {"Actual/Actual ICMA", ACT_ACT_ICMA},
+        {"A/A (ICMA)", ACT_ACT_ICMA},
+        {"Act/Act (ICMA)", ACT_ACT_ICMA},
+        {"Actual/Actual (ICMA)", ACT_ACT_ICMA},
+        {"ISMA-99", ACT_ACT_ICMA},
+        {"Actual/Actual (Bond)", ACT_ACT_ICMA},
+
+        {"A/A AFB", ACT_ACT_AFB},
+        {"Actual/Actual AFB", ACT_ACT_AFB},
+        {"A/A (AFB)", ACT_ACT_AFB},
+        {"Act/Act (AFB)", ACT_ACT_AFB},
+        {"Actual/Actual (AFB)", ACT_ACT_AFB},
+        {"Actual/Actual (Euro)", ACT_ACT_AFB},
+
+        {"A/365 Actual", ACT_365_ACTUAL},
+        {"Actual/365 Actual", ACT_365_ACTUAL},
+        {"A/365 (Actual)", ACT_365_ACTUAL},
+        {"Act/365 (Actual)", ACT_365_ACTUAL},
+        {"Actual/365 (Actual)", ACT_365_ACTUAL},
+        {"A/365A", ACT_365_ACTUAL},
+        {"Act/365A", ACT_365_ACTUAL},
+        {"Actual/365A", ACT_365_ACTUAL},
+
+        {"A/365L", ACT_365L},
+        {"Actual/365L", ACT_365L},
+        {"A/365 Leap year", ACT_365L},
+        {"Act/365 Leap year", ACT_365L},
+        {"Actual/365 Leap year", ACT_365L},
+        {"ISMA-Year", ACT_365L},
+
+        {"Actual/360", ACT_360},
+        {"A/360", ACT_360},
+        {"French", ACT_360},
+
+        {"Actual/364", ACT_364},
+        {"A/364", ACT_364},
+
+        {"A/365F", ACT_365F},
+        {"Actual/365F", ACT_365F},
+        {"A/365", ACT_365F},
+        {"Act/365", ACT_365F},
+        {"Actual/365", ACT_365F},
+        {"Act/365 (Fixed)", ACT_365F},
+        {"Actual/365 (Fixed)", ACT_365F},
+        {"A/365 (Fixed)", ACT_365F},
+        {"Actual/Fixed 365", ACT_365F},
+        {"English", ACT_365F},
+
+        {"A/365.25", ACT_365_25},
+        {"Actual/365.25", ACT_365_25},
+
+        {"A/NL", NL_365},
+        {"Actual/NL", NL_365},
+        {"NL365", NL_365},
+        {"Act/365 No leap year", NL_365},
+
+        {"30/360", THIRTY_360_ISDA},
+
+        {"Eurobond Basis", THIRTY_E_360},
+        {"30S/360", THIRTY_E_360},
+        {"Special German", THIRTY_E_360},
+        {"30/360 ICMA", THIRTY_E_360},
+        {"30/360 (ICMA)", THIRTY_E_360},
+
+        {"30/360 German", THIRTY_E_360_ISDA},
+        {"German", THIRTY_E_360_ISDA},
+
+        {"30/360 US", THIRTY_U_360},
+        {"30/360 (US)", THIRTY_U_360},
+        {"30US/360", THIRTY_U_360},
+        {"360/360", THIRTY_U_360},
+        {"Bond Basis", THIRTY_U_360},
+        {"US", THIRTY_U_360},
+        {"ISMA-30/360", THIRTY_U_360},
+        {"30/360 SIA", THIRTY_U_360},
+        {"30/360 (SIA)", THIRTY_U_360},
+
+        {"BUS/252", DayCount.ofBus252(HolidayCalendarIds.BRBD)},
+    };
+  }
+
+  @Test(dataProvider = "lenient")
+  public void test_lenientLookup_specialNames(String name, DayCount convention) {
+    assertEquals(DayCount.extendedEnum().findLenient(name.toLowerCase(Locale.ENGLISH)), Optional.of(convention));
+  }
+
+  public void test_lenientLookup_constants() throws IllegalAccessException {
+    Field[] fields = DayCounts.class.getDeclaredFields();
+    for (Field field : fields) {
+      if (Modifier.isPublic(field.getModifiers()) &&
+          Modifier.isStatic(field.getModifiers()) &&
+          Modifier.isFinal(field.getModifiers())) {
+
+        String name = field.getName();
+        Object value = field.get(null);
+        ExtendedEnum<DayCount> ext = DayCount.extendedEnum();
+        assertEquals(ext.findLenient(name), Optional.of(value));
+        assertEquals(ext.findLenient(name.toLowerCase(Locale.ENGLISH)), Optional.of(value));
+      }
+    }
   }
 
   //-------------------------------------------------------------------------
@@ -1091,10 +1219,10 @@ public class DayCountTest {
   public void test_scheduleInfo() {
     ScheduleInfo test = new ScheduleInfo() {};
     assertEquals(test.isEndOfMonthConvention(), true);
-    assertThrows(() -> test.getStartDate(), UnsupportedOperationException.class);
-    assertThrows(() -> test.getEndDate(), UnsupportedOperationException.class);
-    assertThrows(() -> test.getFrequency(), UnsupportedOperationException.class);
-    assertThrows(() -> test.getPeriodEndDate(JAN_01), UnsupportedOperationException.class);
+    assertThatExceptionOfType(UnsupportedOperationException.class).isThrownBy(() -> test.getStartDate());
+    assertThatExceptionOfType(UnsupportedOperationException.class).isThrownBy(() -> test.getEndDate());
+    assertThatExceptionOfType(UnsupportedOperationException.class).isThrownBy(() -> test.getFrequency());
+    assertThatExceptionOfType(UnsupportedOperationException.class).isThrownBy(() -> test.getPeriodEndDate(JAN_01));
   }
 
   //-------------------------------------------------------------------------

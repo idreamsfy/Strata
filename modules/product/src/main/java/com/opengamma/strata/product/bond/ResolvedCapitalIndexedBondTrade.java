@@ -6,27 +6,25 @@
 package com.opengamma.strata.product.bond;
 
 import java.io.Serializable;
-import java.time.LocalDate;
 import java.util.Map;
 import java.util.NoSuchElementException;
-import java.util.Set;
+import java.util.Optional;
 
 import org.joda.beans.Bean;
-import org.joda.beans.BeanDefinition;
 import org.joda.beans.ImmutableBean;
-import org.joda.beans.ImmutableDefaults;
-import org.joda.beans.ImmutableValidator;
 import org.joda.beans.JodaBeanUtils;
+import org.joda.beans.MetaBean;
 import org.joda.beans.MetaProperty;
-import org.joda.beans.Property;
-import org.joda.beans.PropertyDefinition;
+import org.joda.beans.gen.BeanDefinition;
+import org.joda.beans.gen.ImmutableDefaults;
+import org.joda.beans.gen.PropertyDefinition;
 import org.joda.beans.impl.direct.DirectFieldsBeanBuilder;
 import org.joda.beans.impl.direct.DirectMetaBean;
 import org.joda.beans.impl.direct.DirectMetaProperty;
 import org.joda.beans.impl.direct.DirectMetaPropertyMap;
 
 import com.opengamma.strata.basics.ReferenceData;
-import com.opengamma.strata.collect.ArgChecker;
+import com.opengamma.strata.product.PortfolioItemInfo;
 import com.opengamma.strata.product.ResolvedTrade;
 import com.opengamma.strata.product.TradeInfo;
 
@@ -37,6 +35,9 @@ import com.opengamma.strata.product.TradeInfo;
  * Applications will typically create a {@code ResolvedCapitalIndexedBondTrade} from a {@code CapitalIndexedBondTrade}
  * using {@link CapitalIndexedBondTrade#resolve(ReferenceData)}.
  * <p>
+ * It is also the resolved form of {@link CapitalIndexedBondPosition} for those cases where a position is held.
+ * The position is priced as though the trade is fully settled.
+ * <p>
  * A {@code ResolvedCapitalIndexedBondTrade} is bound to data that changes over time, such as holiday calendars.
  * If the data changes, such as the addition of a new holiday, the resolved form will not be updated.
  * Care must be taken when placing the resolved form in a cache or persistence layer.
@@ -45,19 +46,19 @@ import com.opengamma.strata.product.TradeInfo;
  * Strata uses <i>decimal prices</i> for bonds in the trade model, pricers and market data.
  * For example, a price of 99.32% is represented in Strata by 0.9932.
  */
-@BeanDefinition
+@BeanDefinition(constructorScope = "package")
 public final class ResolvedCapitalIndexedBondTrade
     implements ResolvedTrade, ImmutableBean, Serializable {
 
   /**
-   * The additional trade information, defaulted to an empty instance.
+   * The additional information, defaulted to an empty instance.
    * <p>
-   * This allows additional information to be attached to the trade.
+   * This allows additional information to be attached.
    */
-  @PropertyDefinition(overrideGet = true)
-  private final TradeInfo info;
+  @PropertyDefinition(validate = "notNull", overrideGet = true)
+  private final PortfolioItemInfo info;
   /**
-   * The resolved fixed coupon bond product.
+   * The resolved capital indexed bond product.
    * <p>
    * The product captures the contracted financial details of the trade.
    */
@@ -71,25 +72,12 @@ public final class ResolvedCapitalIndexedBondTrade
   @PropertyDefinition
   private final double quantity;
   /**
-   * The <i>clean</i> price at which the bond was traded.
+   * The settlement details of the bond trade.
    * <p>
-   * The "clean" price excludes any accrued interest.
-   * <p>
-   * Strata uses <i>decimal prices</i> for bonds in the trade model, pricers and market data.
-   * For example, a price of 99.32% is represented in Strata by 0.9932.
+   * When this class is used to represent a position, this property will be empty.
    */
-  @PropertyDefinition(validate = "ArgChecker.notNegative")
-  private final double price;
-  /**
-   * The settlement of the bond trade.
-   * <p>
-   * The payment sign should be compatible with the product notional and trade quantity, 
-   * thus the payment is negative for positive quantity and positive for negative quantity.
-   * <p>
-   * This is effectively a fixed amount payment once the inflation rate is fixed.
-   */
-  @PropertyDefinition(validate = "notNull")
-  private final BondPaymentPeriod settlement;
+  @PropertyDefinition(get = "optional")
+  private final ResolvedCapitalIndexedBondSettlement settlement;
 
   //-------------------------------------------------------------------------
   @ImmutableDefaults
@@ -97,23 +85,7 @@ public final class ResolvedCapitalIndexedBondTrade
     builder.info = TradeInfo.empty();
   }
 
-  @ImmutableValidator
-  private void validate() {
-    ArgChecker.isTrue(info.getSettlementDate().isPresent(), "Settlement date must be present on TradeInfo");
-  }
-
-  //-------------------------------------------------------------------------
-  /**
-   * Gets the settlement date.
-   * 
-   * @return the settlement date
-   */
-  public LocalDate getSettlementDate() {
-    return info.getSettlementDate().get();  // settlement date checked in validate()
-  }
-
   //------------------------- AUTOGENERATED START -------------------------
-  ///CLOVER:OFF
   /**
    * The meta-bean for {@code ResolvedCapitalIndexedBondTrade}.
    * @return the meta-bean, not null
@@ -123,7 +95,7 @@ public final class ResolvedCapitalIndexedBondTrade
   }
 
   static {
-    JodaBeanUtils.registerMetaBean(ResolvedCapitalIndexedBondTrade.Meta.INSTANCE);
+    MetaBean.register(ResolvedCapitalIndexedBondTrade.Meta.INSTANCE);
   }
 
   /**
@@ -139,21 +111,24 @@ public final class ResolvedCapitalIndexedBondTrade
     return new ResolvedCapitalIndexedBondTrade.Builder();
   }
 
-  private ResolvedCapitalIndexedBondTrade(
-      TradeInfo info,
+  /**
+   * Creates an instance.
+   * @param info  the value of the property, not null
+   * @param product  the value of the property, not null
+   * @param quantity  the value of the property
+   * @param settlement  the value of the property
+   */
+  ResolvedCapitalIndexedBondTrade(
+      PortfolioItemInfo info,
       ResolvedCapitalIndexedBond product,
       double quantity,
-      double price,
-      BondPaymentPeriod settlement) {
+      ResolvedCapitalIndexedBondSettlement settlement) {
+    JodaBeanUtils.notNull(info, "info");
     JodaBeanUtils.notNull(product, "product");
-    ArgChecker.notNegative(price, "price");
-    JodaBeanUtils.notNull(settlement, "settlement");
     this.info = info;
     this.product = product;
     this.quantity = quantity;
-    this.price = price;
     this.settlement = settlement;
-    validate();
   }
 
   @Override
@@ -161,31 +136,21 @@ public final class ResolvedCapitalIndexedBondTrade
     return ResolvedCapitalIndexedBondTrade.Meta.INSTANCE;
   }
 
-  @Override
-  public <R> Property<R> property(String propertyName) {
-    return metaBean().<R>metaProperty(propertyName).createProperty(this);
-  }
-
-  @Override
-  public Set<String> propertyNames() {
-    return metaBean().metaPropertyMap().keySet();
-  }
-
   //-----------------------------------------------------------------------
   /**
-   * Gets the additional trade information, defaulted to an empty instance.
+   * Gets the additional information, defaulted to an empty instance.
    * <p>
-   * This allows additional information to be attached to the trade.
-   * @return the value of the property
+   * This allows additional information to be attached.
+   * @return the value of the property, not null
    */
   @Override
-  public TradeInfo getInfo() {
+  public PortfolioItemInfo getInfo() {
     return info;
   }
 
   //-----------------------------------------------------------------------
   /**
-   * Gets the resolved fixed coupon bond product.
+   * Gets the resolved capital indexed bond product.
    * <p>
    * The product captures the contracted financial details of the trade.
    * @return the value of the property, not null
@@ -208,30 +173,13 @@ public final class ResolvedCapitalIndexedBondTrade
 
   //-----------------------------------------------------------------------
   /**
-   * Gets the <i>clean</i> price at which the bond was traded.
+   * Gets the settlement details of the bond trade.
    * <p>
-   * The "clean" price excludes any accrued interest.
-   * <p>
-   * Strata uses <i>decimal prices</i> for bonds in the trade model, pricers and market data.
-   * For example, a price of 99.32% is represented in Strata by 0.9932.
-   * @return the value of the property
+   * When this class is used to represent a position, this property will be empty.
+   * @return the optional value of the property, not null
    */
-  public double getPrice() {
-    return price;
-  }
-
-  //-----------------------------------------------------------------------
-  /**
-   * Gets the settlement of the bond trade.
-   * <p>
-   * The payment sign should be compatible with the product notional and trade quantity,
-   * thus the payment is negative for positive quantity and positive for negative quantity.
-   * <p>
-   * This is effectively a fixed amount payment once the inflation rate is fixed.
-   * @return the value of the property, not null
-   */
-  public BondPaymentPeriod getSettlement() {
-    return settlement;
+  public Optional<ResolvedCapitalIndexedBondSettlement> getSettlement() {
+    return Optional.ofNullable(settlement);
   }
 
   //-----------------------------------------------------------------------
@@ -253,7 +201,6 @@ public final class ResolvedCapitalIndexedBondTrade
       return JodaBeanUtils.equal(info, other.info) &&
           JodaBeanUtils.equal(product, other.product) &&
           JodaBeanUtils.equal(quantity, other.quantity) &&
-          JodaBeanUtils.equal(price, other.price) &&
           JodaBeanUtils.equal(settlement, other.settlement);
     }
     return false;
@@ -265,19 +212,17 @@ public final class ResolvedCapitalIndexedBondTrade
     hash = hash * 31 + JodaBeanUtils.hashCode(info);
     hash = hash * 31 + JodaBeanUtils.hashCode(product);
     hash = hash * 31 + JodaBeanUtils.hashCode(quantity);
-    hash = hash * 31 + JodaBeanUtils.hashCode(price);
     hash = hash * 31 + JodaBeanUtils.hashCode(settlement);
     return hash;
   }
 
   @Override
   public String toString() {
-    StringBuilder buf = new StringBuilder(192);
+    StringBuilder buf = new StringBuilder(160);
     buf.append("ResolvedCapitalIndexedBondTrade{");
     buf.append("info").append('=').append(info).append(',').append(' ');
     buf.append("product").append('=').append(product).append(',').append(' ');
     buf.append("quantity").append('=').append(quantity).append(',').append(' ');
-    buf.append("price").append('=').append(price).append(',').append(' ');
     buf.append("settlement").append('=').append(JodaBeanUtils.toString(settlement));
     buf.append('}');
     return buf.toString();
@@ -296,8 +241,8 @@ public final class ResolvedCapitalIndexedBondTrade
     /**
      * The meta-property for the {@code info} property.
      */
-    private final MetaProperty<TradeInfo> info = DirectMetaProperty.ofImmutable(
-        this, "info", ResolvedCapitalIndexedBondTrade.class, TradeInfo.class);
+    private final MetaProperty<PortfolioItemInfo> info = DirectMetaProperty.ofImmutable(
+        this, "info", ResolvedCapitalIndexedBondTrade.class, PortfolioItemInfo.class);
     /**
      * The meta-property for the {@code product} property.
      */
@@ -309,15 +254,10 @@ public final class ResolvedCapitalIndexedBondTrade
     private final MetaProperty<Double> quantity = DirectMetaProperty.ofImmutable(
         this, "quantity", ResolvedCapitalIndexedBondTrade.class, Double.TYPE);
     /**
-     * The meta-property for the {@code price} property.
-     */
-    private final MetaProperty<Double> price = DirectMetaProperty.ofImmutable(
-        this, "price", ResolvedCapitalIndexedBondTrade.class, Double.TYPE);
-    /**
      * The meta-property for the {@code settlement} property.
      */
-    private final MetaProperty<BondPaymentPeriod> settlement = DirectMetaProperty.ofImmutable(
-        this, "settlement", ResolvedCapitalIndexedBondTrade.class, BondPaymentPeriod.class);
+    private final MetaProperty<ResolvedCapitalIndexedBondSettlement> settlement = DirectMetaProperty.ofImmutable(
+        this, "settlement", ResolvedCapitalIndexedBondTrade.class, ResolvedCapitalIndexedBondSettlement.class);
     /**
      * The meta-properties.
      */
@@ -326,7 +266,6 @@ public final class ResolvedCapitalIndexedBondTrade
         "info",
         "product",
         "quantity",
-        "price",
         "settlement");
 
     /**
@@ -344,8 +283,6 @@ public final class ResolvedCapitalIndexedBondTrade
           return product;
         case -1285004149:  // quantity
           return quantity;
-        case 106934601:  // price
-          return price;
         case 73828649:  // settlement
           return settlement;
       }
@@ -372,7 +309,7 @@ public final class ResolvedCapitalIndexedBondTrade
      * The meta-property for the {@code info} property.
      * @return the meta-property, not null
      */
-    public MetaProperty<TradeInfo> info() {
+    public MetaProperty<PortfolioItemInfo> info() {
       return info;
     }
 
@@ -393,18 +330,10 @@ public final class ResolvedCapitalIndexedBondTrade
     }
 
     /**
-     * The meta-property for the {@code price} property.
-     * @return the meta-property, not null
-     */
-    public MetaProperty<Double> price() {
-      return price;
-    }
-
-    /**
      * The meta-property for the {@code settlement} property.
      * @return the meta-property, not null
      */
-    public MetaProperty<BondPaymentPeriod> settlement() {
+    public MetaProperty<ResolvedCapitalIndexedBondSettlement> settlement() {
       return settlement;
     }
 
@@ -418,10 +347,8 @@ public final class ResolvedCapitalIndexedBondTrade
           return ((ResolvedCapitalIndexedBondTrade) bean).getProduct();
         case -1285004149:  // quantity
           return ((ResolvedCapitalIndexedBondTrade) bean).getQuantity();
-        case 106934601:  // price
-          return ((ResolvedCapitalIndexedBondTrade) bean).getPrice();
         case 73828649:  // settlement
-          return ((ResolvedCapitalIndexedBondTrade) bean).getSettlement();
+          return ((ResolvedCapitalIndexedBondTrade) bean).settlement;
       }
       return super.propertyGet(bean, propertyName, quiet);
     }
@@ -443,11 +370,10 @@ public final class ResolvedCapitalIndexedBondTrade
    */
   public static final class Builder extends DirectFieldsBeanBuilder<ResolvedCapitalIndexedBondTrade> {
 
-    private TradeInfo info;
+    private PortfolioItemInfo info;
     private ResolvedCapitalIndexedBond product;
     private double quantity;
-    private double price;
-    private BondPaymentPeriod settlement;
+    private ResolvedCapitalIndexedBondSettlement settlement;
 
     /**
      * Restricted constructor.
@@ -464,8 +390,7 @@ public final class ResolvedCapitalIndexedBondTrade
       this.info = beanToCopy.getInfo();
       this.product = beanToCopy.getProduct();
       this.quantity = beanToCopy.getQuantity();
-      this.price = beanToCopy.getPrice();
-      this.settlement = beanToCopy.getSettlement();
+      this.settlement = beanToCopy.settlement;
     }
 
     //-----------------------------------------------------------------------
@@ -478,8 +403,6 @@ public final class ResolvedCapitalIndexedBondTrade
           return product;
         case -1285004149:  // quantity
           return quantity;
-        case 106934601:  // price
-          return price;
         case 73828649:  // settlement
           return settlement;
         default:
@@ -491,7 +414,7 @@ public final class ResolvedCapitalIndexedBondTrade
     public Builder set(String propertyName, Object newValue) {
       switch (propertyName.hashCode()) {
         case 3237038:  // info
-          this.info = (TradeInfo) newValue;
+          this.info = (PortfolioItemInfo) newValue;
           break;
         case -309474065:  // product
           this.product = (ResolvedCapitalIndexedBond) newValue;
@@ -499,11 +422,8 @@ public final class ResolvedCapitalIndexedBondTrade
         case -1285004149:  // quantity
           this.quantity = (Double) newValue;
           break;
-        case 106934601:  // price
-          this.price = (Double) newValue;
-          break;
         case 73828649:  // settlement
-          this.settlement = (BondPaymentPeriod) newValue;
+          this.settlement = (ResolvedCapitalIndexedBondSettlement) newValue;
           break;
         default:
           throw new NoSuchElementException("Unknown property: " + propertyName);
@@ -517,61 +437,31 @@ public final class ResolvedCapitalIndexedBondTrade
       return this;
     }
 
-    /**
-     * @deprecated Use Joda-Convert in application code
-     */
-    @Override
-    @Deprecated
-    public Builder setString(String propertyName, String value) {
-      setString(meta().metaProperty(propertyName), value);
-      return this;
-    }
-
-    /**
-     * @deprecated Use Joda-Convert in application code
-     */
-    @Override
-    @Deprecated
-    public Builder setString(MetaProperty<?> property, String value) {
-      super.setString(property, value);
-      return this;
-    }
-
-    /**
-     * @deprecated Loop in application code
-     */
-    @Override
-    @Deprecated
-    public Builder setAll(Map<String, ? extends Object> propertyValueMap) {
-      super.setAll(propertyValueMap);
-      return this;
-    }
-
     @Override
     public ResolvedCapitalIndexedBondTrade build() {
       return new ResolvedCapitalIndexedBondTrade(
           info,
           product,
           quantity,
-          price,
           settlement);
     }
 
     //-----------------------------------------------------------------------
     /**
-     * Sets the additional trade information, defaulted to an empty instance.
+     * Sets the additional information, defaulted to an empty instance.
      * <p>
-     * This allows additional information to be attached to the trade.
-     * @param info  the new value
+     * This allows additional information to be attached.
+     * @param info  the new value, not null
      * @return this, for chaining, not null
      */
-    public Builder info(TradeInfo info) {
+    public Builder info(PortfolioItemInfo info) {
+      JodaBeanUtils.notNull(info, "info");
       this.info = info;
       return this;
     }
 
     /**
-     * Sets the resolved fixed coupon bond product.
+     * Sets the resolved capital indexed bond product.
      * <p>
      * The product captures the contracted financial details of the trade.
      * @param product  the new value, not null
@@ -596,33 +486,13 @@ public final class ResolvedCapitalIndexedBondTrade
     }
 
     /**
-     * Sets the <i>clean</i> price at which the bond was traded.
+     * Sets the settlement details of the bond trade.
      * <p>
-     * The "clean" price excludes any accrued interest.
-     * <p>
-     * Strata uses <i>decimal prices</i> for bonds in the trade model, pricers and market data.
-     * For example, a price of 99.32% is represented in Strata by 0.9932.
-     * @param price  the new value
+     * When this class is used to represent a position, this property will be empty.
+     * @param settlement  the new value
      * @return this, for chaining, not null
      */
-    public Builder price(double price) {
-      ArgChecker.notNegative(price, "price");
-      this.price = price;
-      return this;
-    }
-
-    /**
-     * Sets the settlement of the bond trade.
-     * <p>
-     * The payment sign should be compatible with the product notional and trade quantity,
-     * thus the payment is negative for positive quantity and positive for negative quantity.
-     * <p>
-     * This is effectively a fixed amount payment once the inflation rate is fixed.
-     * @param settlement  the new value, not null
-     * @return this, for chaining, not null
-     */
-    public Builder settlement(BondPaymentPeriod settlement) {
-      JodaBeanUtils.notNull(settlement, "settlement");
+    public Builder settlement(ResolvedCapitalIndexedBondSettlement settlement) {
       this.settlement = settlement;
       return this;
     }
@@ -630,12 +500,11 @@ public final class ResolvedCapitalIndexedBondTrade
     //-----------------------------------------------------------------------
     @Override
     public String toString() {
-      StringBuilder buf = new StringBuilder(192);
+      StringBuilder buf = new StringBuilder(160);
       buf.append("ResolvedCapitalIndexedBondTrade.Builder{");
       buf.append("info").append('=').append(JodaBeanUtils.toString(info)).append(',').append(' ');
       buf.append("product").append('=').append(JodaBeanUtils.toString(product)).append(',').append(' ');
       buf.append("quantity").append('=').append(JodaBeanUtils.toString(quantity)).append(',').append(' ');
-      buf.append("price").append('=').append(JodaBeanUtils.toString(price)).append(',').append(' ');
       buf.append("settlement").append('=').append(JodaBeanUtils.toString(settlement));
       buf.append('}');
       return buf.toString();
@@ -643,6 +512,5 @@ public final class ResolvedCapitalIndexedBondTrade
 
   }
 
-  ///CLOVER:ON
   //-------------------------- AUTOGENERATED END --------------------------
 }

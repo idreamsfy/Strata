@@ -13,7 +13,6 @@ import static com.opengamma.strata.basics.date.HolidayCalendarIds.GBLO;
 import static com.opengamma.strata.basics.index.FxIndices.GBP_USD_WM;
 import static com.opengamma.strata.basics.index.IborIndices.GBP_LIBOR_3M;
 import static com.opengamma.strata.collect.TestHelper.assertSerialization;
-import static com.opengamma.strata.collect.TestHelper.assertThrowsIllegalArg;
 import static com.opengamma.strata.collect.TestHelper.coverBeanEquals;
 import static com.opengamma.strata.collect.TestHelper.coverImmutableBean;
 import static com.opengamma.strata.collect.TestHelper.date;
@@ -21,6 +20,7 @@ import static com.opengamma.strata.product.common.PayReceive.PAY;
 import static com.opengamma.strata.product.common.PayReceive.RECEIVE;
 import static com.opengamma.strata.product.swap.SwapLegType.FIXED;
 import static com.opengamma.strata.product.swap.SwapLegType.IBOR;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.testng.Assert.assertEquals;
 
 import java.time.LocalDate;
@@ -144,7 +144,8 @@ public class RatePeriodSwapLegTest {
   }
 
   public void test_builder_invalidMixedCurrency() {
-    assertThrowsIllegalArg(() -> RatePeriodSwapLeg.builder()
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> RatePeriodSwapLeg.builder()
         .type(IBOR)
         .payReceive(RECEIVE)
         .paymentPeriods(RPP3)
@@ -162,6 +163,19 @@ public class RatePeriodSwapLegTest {
     ImmutableSet.Builder<Index> builder = ImmutableSet.builder();
     test.collectIndices(builder);
     assertEquals(builder.build(), ImmutableSet.of(GBP_LIBOR_3M));
+    assertEquals(test.allCurrencies(), ImmutableSet.of(GBP));
+  }
+
+  public void test_collectIndices_fxReset() {
+    RatePeriodSwapLeg test = RatePeriodSwapLeg.builder()
+        .type(IBOR)
+        .payReceive(RECEIVE)
+        .paymentPeriods(RPP1_FXRESET)
+        .build();
+    ImmutableSet.Builder<Index> builder = ImmutableSet.builder();
+    test.collectIndices(builder);
+    assertEquals(builder.build(), ImmutableSet.of(GBP_LIBOR_3M, GBP_USD_WM));
+    assertEquals(test.allCurrencies(), ImmutableSet.of(GBP, USD));
   }
 
   //-------------------------------------------------------------------------
@@ -225,7 +239,7 @@ public class RatePeriodSwapLegTest {
     assertEquals(test.resolve(REF_DATA), expected);
   }
 
-  public void test_resolve_omitFxResetNotionalExchange() {
+  public void test_resolve_FxResetOmitIntermediateNotionalExchange() {
     RatePeriodSwapLeg test = RatePeriodSwapLeg.builder()
         .type(IBOR)
         .payReceive(RECEIVE)
@@ -234,10 +248,39 @@ public class RatePeriodSwapLegTest {
         .intermediateExchange(false)
         .finalExchange(true)
         .build();
+
+    FxResetNotionalExchange initialExchange = FxResetNotionalExchange.of(
+        CurrencyAmount.of(USD, -8000d), DATE_2014_06_30, FxIndexObservation.of(GBP_USD_WM, DATE_2014_06_28, REF_DATA));
+    FxResetNotionalExchange finalExchange = FxResetNotionalExchange.of(
+        CurrencyAmount.of(USD, 8000d), DATE_2014_10_01, FxIndexObservation.of(GBP_USD_WM, DATE_2014_06_28, REF_DATA));
+
     ResolvedSwapLeg expected = ResolvedSwapLeg.builder()
         .type(IBOR)
         .payReceive(RECEIVE)
         .paymentPeriods(RPP1_FXRESET)
+        .paymentEvents(initialExchange, finalExchange)
+        .build();
+    assertEquals(test.resolve(REF_DATA), expected);
+  }
+
+  public void test_resolve_FxResetOmitInitialNotionalExchange() {
+    RatePeriodSwapLeg test = RatePeriodSwapLeg.builder()
+        .type(IBOR)
+        .payReceive(PAY)
+        .paymentPeriods(RPP1_FXRESET)
+        .initialExchange(false)
+        .intermediateExchange(true)
+        .finalExchange(true)
+        .build();
+
+    FxResetNotionalExchange finalExchange = FxResetNotionalExchange.of(
+        CurrencyAmount.of(USD, 8000d), DATE_2014_10_01, FxIndexObservation.of(GBP_USD_WM, DATE_2014_06_28, REF_DATA));
+
+    ResolvedSwapLeg expected = ResolvedSwapLeg.builder()
+        .type(IBOR)
+        .payReceive(PAY)
+        .paymentPeriods(RPP1_FXRESET)
+        .paymentEvents(finalExchange)
         .build();
     assertEquals(test.resolve(REF_DATA), expected);
   }

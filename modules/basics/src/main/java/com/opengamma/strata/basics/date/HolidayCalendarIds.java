@@ -67,6 +67,12 @@ public final class HolidayCalendarIds {
    */
   public static final HolidayCalendarId FRPA = HolidayCalendarId.of("FRPA");
   /**
+   * An identifier for the holiday calendar of Frankfurt, Germany, with code 'DEFR'.
+   * <p>
+   * This constant references the calendar for Frankfurt public holidays.
+   */
+  public static final HolidayCalendarId DEFR = HolidayCalendarId.of("DEFR");
+  /**
    * An identifier for the holiday calendar of Zurich, Switzerland, with code 'EUTA'.
    * <p>
    * This constant references the calendar for Zurich public holidays.
@@ -131,6 +137,12 @@ public final class HolidayCalendarIds {
    */
   public static final HolidayCalendarId BRBD = HolidayCalendarId.of("BRBD");
   /**
+   * An identifier for the holiday calendar of Montreal, Canada, with code 'CAMO'.
+   * <p>
+   * This constant references the calendar for Montreal bank holidays.
+   */
+  public static final HolidayCalendarId CAMO = HolidayCalendarId.of("CAMO");
+  /**
    * An identifier for the holiday calendar of Toronto, Canada, with code 'CATO'.
    * <p>
    * This constant references the calendar for Toronto bank holidays.
@@ -166,6 +178,18 @@ public final class HolidayCalendarIds {
    * This constant references the calendar for Oslo bank holidays.
    */
   public static final HolidayCalendarId NOOS = HolidayCalendarId.of("NOOS");
+  /**
+   * An identifier for the holiday calendar of Auckland, New Zealand, with code 'NZAU'.
+   * <p>
+   * This constant references the calendar for Auckland bank holidays.
+   */
+  public static final HolidayCalendarId NZAU = HolidayCalendarId.of("NZAU");
+  /**
+   * An identifier for the holiday calendar of Wellington, New Zealand, with code 'NZWE'.
+   * <p>
+   * This constant references the calendar for Wellington bank holidays.
+   */
+  public static final HolidayCalendarId NZWE = HolidayCalendarId.of("NZWE");
   /**
    * An identifier for the holiday calendar of Warsaw, Poland, with code 'PLWA'.
    * <p>

@@ -16,7 +16,11 @@ import org.testng.annotations.Test;
 
 import com.opengamma.strata.basics.ReferenceData;
 import com.opengamma.strata.basics.currency.AdjustablePayment;
+import com.opengamma.strata.basics.currency.Currency;
 import com.opengamma.strata.basics.currency.CurrencyAmount;
+import com.opengamma.strata.product.PortfolioItemSummary;
+import com.opengamma.strata.product.PortfolioItemType;
+import com.opengamma.strata.product.ProductType;
 import com.opengamma.strata.product.TradeInfo;
 
 /**
@@ -37,8 +41,22 @@ public class FxVanillaOptionTradeTest {
   public void test_builder() {
     FxVanillaOptionTrade test = sut();
     assertEquals(test.getProduct(), PRODUCT);
+    assertEquals(test.getProduct().getCurrencyPair(), PRODUCT.getCurrencyPair());
     assertEquals(test.getInfo(), TRADE_INFO);
     assertEquals(test.getPremium(), PREMIUM);
+    assertEquals(test.withInfo(TRADE_INFO).getInfo(), TRADE_INFO);
+  }
+
+  //-------------------------------------------------------------------------
+  public void test_summarize() {
+    FxVanillaOptionTrade trade = sut();
+    PortfolioItemSummary expected = PortfolioItemSummary.builder()
+        .portfolioItemType(PortfolioItemType.TRADE)
+        .productType(ProductType.FX_VANILLA_OPTION)
+        .currencies(Currency.USD, Currency.EUR)
+        .description("Long Rec EUR 1mm @ EUR/USD 1.35 Premium EUR 50k : 14Feb15")
+        .build();
+    assertEquals(trade.summarize(), expected);
   }
 
   //-------------------------------------------------------------------------

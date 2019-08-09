@@ -9,9 +9,9 @@ import static com.opengamma.strata.basics.date.HolidayCalendarIds.EUTA;
 import static com.opengamma.strata.basics.date.HolidayCalendarIds.GBLO;
 import static com.opengamma.strata.collect.TestHelper.assertJodaConvert;
 import static com.opengamma.strata.collect.TestHelper.assertSerialization;
-import static com.opengamma.strata.collect.TestHelper.assertThrowsIllegalArg;
 import static com.opengamma.strata.collect.TestHelper.coverPrivateConstructor;
 import static com.opengamma.strata.collect.TestHelper.date;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertSame;
 
@@ -28,6 +28,7 @@ import com.opengamma.strata.basics.ReferenceData;
 public class Business252DayCountTest {
 
   private static final ReferenceData REF_DATA = ReferenceData.standard();
+  private static final Object ANOTHER_TYPE = "";
 
   //-------------------------------------------------------------------------
   public void test_factory_name() {
@@ -72,7 +73,7 @@ public class Business252DayCountTest {
     DayCount test = DayCount.of("Bus/252 EUTA");
     LocalDate date1 = date(2014, 12, 2);
     LocalDate date2 = date(2014, 12, 1);
-    assertThrowsIllegalArg(() -> test.yearFraction(date1, date2));
+    assertThatIllegalArgumentException().isThrownBy(() -> test.yearFraction(date1, date2));
   }
 
   public void test_days() {
@@ -91,7 +92,7 @@ public class Business252DayCountTest {
     DayCount b = DayCount.of("Bus/252 GBLO");
     assertEquals(a.equals(a), true);
     assertEquals(a.equals(b), false);
-    assertEquals(a.equals("Rubbish"), false);
+    assertEquals(a.equals(ANOTHER_TYPE), false);
     assertEquals(a.equals(null), false);
     assertEquals(a.hashCode(), a.hashCode());
   }

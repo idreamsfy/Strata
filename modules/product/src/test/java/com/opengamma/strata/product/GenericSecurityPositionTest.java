@@ -37,8 +37,12 @@ public class GenericSecurityPositionTest {
     assertEquals(test.getLongQuantity(), QUANTITY);
     assertEquals(test.getShortQuantity(), 0d);
     assertEquals(test.getQuantity(), QUANTITY);
+    assertEquals(test.getProduct(), SECURITY);
     assertEquals(test.getSecurityId(), SECURITY.getSecurityId());
     assertEquals(test.getCurrency(), SECURITY.getCurrency());
+    assertEquals(test.withInfo(POSITION_INFO).getInfo(), POSITION_INFO);
+    assertEquals(test.withQuantity(129).getQuantity(), 129d, 0d);
+    assertEquals(test.withQuantity(-129).getQuantity(), -129d, 0d);
   }
 
   public void test_ofNet_withInfo_positive() {
@@ -93,6 +97,19 @@ public class GenericSecurityPositionTest {
     assertEquals(test.getLongQuantity(), LONG_QUANTITY);
     assertEquals(test.getShortQuantity(), SHORT_QUANTITY);
     assertEquals(test.getQuantity(), QUANTITY);
+  }
+
+  //-------------------------------------------------------------------------
+  public void test_summarize() {
+    GenericSecurityPosition trade = sut();
+    PortfolioItemSummary expected = PortfolioItemSummary.builder()
+        .id(POSITION_INFO.getId().orElse(null))
+        .portfolioItemType(PortfolioItemType.POSITION)
+        .productType(ProductType.SECURITY)
+        .currencies(SECURITY.getCurrency())
+        .description("1 x 100")
+        .build();
+    assertEquals(trade.summarize(), expected);
   }
 
   //-------------------------------------------------------------------------

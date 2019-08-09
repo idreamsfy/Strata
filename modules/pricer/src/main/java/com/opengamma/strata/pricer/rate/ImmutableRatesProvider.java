@@ -5,26 +5,27 @@
  */
 package com.opengamma.strata.pricer.rate;
 
+import static com.opengamma.strata.collect.Guavate.filtering;
 import static com.opengamma.strata.collect.Guavate.toImmutableSet;
 
 import java.io.Serializable;
 import java.time.LocalDate;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.NoSuchElementException;
 import java.util.Optional;
-import java.util.Set;
 import java.util.stream.Stream;
 
 import org.joda.beans.Bean;
 import org.joda.beans.BeanBuilder;
-import org.joda.beans.BeanDefinition;
 import org.joda.beans.ImmutableBean;
-import org.joda.beans.ImmutableDefaults;
 import org.joda.beans.JodaBeanUtils;
+import org.joda.beans.MetaBean;
 import org.joda.beans.MetaProperty;
-import org.joda.beans.Property;
-import org.joda.beans.PropertyDefinition;
+import org.joda.beans.gen.BeanDefinition;
+import org.joda.beans.gen.ImmutableDefaults;
+import org.joda.beans.gen.PropertyDefinition;
 import org.joda.beans.impl.direct.DirectMetaBean;
 import org.joda.beans.impl.direct.DirectMetaProperty;
 import org.joda.beans.impl.direct.DirectMetaPropertyMap;
@@ -43,9 +44,12 @@ import com.opengamma.strata.basics.index.OvernightIndex;
 import com.opengamma.strata.basics.index.PriceIndex;
 import com.opengamma.strata.collect.ArgChecker;
 import com.opengamma.strata.collect.timeseries.LocalDateDoubleTimeSeries;
+import com.opengamma.strata.data.MarketData;
 import com.opengamma.strata.data.MarketDataId;
 import com.opengamma.strata.data.MarketDataName;
 import com.opengamma.strata.market.curve.Curve;
+import com.opengamma.strata.market.curve.CurveGroupName;
+import com.opengamma.strata.market.curve.CurveId;
 import com.opengamma.strata.market.curve.CurveName;
 import com.opengamma.strata.pricer.DiscountFactors;
 import com.opengamma.strata.pricer.fx.DiscountFxForwardRates;
@@ -158,25 +162,27 @@ public final class ImmutableRatesProvider
   @Override
   public ImmutableSet<IborIndex> getIborIndices() {
     return indexCurves.keySet().stream()
-        .filter(IborIndex.class::isInstance)
-        .map(IborIndex.class::cast)
+        .flatMap(filtering(IborIndex.class))
         .collect(toImmutableSet());
   }
 
   @Override
   public ImmutableSet<OvernightIndex> getOvernightIndices() {
     return indexCurves.keySet().stream()
-        .filter(OvernightIndex.class::isInstance)
-        .map(OvernightIndex.class::cast)
+        .flatMap(filtering(OvernightIndex.class))
         .collect(toImmutableSet());
   }
 
   @Override
   public ImmutableSet<PriceIndex> getPriceIndices() {
     return indexCurves.keySet().stream()
-        .filter(PriceIndex.class::isInstance)
-        .map(PriceIndex.class::cast)
+        .flatMap(filtering(PriceIndex.class))
         .collect(toImmutableSet());
+  }
+
+  @Override
+  public ImmutableSet<Index> getTimeSeriesIndices() {
+    return timeSeries.keySet();
   }
 
   //-------------------------------------------------------------------------
@@ -201,15 +207,6 @@ public final class ImmutableRatesProvider
   @Override
   public LocalDateDoubleTimeSeries timeSeries(Index index) {
     return timeSeries.getOrDefault(index, LocalDateDoubleTimeSeries.empty());
-  }
-
-  // finds the index curve
-  private Curve indexCurve(Index index) {
-    Curve curve = indexCurves.get(index);
-    if (curve == null) {
-      throw new IllegalArgumentException("Unable to find index curve: " + index);
-    }
-    return curve;
   }
 
   //-------------------------------------------------------------------------
@@ -247,23 +244,58 @@ public final class ImmutableRatesProvider
   //-------------------------------------------------------------------------
   @Override
   public IborIndexRates iborIndexRates(IborIndex index) {
-    LocalDateDoubleTimeSeries fixings = timeSeries(index);
-    Curve curve = indexCurve(index);
-    return IborIndexRates.of(index, valuationDate, curve, fixings);
+    Curve curve = indexCurves.get(index);
+    if (curve == null) {
+      return historicCurve(index);
+    }
+    return IborIndexRates.of(index, valuationDate, curve, timeSeries(index));
   }
 
+  // creates a historic rates instance if index is inactive and time-series is available
+  private IborIndexRates historicCurve(IborIndex index) {
+    LocalDateDoubleTimeSeries fixings = timeSeries(index);
+    if (index.isActive() || fixings.isEmpty()) {
+      throw new IllegalArgumentException("Unable to find Ibor index curve: " + index);
+    }
+    return HistoricIborIndexRates.of(index, valuationDate, fixings);
+  }
+
+  //-------------------------------------------------------------------------
   @Override
   public OvernightIndexRates overnightIndexRates(OvernightIndex index) {
-    LocalDateDoubleTimeSeries fixings = timeSeries(index);
-    Curve curve = indexCurve(index);
-    return OvernightIndexRates.of(index, valuationDate, curve, fixings);
+    Curve curve = indexCurves.get(index);
+    if (curve == null) {
+      return historicCurve(index);
+    }
+    return OvernightIndexRates.of(index, valuationDate, curve, timeSeries(index));
   }
 
+  // creates a historic rates instance if index is inactive and time-series is available
+  private OvernightIndexRates historicCurve(OvernightIndex index) {
+    LocalDateDoubleTimeSeries fixings = timeSeries(index);
+    if (index.isActive() || fixings.isEmpty()) {
+      throw new IllegalArgumentException("Unable to find Overnight index curve: " + index);
+    }
+    return HistoricOvernightIndexRates.of(index, valuationDate, fixings);
+  }
+
+  //-------------------------------------------------------------------------
   @Override
   public PriceIndexValues priceIndexValues(PriceIndex index) {
+    Curve curve = indexCurves.get(index);
+    if (curve == null) {
+      return historicCurve(index);
+    }
+    return PriceIndexValues.of(index, valuationDate, curve, timeSeries(index));
+  }
+
+  // creates a historic rates instance if index is inactive and time-series is available
+  private PriceIndexValues historicCurve(PriceIndex index) {
     LocalDateDoubleTimeSeries fixings = timeSeries(index);
-    Curve curve = indexCurve(index);
-    return PriceIndexValues.of(index, valuationDate, curve, fixings);
+    if (index.isActive() || fixings.isEmpty()) {
+      throw new IllegalArgumentException("Unable to find Price index curve: " + index);
+    }
+    return HistoricPriceIndexValues.of(index, valuationDate, fixings);
   }
 
   //-------------------------------------------------------------------------
@@ -314,8 +346,40 @@ public final class ImmutableRatesProvider
     return this;
   }
 
+  /**
+   * Returns a map containing all the curves, keyed by curve name.
+   * <p>
+   * No checks are performed to see if one curve name is mapped to two different curves.
+   * 
+   * @return the map of curves
+   */
+  public Map<CurveName, Curve> getCurves() {
+    // use a HashMap to avoid errors due to duplicates
+    Map<CurveName, Curve> curves = new HashMap<>();
+    discountCurves.values().forEach(curve -> curves.put(curve.getName(), curve));
+    indexCurves.values().forEach(curve -> curves.put(curve.getName(), curve));
+    return curves;
+  }
+
+  /**
+   * Returns a map containing all the curves, keyed by curve identifier.
+   * <p>
+   * No checks are performed to see if one curve name is mapped to two different curves.
+   * <p>
+   * This method is useful when transforming a rates provider to {@link MarketData}.
+   * 
+   * @param groupName  the curve group name
+   * @return the map of curves, keyed by {@code CurveId}.
+   */
+  public Map<CurveId, Curve> getCurves(CurveGroupName groupName) {
+    // use a HashMap to avoid errors due to duplicates
+    Map<CurveId, Curve> curves = new HashMap<>();
+    discountCurves.values().forEach(curve -> curves.put(CurveId.of(groupName, curve.getName()), curve));
+    indexCurves.values().forEach(curve -> curves.put(CurveId.of(groupName, curve.getName()), curve));
+    return curves;
+  }
+
   //------------------------- AUTOGENERATED START -------------------------
-  ///CLOVER:OFF
   /**
    * The meta-bean for {@code ImmutableRatesProvider}.
    * @return the meta-bean, not null
@@ -325,7 +389,7 @@ public final class ImmutableRatesProvider
   }
 
   static {
-    JodaBeanUtils.registerMetaBean(ImmutableRatesProvider.Meta.INSTANCE);
+    MetaBean.register(ImmutableRatesProvider.Meta.INSTANCE);
   }
 
   /**
@@ -357,16 +421,6 @@ public final class ImmutableRatesProvider
   @Override
   public ImmutableRatesProvider.Meta metaBean() {
     return ImmutableRatesProvider.Meta.INSTANCE;
-  }
-
-  @Override
-  public <R> Property<R> property(String propertyName) {
-    return metaBean().<R>metaProperty(propertyName).createProperty(this);
-  }
-
-  @Override
-  public Set<String> propertyNames() {
-    return metaBean().metaPropertyMap().keySet();
   }
 
   //-----------------------------------------------------------------------
@@ -635,7 +689,6 @@ public final class ImmutableRatesProvider
      * Restricted constructor.
      */
     private Builder() {
-      super(meta());
       applyDefaults(this);
     }
 
@@ -709,6 +762,5 @@ public final class ImmutableRatesProvider
 
   }
 
-  ///CLOVER:ON
   //-------------------------- AUTOGENERATED END --------------------------
 }

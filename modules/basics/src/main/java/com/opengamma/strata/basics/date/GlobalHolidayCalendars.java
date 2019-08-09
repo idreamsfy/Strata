@@ -16,16 +16,21 @@ import static java.time.temporal.TemporalAdjusters.dayOfWeekInMonth;
 import static java.time.temporal.TemporalAdjusters.firstInMonth;
 import static java.time.temporal.TemporalAdjusters.lastInMonth;
 import static java.time.temporal.TemporalAdjusters.nextOrSame;
-import static java.util.stream.Collectors.toSet;
+import static java.time.temporal.TemporalAdjusters.previous;
 
+import java.io.DataOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
-import java.time.MonthDay;
 import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+
+import com.google.common.io.Files;
 
 /**
  * Implementation of some common global holiday calendars.
@@ -35,199 +40,64 @@ import java.util.Set;
  * This data may or may not be sufficient for your production needs.
  */
 final class GlobalHolidayCalendars {
+  // WARNING!!
+  // If you change this file, you must run the main method to update the binary file
+  // which is used at runtime (for performance reasons)
 
-  /**
-   * The holiday calendar for London, United Kingdom, with code 'GBLO'.
-   * <p>
-   * This constant provides the calendar for London bank holidays.
-   * <p>
-   * The default implementation is based on original research and covers 1950 to 2099.
-   * Future dates are an extrapolations of the latest known rules.
-   */
-  public static final HolidayCalendar GBLO = generateLondon();
-  /**
-   * The holiday calendar for Paris, France, with code 'FRPA'.
-   * <p>
-   * This constant provides the calendar for Paris public holidays.
-   * <p>
-   * The default implementation is based on original research and covers 1950 to 2099.
-   * Future and past dates are an extrapolations of the latest known rules.
-   */
-  public static final HolidayCalendar FRPA = generateParis();
-  /**
-   * The holiday calendar for Zurich, Switzerland, with code 'EUTA'.
-   * <p>
-   * This constant provides the calendar for Zurich public holidays.
-   * <p>
-   * The default implementation is based on original research and covers 1950 to 2099.
-   * Future and past dates are an extrapolations of the latest known rules.
-   */
-  public static final HolidayCalendar CHZU = generateZurich();
-  /**
-   * The holiday calendar for the European Union TARGET system, with code 'EUTA'.
-   * <p>
-   * This constant provides the calendar for the TARGET interbank payment system holidays.
-   * <p>
-   * The default implementation is based on original research and covers 1997 to 2099.
-   * Future dates are an extrapolations of the latest known rules.
-   * <p>
-   * Referenced by the 2006 ISDA definitions 1.8.
-   */
-  public static final HolidayCalendar EUTA = generateEuropeanTarget();
-  /**
-   * The holiday calendar for United States Government Securities, with code 'USGS'.
-   * <p>
-   * This constant provides the calendar for United States Government Securities as per SIFMA.
-   * <p>
-   * The default implementation is based on original research and covers 1950 to 2099.
-   * Future and past dates are an extrapolations of the latest known rules.
-   * <p>
-   * Referenced by the 2006 ISDA definitions 1.11.
-   */
-  public static final HolidayCalendar USGS = generateUsGovtSecurities();
-  /**
-   * The holiday calendar for New York, United States, with code 'USNY'.
-   * <p>
-   * This constant provides the calendar for New York holidays.
-   * <p>
-   * The default implementation is based on original research and covers 1950 to 2099.
-   * Future and past dates are an extrapolations of the latest known rules.
-   */
-  public static final HolidayCalendar USNY = generateUsNewYork();
-  /**
-   * The holiday calendar for the Federal Reserve Bank of New York, with code 'NYFD'.
-   * <p>
-   * This constant provides the calendar for the Federal Reserve Bank of New York holidays.
-   * <p>
-   * The default implementation is based on original research and covers 1950 to 2099.
-   * Future and past dates are an extrapolations of the latest known rules.
-   * <p>
-   * Referenced by the 2006 ISDA definitions 1.9.
-   */
-  public static final HolidayCalendar NYFD = generateNewYorkFed();
-  /**
-   * The holiday calendar for the New York Stock Exchange, with code 'NYSE'.
-   * <p>
-   * This constant provides the calendar for the New York Stock Exchange.
-   * <p>
-   * The default implementation is based on original research and covers 1950 to 2099.
-   * Future and past dates are an extrapolations of the latest known rules.
-   * <p>
-   * Referenced by the 2006 ISDA definitions 1.10.
-   */
-  public static final HolidayCalendar NYSE = generateNewYorkStockExchange();
-  /**
-   * The holiday calendar for Tokyo, Japan, with code 'JPTO'.
-   * <p>
-   * This constant provides the calendar for Tokyo bank holidays.
-   * <p>
-   * The default implementation is based on original research and covers 1950 to 2099.
-   * Future and past dates are an extrapolations of the latest known rules.
-   */
-  public static final HolidayCalendar JPTO = generateTokyo();
-
-  /**
-   * The holiday calendar for Sydney, Australia, with code 'AUSY'.
-   * <p>
-   * This constant provides the calendar for Sydney holidays.
-   * <p>
-   * The default implementation is based on original research and covers 1950 to 2099.
-   * Future and past dates are an extrapolations of the latest known rules.
-   */
-  public static final HolidayCalendar AUSY = generateSydney();
-  /**
-   * The holiday calendar for Brazil with code 'BRBD'.
-   * <p>
-   * This constant references the combined calendar for Brazil bank holidays.
-   * This unites city-level calendars.
-   * <p>
-   * The default implementation is based on original research and covers 1950 to 2099.
-   * Future and past dates are an extrapolations of the latest known rules.
-   */
-  public static final HolidayCalendar BRBD = generateBrazil();
-  /**
-   * The holiday calendar for Toronto, Canada, with code 'CATO'.
-   * <p>
-   * This constant provides the calendar for Toronto holidays.
-   * <p>
-   * The default implementation is based on original research and covers 1950 to 2099.
-   * Future and past dates are an extrapolations of the latest known rules.
-   */
-  public static final HolidayCalendar CATO = generateToronto();
-  /**
-   * The holiday calendar of Prague, Czech Republic, with code 'CZPR'.
-   * <p>
-   * This constant provides the calendar for Prague bank holidays.
-   * <p>
-   * The default implementation is based on original research and covers 1950 to 2099.
-   * Future and past dates are an extrapolations of the latest known rules.
-   */
-  public static final HolidayCalendar CZPR = generatePrague();
-  /**
-   * The holiday calendar for Copenhagen, Denmark, with code 'DKCO'.
-   * <p>
-   * This constant provides the calendar for Copenhagen holidays.
-   * <p>
-   * The default implementation is based on original research and covers 1950 to 2099.
-   * Future and past dates are an extrapolations of the latest known rules.
-   */
-  public static final HolidayCalendar DKCO = generateCopenhagen();
-  /**
-   * The holiday calendar for Budapest, Hungary, with code 'HUBU'.
-   * <p>
-   * This constant provides the calendar for Budapest holidays.
-   * <p>
-   * The default implementation is based on original research and covers 1950 to 2099.
-   * Future and past dates are an extrapolations of the latest known rules.
-   */
-  public static final HolidayCalendar HUBU = generateBudapest();
-  /**
-   * The holiday calendar for Mexico City, Mexico, with code 'HUBU'.
-   * <p>
-   * This constant provides the calendar for Mexico City holidays.
-   * <p>
-   * The default implementation is based on original research and covers 1950 to 2099.
-   * Future and past dates are an extrapolations of the latest known rules.
-   */
-  public static final HolidayCalendar MXMC = generateMexicoCity();
-  /**
-   * The holiday calendar for Oslo, Norway, with code 'NOOS'.
-   * <p>
-   * This constant provides the calendar for Oslo holidays.
-   * <p>
-   * The default implementation is based on original research and covers 1950 to 2099.
-   * Future and past dates are an extrapolations of the latest known rules.
-   */
-  public static final HolidayCalendar NOOS = generateOslo();
-  /**
-   * The holiday calendar for Warsaw, Poland, with code 'PLWA'.
-   * <p>
-   * This constant provides the calendar for Warsaw holidays.
-   * <p>
-   * The default implementation is based on original research and covers 1950 to 2099.
-   * Future and past dates are an extrapolations of the latest known rules.
-   */
-  public static final HolidayCalendar PLWA = generateWarsaw();
-  /**
-   * The holiday calendar for Stockholm, Sweden, with code 'SEST'.
-   * <p>
-   * This constant provides the calendar for Stockholm holidays.
-   * <p>
-   * The default implementation is based on original research and covers 1950 to 2099.
-   * Future and past dates are an extrapolations of the latest known rules.
-   */
-  public static final HolidayCalendar SEST = generateStockholm();
-  /**
-   * The holiday calendar for Johannesburg, South Africa, with code 'ZAJO'.
-   * <p>
-   * This constant provides the calendar for Johannesburg holidays.
-   * <p>
-   * The default implementation is based on original research and covers 1950 to 2099.
-   * Future and past dates are an extrapolations of the latest known rules.
-   */
-  public static final HolidayCalendar ZAJO = generateJohannesburg();
+  /** Where to store the file. */
+  private static final File DATA_FILE =
+      new File("src/main/resources/com/opengamma/strata/basics/date/GlobalHolidayCalendars.bin");
 
   //-------------------------------------------------------------------------
+  /**
+   * Used to generate a binary holiday data file.
+   * 
+   * @param args ignored
+   * @throws IOException if an IO error occurs
+   */
+  public static void main(String[] args) throws IOException {
+    Files.createParentDirs(DATA_FILE);
+    ImmutableHolidayCalendar[] calendars = {
+        generateLondon(),
+        generateParis(),
+        generateFrankfurt(),
+        generateZurich(),
+        generateEuropeanTarget(),
+        generateUsGovtSecurities(),
+        generateUsNewYork(),
+        generateNewYorkFed(),
+        generateNewYorkStockExchange(),
+        generateTokyo(),
+        generateSydney(),
+        generateBrazil(),
+        generateMontreal(),
+        generateToronto(),
+        generatePrague(),
+        generateCopenhagen(),
+        generateBudapest(),
+        generateMexicoCity(),
+        generateOslo(),
+        generateAuckland(),
+        generateWellington(),
+        generateNewZealand(),
+        generateWarsaw(),
+        generateStockholm(),
+        generateJohannesburg(),
+    };
+    try (FileOutputStream fos = new FileOutputStream(DATA_FILE)) {
+      try (DataOutputStream out = new DataOutputStream(fos)) {
+        out.writeByte('H');
+        out.writeByte('C');
+        out.writeByte('a');
+        out.writeByte('l');
+        out.writeShort(calendars.length);
+        for (ImmutableHolidayCalendar cal : calendars) {
+          cal.writeExternal(out);
+        }
+      }
+    }
+  }
+
   /**
    * Restricted constructor.
    */
@@ -311,7 +181,7 @@ final class GlobalHolidayCalendars {
   // New Years Eve is holiday for cash markets and derivatives in 2015
   // https://www.euronext.com/en/holidays-and-hours
   // https://www.euronext.com/en/trading/nyse-euronext-trading-calendar/archives
-  // evidence suggests that Monday is holiday when Tuesday is, and Friday is holiday when Thursday is
+  // some sources have Monday is holiday when Tuesday is, and Friday is holiday when Thursday is (not applying this)
   static ImmutableHolidayCalendar generateParis() {
     List<LocalDate> holidays = new ArrayList<>(2000);
     for (int year = 1950; year <= 2099; year++) {
@@ -332,9 +202,41 @@ final class GlobalHolidayCalendars {
       holidays.add(date(year, 12, 26));  // saint stephen
     }
     holidays.add(date(1999, 12, 31));  // millennium
-    applyBridging(holidays);
     removeSatSun(holidays);
     return ImmutableHolidayCalendar.of(HolidayCalendarIds.FRPA, holidays, SATURDAY, SUNDAY);
+  }
+
+  //-------------------------------------------------------------------------
+  // generate DEFR
+  // data sources
+  // https://www.feiertagskalender.ch/index.php?geo=3122&klasse=3&jahr=2017&hl=en
+  // http://jollyday.sourceforge.net/data/de.html
+  // http://en.boerse-frankfurt.de/basics-marketplaces-tradingcalendar2019
+  static ImmutableHolidayCalendar generateFrankfurt() {
+    List<LocalDate> holidays = new ArrayList<>(2000);
+    for (int year = 1950; year <= 2099; year++) {
+      holidays.add(date(year, 1, 1));  // new year
+      holidays.add(easter(year).minusDays(2));  // good friday
+      holidays.add(easter(year).plusDays(1));  // easter monday
+      holidays.add(date(year, 5, 1));  // labour day
+      holidays.add(easter(year).plusDays(39));  // ascension day
+      holidays.add(easter(year).plusDays(50));  // whit monday
+      holidays.add(easter(year).plusDays(60));  // corpus christi
+      if (year >= 2000) {
+        holidays.add(date(year, 10, 3));  // german unity
+      }
+      if (year <= 1994) {
+        // Wed before the Sunday that is 2 weeks before first advent, which is 4th Sunday before Christmas
+        holidays.add(date(year, 12, 25).with(previous(SUNDAY)).minusWeeks(6).minusDays(4));  // repentance
+      }
+      holidays.add(date(year, 12, 24));  // christmas eve
+      holidays.add(date(year, 12, 25));  // christmas day
+      holidays.add(date(year, 12, 26));  // saint stephen
+      holidays.add(date(year, 12, 31));  // new year
+    }
+    holidays.add(date(2017, 10, 31));  // reformation day
+    removeSatSun(holidays);
+    return ImmutableHolidayCalendar.of(HolidayCalendarIds.DEFR, holidays, SATURDAY, SUNDAY);
   }
 
   //-------------------------------------------------------------------------
@@ -464,6 +366,7 @@ final class GlobalHolidayCalendars {
         holidays.add(date(year, 10, 30));
       }
     }
+    holidays.add(date(2018, 12, 5));  // Death of George H.W. Bush
     removeSatSun(holidays);
     return ImmutableHolidayCalendar.of(HolidayCalendarIds.USGS, holidays, SATURDAY, SUNDAY);
   }
@@ -576,6 +479,7 @@ final class GlobalHolidayCalendars {
     holidays.add(date(2004, 6, 11));  // Death of Ronald Reagan
     holidays.add(date(2007, 1, 2));  // Death of Gerald Ford
     holidays.add(date(2012, 10, 30));  // Hurricane Sandy
+    holidays.add(date(2018, 12, 5));  // Death of George H.W. Bush
     removeSatSun(holidays);
     return ImmutableHolidayCalendar.of(HolidayCalendarIds.NYSE, holidays, SATURDAY, SUNDAY);
   }
@@ -589,6 +493,8 @@ final class GlobalHolidayCalendars {
   // http://www8.cao.go.jp/chosei/shukujitsu/gaiyou.html (law)
   // http://www.nao.ac.jp/faq/a0301.html (equinox)
   // http://eco.mtk.nao.ac.jp/koyomi/faq/holiday.html.en
+  // https://www.jpx.co.jp/english/announce/market-holidays.html
+  // https://www.loc.gov/law/foreign-news/article/japan-three-holidays-to-be-moved-to-ease-2020-olympic-ceremony-traffic/
   static ImmutableHolidayCalendar generateTokyo() {
     List<LocalDate> holidays = new ArrayList<>(2000);
     for (int year = 1950; year <= 2099; year++) {
@@ -633,13 +539,19 @@ final class GlobalHolidayCalendars {
         holidays.add(bumpSunToMon(date(year, 5, 5)));
       }
       // marine
-      if (year >= 2003) {
+      if (year == 2020) {
+        // moved because of the Olympics (day prior to opening ceremony)
+        holidays.add(date(year, 7, 23));
+      } else if (year >= 2003) {
         holidays.add(date(year, 7, 1).with(dayOfWeekInMonth(3, MONDAY)));
       } else if (year >= 1996) {
         holidays.add(bumpSunToMon(date(year, 7, 20)));
       }
       // mountain
-      if (year >= 2016) {
+      if (year == 2020) {
+        // moved because of the Olympics (day after closing ceremony)
+        holidays.add(date(year, 8, 10));
+      } else if (year >= 2016) {
         holidays.add(bumpSunToMon(date(year, 8, 11)));
       }
       // aged
@@ -657,7 +569,10 @@ final class GlobalHolidayCalendars {
       citizensDay(holidays, date(year, 9, 20), date(year, 9, 22));
       citizensDay(holidays, date(year, 9, 21), date(year, 9, 23));
       // health-sports
-      if (year >= 2000) {
+      if (year == 2020) {
+        // moved because of the Olympics (day of opening ceremony)
+        holidays.add(date(2020, 7, 24));
+      } else if (year >= 2000) {
         holidays.add(date(year, 10, 1).with(dayOfWeekInMonth(2, MONDAY)));
       } else if (year >= 1966) {
         holidays.add(bumpSunToMon(date(year, 10, 10)));
@@ -666,9 +581,11 @@ final class GlobalHolidayCalendars {
       holidays.add(bumpSunToMon(date(year, 11, 3)));
       // labor (from 1948)
       holidays.add(bumpSunToMon(date(year, 11, 23)));
-      // emperor (current emporer)
-      if (year >= 1990) {
+      // emperor (current emporer birthday)
+      if (year >= 1990 && year < 2019) {
         holidays.add(bumpSunToMon(date(year, 12, 23)));
+      } else if (year >= 2020) {
+        holidays.add(bumpSunToMon(date(year, 2, 23)));
       }
       // new years eve - bank of Japan, but not national holiday
       holidays.add(bumpSunToMon(date(year, 12, 31)));
@@ -677,6 +594,10 @@ final class GlobalHolidayCalendars {
     holidays.add(date(1989, 2, 24));  // funeral showa
     holidays.add(date(1990, 11, 12));  // enthrone akihito
     holidays.add(date(1993, 6, 9));  // marriage naruhito
+    holidays.add(date(2019, 4, 30));  // abdication
+    holidays.add(date(2019, 5, 1));  // accession
+    holidays.add(date(2019, 5, 2));  // accession
+    holidays.add(date(2019, 10, 22));  // enthronement
     removeSatSun(holidays);
     return ImmutableHolidayCalendar.of(HolidayCalendarIds.JPTO, holidays, SATURDAY, SUNDAY);
   }
@@ -688,6 +609,36 @@ final class GlobalHolidayCalendars {
         holidays.add(date1.plusDays(1));
       }
     }
+  }
+
+  //-------------------------------------------------------------------------
+  // generate CAMO
+  // data sources
+  // https://www.cnt.gouv.qc.ca/en/leaves-and-absences/statutory-holidays/index.html
+  // https://www.canada.ca/en/revenue-agency/services/tax/public-holidays.html
+  // http://www.statutoryholidayscanada.com/
+  static ImmutableHolidayCalendar generateMontreal() {
+    List<LocalDate> holidays = new ArrayList<>(2000);
+    for (int year = 1950; year <= 2099; year++) {
+      // new year
+      holidays.add(bumpToMon(date(year, 1, 1)));
+      // good friday
+      holidays.add(easter(year).minusDays(2));
+      // patriots
+      holidays.add(date(year, 5, 25).with(TemporalAdjusters.previous(MONDAY)));
+      // fete nationale quebec
+      holidays.add(bumpToMon(date(year, 6, 24)));
+      // canada
+      holidays.add(bumpToMon(date(year, 7, 1)));
+      // labour
+      holidays.add(first(year, 9).with(dayOfWeekInMonth(1, MONDAY)));
+      // thanksgiving
+      holidays.add(first(year, 10).with(dayOfWeekInMonth(2, MONDAY)));
+      // christmas
+      holidays.add(christmasBumpedSatSun(year));
+    }
+    removeSatSun(holidays);
+    return ImmutableHolidayCalendar.of(HolidayCalendarId.of("CAMO"), holidays, SATURDAY, SUNDAY);
   }
 
   //-------------------------------------------------------------------------
@@ -808,11 +759,86 @@ final class GlobalHolidayCalendars {
   }
 
   //-------------------------------------------------------------------------
+  // generate NZAU
+  // https://www.nzfma.org/Site/practices_standards/market_conventions.aspx
+  static ImmutableHolidayCalendar generateAuckland() {
+    List<LocalDate> holidays = new ArrayList<>(2000);
+    for (int year = 1950; year <= 2099; year++) {
+      newZealand(holidays, year);
+      // auckland anniversary day
+      holidays.add(date(year, 1, 29).minusDays(3).with(nextOrSame(MONDAY)));
+    }
+    removeSatSun(holidays);
+    return ImmutableHolidayCalendar.of(HolidayCalendarId.of("NZAU"), holidays, SATURDAY, SUNDAY);
+  }
+
+  // generate NZWE
+  // https://www.nzfma.org/Site/practices_standards/market_conventions.aspx
+  static ImmutableHolidayCalendar generateWellington() {
+    List<LocalDate> holidays = new ArrayList<>(2000);
+    for (int year = 1950; year <= 2099; year++) {
+      newZealand(holidays, year);
+      // wellington anniversary day
+      holidays.add(date(year, 1, 22).minusDays(3).with(nextOrSame(MONDAY)));
+    }
+    removeSatSun(holidays);
+    return ImmutableHolidayCalendar.of(HolidayCalendarId.of("NZWE"), holidays, SATURDAY, SUNDAY);
+  }
+
+  // generate NZBD
+  // https://www.nzfma.org/Site/practices_standards/market_conventions.aspx
+  static ImmutableHolidayCalendar generateNewZealand() {
+    // artificial non-ISDA definition named after BRBD for Brazil
+    // this is needed as NZD-BBR index is published on both Wellington and Auckland anniversary days
+    List<LocalDate> holidays = new ArrayList<>(2000);
+    for (int year = 1950; year <= 2099; year++) {
+      newZealand(holidays, year);
+    }
+    removeSatSun(holidays);
+    return ImmutableHolidayCalendar.of(HolidayCalendarId.of("NZBD"), holidays, SATURDAY, SUNDAY);
+  }
+
+  private static void newZealand(List<LocalDate> holidays, int year) {
+    // new year and day after
+    LocalDate newYear = bumpToMon(date(year, 1, 1));
+    holidays.add(newYear);
+    holidays.add(bumpToMon(newYear.plusDays(1)));
+    // waitangi day
+    // https://www.employment.govt.nz/leave-and-holidays/public-holidays/public-holidays-and-anniversary-dates/
+    if (year >= 2014) {
+      holidays.add(bumpToMon(date(year, 2, 6)));
+    } else {
+      holidays.add(date(year, 2, 6));
+    }
+    // good friday
+    holidays.add(easter(year).minusDays(2));
+    // easter monday
+    holidays.add(easter(year).plusDays(1));
+    // anzac day
+    // https://www.employment.govt.nz/leave-and-holidays/public-holidays/public-holidays-and-anniversary-dates/
+    if (year >= 2014) {
+      holidays.add(bumpToMon(date(year, 4, 25)));
+    } else {
+      holidays.add(date(year, 4, 25));
+    }
+    // queens birthday
+    holidays.add(first(year, 6).with(firstInMonth(MONDAY)));
+    // labour day
+    holidays.add(first(year, 10).with(dayOfWeekInMonth(4, MONDAY)));
+    // christmas
+    holidays.add(christmasBumpedSatSun(year));
+    holidays.add(boxingDayBumpedSatSun(year));
+  }
+
+  //-------------------------------------------------------------------------
   // generate PLWA
   // data sources#
   // http://isap.sejm.gov.pl/DetailsServlet?id=WDU19510040028 and linked pages
   // https://www.gpw.pl/dni_bez_sesji_en
   // http://jollyday.sourceforge.net/data/pl.html
+  // https://www.gpw.pl/session-details
+  // https://www.gpw.pl/news?cmn_id=107609&title=No+exchange+trading+session+on+12+November+2018
+  // https://www.gpw.pl/news?cmn_id=107794&title=December+24%2C+2018+-+Closing+day
   static ImmutableHolidayCalendar generateWarsaw() {
     // holiday law dates from 1951, but don't know situation before then, so ignore 1951 date
     List<LocalDate> holidays = new ArrayList<>(2000);
@@ -823,8 +849,6 @@ final class GlobalHolidayCalendars {
       if (year < 1961 || year >= 2011) {
         holidays.add(date(year, 1, 6));
       }
-      // good friday
-      holidays.add(easter(year).minusDays(2));
       // easter monday
       holidays.add(easter(year).plusDays(1));
       // state
@@ -861,6 +885,9 @@ final class GlobalHolidayCalendars {
         holidays.add(nyeve);
       }
     }
+    // 100th independence day anniversary
+    holidays.add(date(2018, 11, 12));
+
     removeSatSun(holidays);
     return ImmutableHolidayCalendar.of(HolidayCalendarId.of("PLWA"), holidays, SATURDAY, SUNDAY);
   }
@@ -924,9 +951,9 @@ final class GlobalHolidayCalendars {
       holidays.add(first(year, 6).with(dayOfWeekInMonth(2, MONDAY)));
       // bank holiday
       holidays.add(first(year, 8).with(dayOfWeekInMonth(1, MONDAY)));
-      // labour day 
+      // labour day
       holidays.add(first(year, 10).with(dayOfWeekInMonth(1, MONDAY)));
-      // christmas 
+      // christmas
       holidays.add(christmasBumpedSatSun(year));
       // boxing
       holidays.add(boxingDayBumpedSatSun(year));
@@ -965,7 +992,7 @@ final class GlobalHolidayCalendars {
       holidays.add(bumpSunToMon(date(year, 9, 24)));
       // reconcilliation
       holidays.add(bumpSunToMon(date(year, 12, 16)));
-      // christmas 
+      // christmas
       holidays.add(christmasBumpedSun(year));
       // goodwill
       holidays.add(boxingDayBumpedSun(year));
@@ -1000,6 +1027,7 @@ final class GlobalHolidayCalendars {
   // https://englishhungary.wordpress.com/2012/01/15/bridge-days/
   // http://www.ucmsgroup.hu/newsletter/public-holiday-and-related-work-schedule-changes-in-2015/
   // http://www.ucmsgroup.hu/newsletter/public-holiday-and-related-work-schedule-changes-in-2014/
+  // https://www.bse.hu/Products-and-Services/Trading-information/tranding-calendar-2019
   static ImmutableHolidayCalendar generateBudapest() {
     List<LocalDate> holidays = new ArrayList<>(2000);
     Set<LocalDate> workDays = new HashSet<>(500);
@@ -1025,6 +1053,7 @@ final class GlobalHolidayCalendars {
       // all saints day
       addDateWithHungarianBridging(date(year, 11, 1), -3, 1, holidays, workDays);
       // christmas
+      holidays.add(date(year, 12, 24));
       holidays.add(date(year, 12, 25));
       holidays.add(date(year, 12, 26));
       if (date(year, 12, 25).getDayOfWeek() == TUESDAY) {
@@ -1074,6 +1103,7 @@ final class GlobalHolidayCalendars {
         return;
       case SATURDAY:
       case SUNDAY:
+      default:
         return;
     }
   }
@@ -1128,6 +1158,7 @@ final class GlobalHolidayCalendars {
   }
 
   // generate BRBD
+  // a holiday in this calendar is only declared if there is a holiday in Sao Paulo, Rio de Janeiro and Brasilia
   // http://www.planalto.gov.br/ccivil_03/leis/l0662.htm
   // http://www.planalto.gov.br/ccivil_03/Leis/L6802.htm
   // http://www.planalto.gov.br/ccivil_03/leis/2002/L10607.htm
@@ -1282,22 +1313,6 @@ final class GlobalHolidayCalendars {
   // remove any holidays covered by Sat/Sun
   private static void removeSatSun(List<LocalDate> holidays) {
     holidays.removeIf(date -> date.getDayOfWeek() == SATURDAY || date.getDayOfWeek() == SUNDAY);
-  }
-
-  // apply bridging (Mon/Fri are holidays if Tue/Thu are)
-  private static void applyBridging(List<LocalDate> holidays) {
-    Set<LocalDate> additional1 = holidays.stream()
-        .filter(date -> date.getDayOfWeek() == TUESDAY &&
-            !MonthDay.from(date).equals(MonthDay.of(1, 1)))
-        .map(date -> date.minusDays(1))
-        .collect(toSet());
-    Set<LocalDate> additional2 = holidays.stream()
-        .filter(date -> date.getDayOfWeek() == THURSDAY &&
-            !MonthDay.from(date).equals(MonthDay.of(12, 26)))
-        .map(date -> date.plusDays(1))
-        .collect(toSet());
-    holidays.addAll(additional1);
-    holidays.addAll(additional2);
   }
 
   // calculate easter day by Delambre

@@ -13,7 +13,6 @@ import static com.opengamma.strata.basics.index.OvernightIndices.GBP_SONIA;
 import static com.opengamma.strata.basics.index.OvernightIndices.USD_FED_FUND;
 import static com.opengamma.strata.basics.schedule.Frequency.P12M;
 import static com.opengamma.strata.collect.TestHelper.assertSerialization;
-import static com.opengamma.strata.collect.TestHelper.assertThrowsIllegalArg;
 import static com.opengamma.strata.collect.TestHelper.coverBeanEquals;
 import static com.opengamma.strata.collect.TestHelper.coverImmutableBean;
 import static com.opengamma.strata.collect.TestHelper.date;
@@ -21,6 +20,7 @@ import static com.opengamma.strata.product.common.BuySell.BUY;
 import static com.opengamma.strata.product.common.PayReceive.PAY;
 import static com.opengamma.strata.product.common.PayReceive.RECEIVE;
 import static com.opengamma.strata.product.swap.OvernightAccrualMethod.AVERAGED;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.testng.Assert.assertEquals;
 
 import java.time.LocalDate;
@@ -57,7 +57,7 @@ public class OvernightIborSwapConventionTest {
           .accrualMethod(AVERAGED)
           .accrualFrequency(Frequency.P3M)
           .paymentFrequency(Frequency.P3M)
-          .stubConvention(StubConvention.SHORT_INITIAL)
+          .stubConvention(StubConvention.SMART_INITIAL)
           .rateCutOffDays(2)
           .build();
   private static final OvernightRateSwapLegConvention FFUND_LEG2 =
@@ -132,7 +132,7 @@ public class OvernightIborSwapConventionTest {
 
   //-------------------------------------------------------------------------
   @DataProvider(name = "name")
-  static Object[][] data_name() {
+  public static Object[][] data_name() {
     return new Object[][] {
         {OvernightIborSwapConventions.USD_FED_FUND_AA_LIBOR_3M, "USD-FED-FUND-AA-LIBOR-3M"},
     };
@@ -161,11 +161,13 @@ public class OvernightIborSwapConventionTest {
   }
 
   public void test_of_lookup_notFound() {
-    assertThrowsIllegalArg(() -> OvernightIborSwapConvention.of("Rubbish"));
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> OvernightIborSwapConvention.of("Rubbish"));
   }
 
   public void test_of_lookup_null() {
-    assertThrowsIllegalArg(() -> OvernightIborSwapConvention.of((String) null));
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> OvernightIborSwapConvention.of((String) null));
   }
 
   //-------------------------------------------------------------------------

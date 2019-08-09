@@ -5,6 +5,8 @@
  */
 package com.opengamma.strata.math.impl.interpolation;
 
+import static com.opengamma.strata.math.MathUtils.pow2;
+
 import java.util.Arrays;
 
 import com.google.common.primitives.Doubles;
@@ -12,7 +14,6 @@ import com.opengamma.strata.collect.ArgChecker;
 import com.opengamma.strata.collect.DoubleArrayMath;
 import com.opengamma.strata.collect.array.DoubleArray;
 import com.opengamma.strata.collect.array.DoubleMatrix;
-import com.opengamma.strata.math.impl.FunctionUtils;
 
 /**
  * C1 cubic interpolation preserving monotonicity based on 
@@ -43,9 +44,7 @@ public class PiecewiseCubicHermiteSplineInterpolatorWithSensitivity extends Piec
     double[] xValuesSrt = Arrays.copyOf(xValues, nDataPts);
     double[] yValuesSrt = Arrays.copyOf(yValues, nDataPts);
     DoubleArrayMath.sortPairs(xValuesSrt, yValuesSrt);
-    for (int i = 1; i < nDataPts; ++i) {
-      ArgChecker.isFalse(xValuesSrt[i - 1] == xValuesSrt[i], "xValues should be distinct");
-    }
+    ArgChecker.noDuplicatesSorted(xValuesSrt, "xValues");
 
     DoubleMatrix[] temp = solve(xValuesSrt, yValuesSrt);
     // check the matrices
@@ -191,7 +190,7 @@ public class PiecewiseCubicHermiteSplineInterpolatorWithSensitivity extends Piec
         double w1 = 2. * h[i] + h[i - 1];
         double w2 = h[i] + 2. * h[i - 1];
         double w12 = w1 + w2;
-        double z2 = 0.5 * w12 / FunctionUtils.square(w1 * delta[i] + w2 * delta[i - 1]);
+        double z2 = 0.5 * w12 / pow2(w1 * delta[i] + w2 * delta[i - 1]);
         jac[i][i - 1] = -w1 * invH[i - 1] * delta[i] * delta[i] * z2;
         jac[i][i] = (w1 * invH[i - 1] * delta[i] * delta[i] - w2 * invH[i] * delta[i - 1] * delta[i - 1]) * z2;
         jac[i][i + 1] = w2 * invH[i] * delta[i - 1] * delta[i - 1] * z2;

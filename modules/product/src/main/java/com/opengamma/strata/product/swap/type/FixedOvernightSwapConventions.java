@@ -10,7 +10,7 @@ import com.opengamma.strata.collect.named.ExtendedEnum;
 /**
  * Market standard Fixed-Overnight swap conventions.
  * <p>
- * http://www.opengamma.com/sites/default/files/interest-rate-instruments-and-market-conventions.pdf
+ * https://developers.opengamma.com/quantitative-research/Interest-Rate-Instruments-and-Market-Conventions.pdf
  */
 public final class FixedOvernightSwapConventions {
 
@@ -39,6 +39,17 @@ public final class FixedOvernightSwapConventions {
    */
   public static final FixedOvernightSwapConvention USD_FIXED_1Y_FED_FUND_OIS =
       FixedOvernightSwapConvention.of(StandardFixedOvernightSwapConventions.USD_FIXED_1Y_FED_FUND_OIS.getName());
+
+  //-------------------------------------------------------------------------
+  /**
+   * The 'USD-FIXED-1Y-SOFR-OIS' swap convention.
+   * <p>
+   * USD fixed vs SOFR OIS swap for terms greater than one year.
+   * Both legs pay annually and use day count 'Act/360'.
+   * The spot date offset is 2 days and the payment date offset is 2 days.
+   */
+  public static final FixedOvernightSwapConvention USD_FIXED_1Y_SOFR_OIS =
+      FixedOvernightSwapConvention.of(StandardFixedOvernightSwapConventions.USD_FIXED_1Y_SOFR_OIS.getName());
 
   //-------------------------------------------------------------------------
   /**

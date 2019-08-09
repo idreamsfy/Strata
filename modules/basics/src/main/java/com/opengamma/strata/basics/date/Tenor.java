@@ -81,6 +81,18 @@ public final class Tenor
    */
   public static final Tenor TENOR_6W = ofWeeks(6);
   /**
+   * A tenor of 13 weeks.
+   */
+  public static final Tenor TENOR_13W = ofWeeks(13);
+  /**
+   * A tenor of 26 weeks.
+   */
+  public static final Tenor TENOR_26W = ofWeeks(26);
+  /**
+   * A tenor of 52 weeks.
+   */
+  public static final Tenor TENOR_52W = ofWeeks(52);
+  /**
    * A tenor of 1 month.
    */
   public static final Tenor TENOR_1M = ofMonths(1);
@@ -129,9 +141,17 @@ public final class Tenor
    */
   public static final Tenor TENOR_12M = ofMonths(12);
   /**
+   * A tenor of 15 months.
+   */
+  public static final Tenor TENOR_15M = ofMonths(15);
+  /**
    * A tenor of 18 months.
    */
   public static final Tenor TENOR_18M = ofMonths(18);
+  /**
+   * A tenor of 21 months.
+   */
+  public static final Tenor TENOR_21M = ofMonths(21);
   /**
    * A tenor of 1 year.
    */
@@ -173,9 +193,21 @@ public final class Tenor
    */
   public static final Tenor TENOR_10Y = ofYears(10);
   /**
+   * A tenor of 11 years.
+   */
+  public static final Tenor TENOR_11Y = ofYears(11);
+  /**
    * A tenor of 12 years.
    */
   public static final Tenor TENOR_12Y = ofYears(12);
+  /**
+   * A tenor of 13 years.
+   */
+  public static final Tenor TENOR_13Y = ofYears(13);
+  /**
+   * A tenor of 14 years.
+   */
+  public static final Tenor TENOR_14Y = ofYears(14);
   /**
    * A tenor of 15 years.
    */
@@ -192,6 +224,22 @@ public final class Tenor
    * A tenor of 30 years.
    */
   public static final Tenor TENOR_30Y = ofYears(30);
+  /**
+   * A tenor of 35 years.
+   */
+  public static final Tenor TENOR_35Y = ofYears(35);
+  /**
+   * A tenor of 40 years.
+   */
+  public static final Tenor TENOR_40Y = ofYears(40);
+  /**
+   * A tenor of 45 years.
+   */
+  public static final Tenor TENOR_45Y = ofYears(45);
+  /**
+   * A tenor of 50 years.
+   */
+  public static final Tenor TENOR_50Y = ofYears(50);
 
   /**
    * The period of the tenor.
@@ -306,8 +354,8 @@ public final class Tenor
    */
   private Tenor(Period period, String name) {
     ArgChecker.notNull(period, "period");
-    ArgChecker.isFalse(period.isZero(), "Period must not be zero");
-    ArgChecker.isFalse(period.isNegative(), "Period must not be negative");
+    ArgChecker.isFalse(period.isZero(), "Tenor period must not be zero");
+    ArgChecker.isFalse(period.isNegative(), "Tenor period must not be negative");
     this.period = period;
     this.name = name;
   }
@@ -459,7 +507,8 @@ public final class Tenor
    * If the two tenors are both based on days, then comparison is easy.
    * If the two tenors are both based on months/years, then comparison is easy.
    * Otherwise, months are converted to days to form an estimated length in days which is compared.
-   * The conversion from months to days divides by 12 and then multiplies by 365.25.
+   * The conversion from months to days divides by 12 and then multiplies by 365.2425.
+   * As a result, this method is compatible with {@link #equals(Object)} for tenors less than 400 years.
    * <p>
    * The resulting order places:
    * <ul>
@@ -468,6 +517,7 @@ public final class Tenor
    * <li>a 3 month tenor between 91 and 92 days
    * <li>a 6 month tenor between 182 and 183 days
    * <li>a 1 year tenor between 365 and 366 days
+   * <li>a 4 year tenor between 1460 and 1461 days
    * </ul>
    * 
    * @param other  the other tenor
@@ -488,8 +538,8 @@ public final class Tenor
       return Long.compare(thisMonths, otherMonths);
     }
     // complex
-    double thisMonthsInDays = (thisMonths / 12d) * 365.25d;
-    double otherMonthsInDays = (otherMonths / 12d) * 365.25d;
+    double thisMonthsInDays = (thisMonths / 12d) * 365.2425d;
+    double otherMonthsInDays = (otherMonths / 12d) * 365.2425d;
     return Double.compare(thisDays + thisMonthsInDays, otherDays + otherMonthsInDays);
   }
 

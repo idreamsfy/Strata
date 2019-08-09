@@ -7,27 +7,27 @@ package com.opengamma.strata.product.etd;
 
 import java.io.Serializable;
 import java.time.YearMonth;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
-import java.util.Set;
 
 import org.joda.beans.Bean;
 import org.joda.beans.BeanBuilder;
-import org.joda.beans.BeanDefinition;
 import org.joda.beans.ImmutableBean;
 import org.joda.beans.JodaBeanUtils;
+import org.joda.beans.MetaBean;
 import org.joda.beans.MetaProperty;
-import org.joda.beans.Property;
-import org.joda.beans.PropertyDefinition;
+import org.joda.beans.gen.BeanDefinition;
+import org.joda.beans.gen.PropertyDefinition;
 import org.joda.beans.impl.direct.DirectMetaBean;
 import org.joda.beans.impl.direct.DirectMetaProperty;
 import org.joda.beans.impl.direct.DirectMetaPropertyMap;
 import org.joda.beans.impl.direct.DirectPrivateBeanBuilder;
 
 import com.google.common.collect.ImmutableMap;
-import com.opengamma.strata.collect.Messages;
-import com.opengamma.strata.product.SecurityAttributeType;
+import com.opengamma.strata.product.AttributeType;
+import com.opengamma.strata.product.Attributes;
 import com.opengamma.strata.product.SecurityPriceInfo;
 import com.opengamma.strata.product.common.ExchangeId;
 import com.opengamma.strata.product.common.PutCall;
@@ -41,7 +41,7 @@ import com.opengamma.strata.product.common.PutCall;
  */
 @BeanDefinition(builderScope = "private", constructorScope = "package")
 public final class EtdContractSpec
-    implements ImmutableBean, Serializable {
+    implements Attributes, ImmutableBean, Serializable {
 
   /**
    * The ID of this contract specification.
@@ -79,15 +79,17 @@ public final class EtdContractSpec
   /**
    * The attributes.
    * <p>
-   * Security attributes, provide the ability to associate arbitrary information
+   * Attributes provide the ability to associate arbitrary information
    * with a security contract specification in a key-value map.
    */
   @PropertyDefinition(validate = "notNull")
-  private final ImmutableMap<SecurityAttributeType<?>, Object> attributes;
+  private final ImmutableMap<AttributeType<?>, Object> attributes;
 
   //-------------------------------------------------------------------------
   /**
    * Returns a builder for building instances of {@code EtdContractSpec}.
+   * <p>
+   * The builder will create an identifier using {@link EtdIdUtils} if it is not set.
    *
    * @return a builder for building instances of {@code EtdContractSpec}
    */
@@ -96,39 +98,22 @@ public final class EtdContractSpec
   }
 
   //-------------------------------------------------------------------------
-  /**
-   * Gets the attribute associated with the specified type.
-   * <p>
-   * This method obtains the specified attribute.
-   * This allows an attribute about a security to be obtained if available.
-   * <p>
-   * If the attribute is not found, an exception is thrown.
-   *
-   * @param <T>  the type of the result
-   * @param type  the type to find
-   * @return the attribute value
-   * @throws IllegalArgumentException if the attribute is not found
-   */
-  public <T> T getAttribute(SecurityAttributeType<T> type) {
-    return findAttribute(type)
-        .orElseThrow(() -> new IllegalArgumentException(Messages.format("Attribute not found for type '{}'", type)));
+  @Override
+  @SuppressWarnings("unchecked")
+  public <T> Optional<T> findAttribute(AttributeType<T> type) {
+    return Optional.ofNullable(type.fromStoredForm(attributes.get(type)));
   }
 
-  /**
-   * Finds the attribute associated with the specified type.
-   * <p>
-   * This method obtains the specified attribute.
-   * This allows an attribute about a security to be obtained if available.
-   * <p>
-   * If the attribute is not found, optional empty is returned.
-   *
-   * @param <T>  the type of the result
-   * @param type  the type to find
-   * @return the attribute value
-   */
-  @SuppressWarnings("unchecked")
-  public <T> Optional<T> findAttribute(SecurityAttributeType<T> type) {
-    return Optional.ofNullable((T) attributes.get(type));
+  @Override
+  public <T> EtdContractSpec withAttribute(AttributeType<T> type, T value) {
+    // ImmutableMap.Builder would not provide Map.put semantics
+    Map<AttributeType<?>, Object> updatedAttributes = new HashMap<>(attributes);
+    if (value == null) {
+      updatedAttributes.remove(type);
+    } else {
+      updatedAttributes.put(type, type.toStoredForm(value));
+    }
+    return new EtdContractSpec(id, this.type, exchangeId, contractCode, description, priceInfo, updatedAttributes);
   }
 
   //-------------------------------------------------------------------------
@@ -139,7 +124,7 @@ public final class EtdContractSpec
    * The {@link #getType() type} must be {@link EtdType#FUTURE} otherwise an exception will be thrown.
    *
    * @param expiryMonth  the expiry month of the future
-   * @param variant  the variant of the ETD, such as 'Monthly', 'Weekly, 'Daily' or 'Flex.
+   * @param variant  the variant of the ETD, such as 'Monthly', 'Weekly, 'Daily' or 'Flex'
    * @return a future security based on this contract specification
    * @throws IllegalStateException if the product type of the contract specification is not {@code FUTURE}
    */
@@ -154,7 +139,7 @@ public final class EtdContractSpec
    * The {@link #getType() type} must be {@link EtdType#OPTION} otherwise an exception will be thrown.
    *
    * @param expiryMonth  the expiry month of the option
-   * @param variant  the variant of the ETD, such as 'Monthly', 'Weekly, 'Daily' or 'Flex.
+   * @param variant  the variant of the ETD, such as 'Monthly', 'Weekly, 'Daily' or 'Flex'
    * @param version  the non-negative version, zero by default
    * @param putCall  whether the option is a put or call
    * @param strikePrice  the strike price of the option
@@ -171,8 +156,33 @@ public final class EtdContractSpec
     return EtdOptionSecurity.of(this, expiryMonth, variant, version, putCall, strikePrice);
   }
 
+  /**
+   * Creates an option security based on this contract specification.
+   * <p>
+   * The security identifier will be automatically created using {@link EtdIdUtils}.
+   * The {@link #getType() type} must be {@link EtdType#OPTION} otherwise an exception will be thrown.
+   *
+   * @param expiryMonth  the expiry month of the option
+   * @param variant  the variant of the ETD, such as 'Monthly', 'Weekly, 'Daily' or 'Flex'
+   * @param version  the non-negative version, zero by default
+   * @param putCall  whether the option is a put or call
+   * @param strikePrice  the strike price of the option
+   * @param underlyingExpiryMonth  the expiry of the underlying instrument, such as a future
+   * @return an option security based on this contract specification
+   * @throws IllegalStateException if the product type of the contract specification is not {@code OPTION}
+   */
+  public EtdOptionSecurity createOption(
+      YearMonth expiryMonth,
+      EtdVariant variant,
+      int version,
+      PutCall putCall,
+      double strikePrice,
+      YearMonth underlyingExpiryMonth) {
+
+    return EtdOptionSecurity.of(this, expiryMonth, variant, version, putCall, strikePrice, underlyingExpiryMonth);
+  }
+
   //------------------------- AUTOGENERATED START -------------------------
-  ///CLOVER:OFF
   /**
    * The meta-bean for {@code EtdContractSpec}.
    * @return the meta-bean, not null
@@ -182,7 +192,7 @@ public final class EtdContractSpec
   }
 
   static {
-    JodaBeanUtils.registerMetaBean(EtdContractSpec.Meta.INSTANCE);
+    MetaBean.register(EtdContractSpec.Meta.INSTANCE);
   }
 
   /**
@@ -207,7 +217,7 @@ public final class EtdContractSpec
       EtdContractCode contractCode,
       String description,
       SecurityPriceInfo priceInfo,
-      Map<SecurityAttributeType<?>, Object> attributes) {
+      Map<AttributeType<?>, Object> attributes) {
     JodaBeanUtils.notNull(id, "id");
     JodaBeanUtils.notNull(type, "type");
     JodaBeanUtils.notNull(exchangeId, "exchangeId");
@@ -227,16 +237,6 @@ public final class EtdContractSpec
   @Override
   public EtdContractSpec.Meta metaBean() {
     return EtdContractSpec.Meta.INSTANCE;
-  }
-
-  @Override
-  public <R> Property<R> property(String propertyName) {
-    return metaBean().<R>metaProperty(propertyName).createProperty(this);
-  }
-
-  @Override
-  public Set<String> propertyNames() {
-    return metaBean().metaPropertyMap().keySet();
   }
 
   //-----------------------------------------------------------------------
@@ -300,11 +300,11 @@ public final class EtdContractSpec
   /**
    * Gets the attributes.
    * <p>
-   * Security attributes, provide the ability to associate arbitrary information
+   * Attributes provide the ability to associate arbitrary information
    * with a security contract specification in a key-value map.
    * @return the value of the property, not null
    */
-  public ImmutableMap<SecurityAttributeType<?>, Object> getAttributes() {
+  public ImmutableMap<AttributeType<?>, Object> getAttributes() {
     return attributes;
   }
 
@@ -399,7 +399,7 @@ public final class EtdContractSpec
      * The meta-property for the {@code attributes} property.
      */
     @SuppressWarnings({"unchecked", "rawtypes" })
-    private final MetaProperty<ImmutableMap<SecurityAttributeType<?>, Object>> attributes = DirectMetaProperty.ofImmutable(
+    private final MetaProperty<ImmutableMap<AttributeType<?>, Object>> attributes = DirectMetaProperty.ofImmutable(
         this, "attributes", EtdContractSpec.class, (Class) ImmutableMap.class);
     /**
      * The meta-properties.
@@ -509,7 +509,7 @@ public final class EtdContractSpec
      * The meta-property for the {@code attributes} property.
      * @return the meta-property, not null
      */
-    public MetaProperty<ImmutableMap<SecurityAttributeType<?>, Object>> attributes() {
+    public MetaProperty<ImmutableMap<AttributeType<?>, Object>> attributes() {
       return attributes;
     }
 
@@ -558,13 +558,12 @@ public final class EtdContractSpec
     private EtdContractCode contractCode;
     private String description;
     private SecurityPriceInfo priceInfo;
-    private Map<SecurityAttributeType<?>, Object> attributes = ImmutableMap.of();
+    private Map<AttributeType<?>, Object> attributes = ImmutableMap.of();
 
     /**
      * Restricted constructor.
      */
     private Builder() {
-      super(meta());
     }
 
     //-----------------------------------------------------------------------
@@ -613,7 +612,7 @@ public final class EtdContractSpec
           this.priceInfo = (SecurityPriceInfo) newValue;
           break;
         case 405645655:  // attributes
-          this.attributes = (Map<SecurityAttributeType<?>, Object>) newValue;
+          this.attributes = (Map<AttributeType<?>, Object>) newValue;
           break;
         default:
           throw new NoSuchElementException("Unknown property: " + propertyName);
@@ -651,6 +650,5 @@ public final class EtdContractSpec
 
   }
 
-  ///CLOVER:ON
   //-------------------------- AUTOGENERATED END --------------------------
 }

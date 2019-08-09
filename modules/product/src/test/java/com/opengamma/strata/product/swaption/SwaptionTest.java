@@ -5,14 +5,15 @@
  */
 package com.opengamma.strata.product.swaption;
 
+import static com.opengamma.strata.basics.currency.Currency.USD;
 import static com.opengamma.strata.basics.date.HolidayCalendarIds.GBLO;
 import static com.opengamma.strata.basics.date.HolidayCalendarIds.USNY;
 import static com.opengamma.strata.collect.TestHelper.assertSerialization;
-import static com.opengamma.strata.collect.TestHelper.assertThrowsIllegalArg;
 import static com.opengamma.strata.collect.TestHelper.coverBeanEquals;
 import static com.opengamma.strata.collect.TestHelper.coverImmutableBean;
 import static com.opengamma.strata.product.common.LongShort.LONG;
 import static com.opengamma.strata.product.common.LongShort.SHORT;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.testng.Assert.assertEquals;
 
 import java.time.LocalDate;
@@ -21,8 +22,8 @@ import java.time.ZoneId;
 
 import org.testng.annotations.Test;
 
+import com.google.common.collect.ImmutableSet;
 import com.opengamma.strata.basics.ReferenceData;
-import com.opengamma.strata.basics.currency.Currency;
 import com.opengamma.strata.basics.date.AdjustableDate;
 import com.opengamma.strata.basics.date.BusinessDayAdjustment;
 import com.opengamma.strata.basics.date.BusinessDayConventions;
@@ -73,12 +74,16 @@ public class SwaptionTest {
     assertEquals(test.getLongShort(), LONG);
     assertEquals(test.getSwaptionSettlement(), PHYSICAL_SETTLE);
     assertEquals(test.getUnderlying(), SWAP);
-    assertEquals(test.getCurrency(), Currency.USD);
+    assertEquals(test.getCurrency(), USD);
     assertEquals(test.getIndex(), IborIndices.USD_LIBOR_3M);
+    assertEquals(test.isCrossCurrency(), false);
+    assertEquals(test.allPaymentCurrencies(), ImmutableSet.of(USD));
+    assertEquals(test.allCurrencies(), ImmutableSet.of(USD));
   }
 
   public void test_builder_expiryAfterStart() {
-    assertThrowsIllegalArg(() -> Swaption.builder()
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> Swaption.builder()
         .expiryDate(AdjustableDate.of(LocalDate.of(2014, 6, 17), ADJUSTMENT))
         .expiryTime(EXPIRY_TIME)
         .expiryZone(ZONE)
@@ -89,7 +94,8 @@ public class SwaptionTest {
   }
 
   public void test_builder_invalidSwapOis() {
-    assertThrowsIllegalArg(() -> Swaption.builder()
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> Swaption.builder()
         .expiryDate(ADJUSTABLE_EXPIRY_DATE)
         .expiryTime(EXPIRY_TIME)
         .expiryZone(ZONE)
@@ -100,7 +106,8 @@ public class SwaptionTest {
   }
 
   public void test_builder_invalidSwapBasis() {
-    assertThrowsIllegalArg(() -> Swaption.builder()
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> Swaption.builder()
         .expiryDate(ADJUSTABLE_EXPIRY_DATE)
         .expiryTime(EXPIRY_TIME)
         .expiryZone(ZONE)
@@ -111,7 +118,8 @@ public class SwaptionTest {
   }
 
   public void test_builder_invalidSwapXCcy() {
-    assertThrowsIllegalArg(() -> Swaption.builder()
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> Swaption.builder()
         .expiryDate(ADJUSTABLE_EXPIRY_DATE)
         .expiryTime(EXPIRY_TIME)
         .expiryZone(ZONE)

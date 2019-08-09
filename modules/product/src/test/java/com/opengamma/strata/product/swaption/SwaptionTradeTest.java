@@ -19,6 +19,9 @@ import com.opengamma.strata.basics.ReferenceData;
 import com.opengamma.strata.basics.currency.AdjustablePayment;
 import com.opengamma.strata.basics.currency.Currency;
 import com.opengamma.strata.basics.currency.CurrencyAmount;
+import com.opengamma.strata.product.PortfolioItemSummary;
+import com.opengamma.strata.product.PortfolioItemType;
+import com.opengamma.strata.product.ProductType;
 import com.opengamma.strata.product.TradeInfo;
 
 /**
@@ -39,6 +42,7 @@ public class SwaptionTradeTest {
     assertEquals(test.getPremium(), PREMIUM);
     assertEquals(test.getProduct(), SWAPTION);
     assertEquals(test.getInfo(), TRADE_INFO);
+    assertEquals(test.withInfo(TRADE_INFO).getInfo(), TRADE_INFO);
   }
 
   public void test_builder() {
@@ -46,6 +50,19 @@ public class SwaptionTradeTest {
     assertEquals(test.getPremium(), PREMIUM);
     assertEquals(test.getProduct(), SWAPTION);
     assertEquals(test.getInfo(), TRADE_INFO);
+  }
+
+  //-------------------------------------------------------------------------
+  public void test_summarize() {
+    SwaptionTrade trade = sut();
+    PortfolioItemSummary expected = PortfolioItemSummary.builder()
+        .id(TRADE_INFO.getId().orElse(null))
+        .portfolioItemType(PortfolioItemType.TRADE)
+        .productType(ProductType.SWAPTION)
+        .currencies(Currency.USD)
+        .description("Long 10Y USD 100mm Rec USD-LIBOR-3M / Pay 1.5% : 14Jun14")
+        .build();
+    assertEquals(trade.summarize(), expected);
   }
 
   //-------------------------------------------------------------------------

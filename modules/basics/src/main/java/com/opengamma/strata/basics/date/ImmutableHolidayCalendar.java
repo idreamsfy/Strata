@@ -5,37 +5,46 @@
  */
 package com.opengamma.strata.basics.date;
 
+import static com.opengamma.strata.collect.Guavate.toImmutableSet;
+
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
 import java.io.Serializable;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.util.Arrays;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.SortedSet;
+import java.util.stream.Stream;
 
 import org.joda.beans.Bean;
 import org.joda.beans.BeanBuilder;
-import org.joda.beans.BeanDefinition;
 import org.joda.beans.ImmutableBean;
-import org.joda.beans.ImmutableConstructor;
 import org.joda.beans.JodaBeanUtils;
+import org.joda.beans.MetaBean;
 import org.joda.beans.MetaProperty;
-import org.joda.beans.Property;
-import org.joda.beans.PropertyDefinition;
+import org.joda.beans.gen.BeanDefinition;
+import org.joda.beans.gen.PropertyDefinition;
 import org.joda.beans.impl.direct.DirectMetaBean;
 import org.joda.beans.impl.direct.DirectMetaProperty;
 import org.joda.beans.impl.direct.DirectMetaPropertyMap;
 import org.joda.beans.impl.direct.DirectPrivateBeanBuilder;
+import org.joda.beans.ser.SerDeserializer;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import com.opengamma.strata.basics.ReferenceData;
 import com.opengamma.strata.collect.ArgChecker;
+import com.opengamma.strata.collect.tuple.Pair;
 
 /**
- * A holiday calendar implementation based on an immutable set of holiday dates and weekends.
+ * An immutable holiday calendar implementation.
  * <p>
  * A standard immutable implementation of {@link HolidayCalendar} that stores all
  * dates that are holidays, plus a list of weekend days.
@@ -61,35 +70,40 @@ public final class ImmutableHolidayCalendar
   // out-of-range and weekend-only (used in testing) are handled using exceptions to fast-path the common case
 
   /**
+   * The deserializer, for compatibility.
+   */
+  public static final SerDeserializer DESERIALIZER = new ImmutableHolidayCalendarDeserializer();
+
+  /**
+   * The serialization version id.
+   */
+  private static final long serialVersionUID = 2L;
+
+  /**
    * The identifier, such as 'GBLO'.
    */
   @PropertyDefinition(validate = "notNull", overrideGet = true)
   private final HolidayCalendarId id;
   /**
-   * The set of holiday dates.
-   * <p>
-   * Each date in this set is not a business day.
-   */
-  @PropertyDefinition(validate = "notNull")
-  private final ImmutableSortedSet<LocalDate> holidays;
-  /**
    * The set of weekend days.
    * <p>
    * Each date that has a day-of-week matching one of these days is not a business day.
    */
-  @PropertyDefinition(validate = "notNull")
-  private final ImmutableSet<DayOfWeek> weekendDays;
+  @PropertyDefinition(get = "")
+  private final int weekends;
   /**
    * The start year.
    * Used as the base year for the lookup table.
    */
-  private final transient int startYear;  // not a property
+  @PropertyDefinition(get = "")
+  private final int startYear;
   /**
    * The lookup table, where each item represents a month from January of startYear onwards.
    * Bits 0 to 31 are used for each day-of-month, where 0 is a holiday and 1 is a business day.
    * Trailing bits are set to 0 so they act as holidays, avoiding month length logic.
    */
-  private final transient int[] lookup;  // not a property
+  @PropertyDefinition(validate = "notNull", get = "")
+  private final int[] lookup;
 
   //-------------------------------------------------------------------------
   /**
@@ -108,9 +122,13 @@ public final class ImmutableHolidayCalendar
    * @return the holiday calendar
    */
   public static ImmutableHolidayCalendar of(
-      HolidayCalendarId id, Iterable<LocalDate> holidays, DayOfWeek firstWeekendDay, DayOfWeek secondWeekendDay) {
+      HolidayCalendarId id,
+      Iterable<LocalDate> holidays,
+      DayOfWeek firstWeekendDay,
+      DayOfWeek secondWeekendDay) {
+
     ImmutableSet<DayOfWeek> weekendDays = Sets.immutableEnumSet(firstWeekendDay, secondWeekendDay);
-    return new ImmutableHolidayCalendar(id, ImmutableSortedSet.copyOf(holidays), weekendDays);
+    return of(id, ImmutableSortedSet.copyOf(holidays), weekendDays, ImmutableSet.of());
   }
 
   /**
@@ -128,15 +146,48 @@ public final class ImmutableHolidayCalendar
    * @return the holiday calendar
    */
   public static ImmutableHolidayCalendar of(
-      HolidayCalendarId id, Iterable<LocalDate> holidays, Iterable<DayOfWeek> weekendDays) {
-    return new ImmutableHolidayCalendar(id, ImmutableSortedSet.copyOf(holidays), Sets.immutableEnumSet(weekendDays));
+      HolidayCalendarId id,
+      Iterable<LocalDate> holidays,
+      Iterable<DayOfWeek> weekendDays) {
+
+    return of(id, ImmutableSortedSet.copyOf(holidays), Sets.immutableEnumSet(weekendDays), ImmutableSet.of());
+  }
+
+  /**
+   * Obtains an instance from a set of holiday dates and weekend days.
+   * <p>
+   * The holiday dates will be extracted into a set with duplicates ignored.
+   * The minimum supported date for query is the start of the year of the earliest holiday.
+   * The maximum supported date for query is the end of the year of the latest holiday.
+   * <p>
+   * The weekend days may be empty, in which case the holiday dates should contain any weekends.
+   * The working days are processed last, changing holidays and weekends back to business days,
+   * but only within the range of supported years.
+   * 
+   * @param id  the identifier
+   * @param holidays  the set of holiday dates
+   * @param weekendDays  the days that define the weekend, if empty then weekends are treated as business days
+   * @param workingDays  the working days that override holidays and weekends
+   * @return the holiday calendar
+   */
+  public static ImmutableHolidayCalendar of(
+      HolidayCalendarId id,
+      Iterable<LocalDate> holidays,
+      Iterable<DayOfWeek> weekendDays,
+      Iterable<LocalDate> workingDays) {
+
+    return of(
+        id,
+        ImmutableSortedSet.copyOf(holidays),
+        Sets.immutableEnumSet(weekendDays),
+        ArgChecker.notNull(workingDays, "workingDays"));
   }
 
   /**
    * Obtains a combined holiday calendar instance.
    * <p>
    * This combines the two input calendars.
-   * It is intended for up-front occasional use rather than continuous use, as it is relatively slow.
+   * It is intended for up-front occasional use rather than continuous use, as it can be relatively slow.
    * 
    * @param cal1  the first calendar
    * @param cal2  the second calendar
@@ -147,46 +198,74 @@ public final class ImmutableHolidayCalendar
     if (cal1 == cal2) {
       return ArgChecker.notNull(cal1, "cal1");
     }
-    ImmutableSortedSet<LocalDate> newHolidays = ImmutableSortedSet.copyOf(Iterables.concat(cal1.holidays, cal2.holidays));
-    ImmutableSet<DayOfWeek> newWeekends = ImmutableSet.copyOf(Iterables.concat(cal1.weekendDays, cal2.weekendDays));
-    return new ImmutableHolidayCalendar(cal1.id.combinedWith(cal2.id), newHolidays, newWeekends);
+    HolidayCalendarId newId = cal1.id.combinedWith(cal2.id);
+
+    // use slow version if lookup arrays do not overlap
+    int endYear1 = cal1.startYear + cal1.lookup.length / 12;
+    int endYear2 = cal2.startYear + cal2.lookup.length / 12;
+    if (endYear1 < cal2.startYear || endYear2 < cal1.startYear) {
+      Pair<ImmutableSortedSet<LocalDate>, ImmutableSortedSet<LocalDate>> holsWork1 = cal1.getHolidaysAndWorkingDays();
+      Pair<ImmutableSortedSet<LocalDate>, ImmutableSortedSet<LocalDate>> holsWork2 = cal2.getHolidaysAndWorkingDays();
+      ImmutableSortedSet<LocalDate> newHolidays =
+          ImmutableSortedSet.copyOf(Iterables.concat(holsWork1.getFirst(), holsWork2.getFirst()));
+      ImmutableSet<DayOfWeek> newWeekends =
+          ImmutableSet.copyOf(Iterables.concat(cal1.getWeekendDays(), cal2.getWeekendDays()));
+      ImmutableSet<LocalDate> newWorkingDays =
+          ImmutableSet.copyOf(Iterables.concat(holsWork1.getSecond(), holsWork2.getSecond()));
+      return of(newId, newHolidays, newWeekends, newWorkingDays);
+    }
+
+    // merge calendars using bitwise operations
+    // figure out which has the lower start year and use that as the base
+    boolean cal1Lower = cal1.startYear <= cal2.startYear;
+    int[] lookup1 = cal1Lower ? cal1.lookup : cal2.lookup;
+    int[] lookup2 = cal1Lower ? cal2.lookup : cal1.lookup;
+    int newStartYear = cal1Lower ? cal1.startYear : cal2.startYear;
+    int otherStartYear = cal1Lower ? cal2.startYear : cal1.startYear;
+    // copy base array and map data from the other on top
+    int newSize = Math.max(lookup1.length, lookup2.length + (otherStartYear - newStartYear) * 12);
+    int offset = (otherStartYear - newStartYear) * 12;
+    int[] newLookup = Arrays.copyOf(lookup1, newSize);
+    for (int i = 0; i < lookup2.length; i++) {
+      newLookup[i + offset] &= lookup2[i]; // use & because 1 = business day (not holiday)
+    }
+    int newWeekends = cal1.weekends | cal2.weekends; // use | because 1 = weekend day
+    return new ImmutableHolidayCalendar(newId, newWeekends, newStartYear, newLookup, false);
   }
 
-  //-------------------------------------------------------------------------
-  /**
-   * Creates an instance calculating the supported range.
-   * 
-   * @param name  the calendar name
-   * @param holidays  the set of holidays, validated non-null
-   * @param weekendDays  the set of weekend days, validated non-null
-   */
-  @ImmutableConstructor
-  private ImmutableHolidayCalendar(HolidayCalendarId id, SortedSet<LocalDate> holidays, Set<DayOfWeek> weekendDays) {
+  // creates an instance calculating the supported range
+  static ImmutableHolidayCalendar of(
+      HolidayCalendarId id,
+      SortedSet<LocalDate> holidays,
+      Set<DayOfWeek> weekendDays,
+      Iterable<LocalDate> workingDays) {
+
     ArgChecker.notNull(id, "id");
-    ArgChecker.notNull(holidays, "holidays");
-    ArgChecker.notNull(weekendDays, "weekendDays");
-    this.id = id;
-    this.holidays = ImmutableSortedSet.copyOfSorted(holidays);
-    this.weekendDays = Sets.immutableEnumSet(weekendDays);
+    int weekends = weekendDays.stream().mapToInt(dow -> 1 << (dow.getValue() - 1)).sum();
+    int startYear = 0;
+    int[] lookup = new int[0];
     if (holidays.isEmpty()) {
       // special case where no holiday dates are specified
-      this.startYear = 0;
-      this.lookup = new int[0];
+      startYear = 0;
+      lookup = new int[0];
     } else {
       // normal case where holidays are specified
-      this.startYear = holidays.first().getYear();
+      startYear = holidays.first().getYear();
       int endYearExclusive = holidays.last().getYear() + 1;
-      this.lookup = buildLookupArray(holidays, weekendDays, startYear, endYearExclusive);
+      lookup = buildLookupArray(holidays, weekendDays, startYear, endYearExclusive, workingDays);
     }
+    return new ImmutableHolidayCalendar(id, weekends, startYear, lookup);
   }
 
   // create and populate the int[] lookup
   // use 1 for business days and 0 for holidays
   private static int[] buildLookupArray(
-      SortedSet<LocalDate> holidays,
-      Set<DayOfWeek> weekendDays,
+      Iterable<LocalDate> holidays,
+      Iterable<DayOfWeek> weekendDays,
       int startYear,
-      int endYearExclusive) {
+      int endYearExclusive,
+      Iterable<LocalDate> workingDays) {
+
     // array that has one entry for each month
     int[] array = new int[(endYearExclusive - startYear) * 12];
     // loop through all months to handle end-of-month and weekends
@@ -212,12 +291,106 @@ public final class ImmutableHolidayCalendar
       int index = (date.getYear() - startYear) * 12 + date.getMonthValue() - 1;
       array[index] &= ~(1 << (date.getDayOfMonth() - 1));
     }
+    // set the bit associated with each overriding working day
+    for (LocalDate date : workingDays) {
+      if (date.getYear() < startYear || date.getYear() >= endYearExclusive) {
+        continue;
+      }
+      int index = (date.getYear() - startYear) * 12 + date.getMonthValue() - 1;
+      array[index] |= (1 << (date.getDayOfMonth() - 1));
+    }
     return array;
   }
 
-  // ensure standard constructor is invoked
-  private Object readResolve() {
-    return new ImmutableHolidayCalendar(id, holidays, weekendDays);
+  //-------------------------------------------------------------------------
+  // writes the binary format
+  void writeExternal(DataOutput out) throws IOException {
+    out.writeUTF(id.getName());
+    out.writeShort(weekends);  // using short rather than byte helps align data with 4 char identifiers
+    out.writeShort(startYear);
+    out.writeShort(lookup.length);
+    for (int i = 0; i < lookup.length; i++) {
+      out.writeInt(lookup[i]);
+    }
+  }
+
+  // reads the binary format
+  static ImmutableHolidayCalendar readExternal(DataInput in) throws IOException {
+    String id = in.readUTF();
+    int weekendDays = in.readShort();
+    int startYear = in.readShort();
+    int lookupSize = in.readShort();
+    // this logic was found to be the fastest way to deserialize the int array
+    byte[] bytes = new byte[lookupSize * 4];
+    int[] lookup = new int[lookupSize];
+    in.readFully(bytes);
+    int offset = 0;
+    for (int i = 0; i < lookupSize; i++) {
+      lookup[i] =
+          ((bytes[offset++] & 0xFF) << 24) | ((bytes[offset++] & 0xFF) << 16) |
+              ((bytes[offset++] & 0xFF) << 8) | (bytes[offset++] & 0xFF);
+    }
+    return new ImmutableHolidayCalendar(HolidayCalendarId.of(id), weekendDays, startYear, lookup, false);
+  }
+
+  //-------------------------------------------------------------------------
+  // creates an instance, not cloning the lookup
+  ImmutableHolidayCalendar(HolidayCalendarId id, int weekendDays, int startYear, int[] lookup, boolean flag) {
+    this.id = ArgChecker.notNull(id, "id");
+    this.weekends = weekendDays;
+    this.startYear = startYear;
+    this.lookup = ArgChecker.notNull(lookup, "lookup");
+  }
+
+  //-------------------------------------------------------------------------
+  // returns the holidays as a set
+  @VisibleForTesting
+  ImmutableSortedSet<LocalDate> getHolidays() {
+    return getHolidaysAndWorkingDays().getFirst();
+  }
+
+  // returns the weekend days as a set
+  @VisibleForTesting
+  ImmutableSet<DayOfWeek> getWeekendDays() {
+    return Stream.of(DayOfWeek.values())
+        .filter(dow -> (weekends & (1 << dow.ordinal())) != 0)
+        .collect(toImmutableSet());
+  }
+
+  // returns the working day overrides as a set
+  @VisibleForTesting
+  ImmutableSortedSet<LocalDate> getWorkingDays() {
+    return getHolidaysAndWorkingDays().getSecond();
+  }
+
+  // returns the working day overrides as a set
+  private Pair<ImmutableSortedSet<LocalDate>, ImmutableSortedSet<LocalDate>> getHolidaysAndWorkingDays() {
+    if (startYear == 0) {
+      return Pair.of(ImmutableSortedSet.of(), ImmutableSortedSet.of());
+    }
+    ImmutableSortedSet.Builder<LocalDate> holidays = ImmutableSortedSet.naturalOrder();
+    ImmutableSortedSet.Builder<LocalDate> workingDays = ImmutableSortedSet.naturalOrder();
+    LocalDate firstOfMonth = LocalDate.of(startYear, 1, 1);
+    for (int i = 0; i < lookup.length; i++) {
+      int monthData = lookup[i];
+      int monthLen = firstOfMonth.lengthOfMonth();
+      int dow0 = firstOfMonth.getDayOfWeek().ordinal();
+      int bit = 1;
+      for (int j = 0; j < monthLen; j++) {
+        // if it is a holiday and not a weekend, then add the date
+        if ((monthData & bit) == 0 && (weekends & (1 << dow0)) == 0) {
+          holidays.add(firstOfMonth.withDayOfMonth(j + 1));
+        }
+        // if it is a working day and a weekend, then add the date
+        if ((monthData & bit) != 0 && (weekends & (1 << dow0)) != 0) {
+          workingDays.add(firstOfMonth.withDayOfMonth(j + 1));
+        }
+        dow0 = (dow0 + 1) % 7;
+        bit <<= 1;
+      }
+      firstOfMonth = firstOfMonth.plusMonths(1);
+    }
+    return Pair.of(holidays.build(), workingDays.build());
   }
 
   //-------------------------------------------------------------------------
@@ -237,7 +410,7 @@ public final class ImmutableHolidayCalendar
   // pulled out to aid hotspot inlining
   private boolean isHolidayOutOfRange(LocalDate date) {
     if (date.getYear() >= 0 && date.getYear() < 10000) {
-      return weekendDays.contains(date.getDayOfWeek());
+      return (weekends & (1 << date.getDayOfWeek().ordinal())) != 0;
     }
     throw new IllegalArgumentException("Date is outside the accepted range (year 0000 to 10,000): " + date);
   }
@@ -462,7 +635,6 @@ public final class ImmutableHolidayCalendar
   }
 
   //------------------------- AUTOGENERATED START -------------------------
-  ///CLOVER:OFF
   /**
    * The meta-bean for {@code ImmutableHolidayCalendar}.
    * @return the meta-bean, not null
@@ -472,27 +644,25 @@ public final class ImmutableHolidayCalendar
   }
 
   static {
-    JodaBeanUtils.registerMetaBean(ImmutableHolidayCalendar.Meta.INSTANCE);
+    MetaBean.register(ImmutableHolidayCalendar.Meta.INSTANCE);
   }
 
-  /**
-   * The serialization version id.
-   */
-  private static final long serialVersionUID = 1L;
+  private ImmutableHolidayCalendar(
+      HolidayCalendarId id,
+      int weekends,
+      int startYear,
+      int[] lookup) {
+    JodaBeanUtils.notNull(id, "id");
+    JodaBeanUtils.notNull(lookup, "lookup");
+    this.id = id;
+    this.weekends = weekends;
+    this.startYear = startYear;
+    this.lookup = lookup.clone();
+  }
 
   @Override
   public ImmutableHolidayCalendar.Meta metaBean() {
     return ImmutableHolidayCalendar.Meta.INSTANCE;
-  }
-
-  @Override
-  public <R> Property<R> property(String propertyName) {
-    return metaBean().<R>metaProperty(propertyName).createProperty(this);
-  }
-
-  @Override
-  public Set<String> propertyNames() {
-    return metaBean().metaPropertyMap().keySet();
   }
 
   //-----------------------------------------------------------------------
@@ -503,28 +673,6 @@ public final class ImmutableHolidayCalendar
   @Override
   public HolidayCalendarId getId() {
     return id;
-  }
-
-  //-----------------------------------------------------------------------
-  /**
-   * Gets the set of holiday dates.
-   * <p>
-   * Each date in this set is not a business day.
-   * @return the value of the property, not null
-   */
-  public ImmutableSortedSet<LocalDate> getHolidays() {
-    return holidays;
-  }
-
-  //-----------------------------------------------------------------------
-  /**
-   * Gets the set of weekend days.
-   * <p>
-   * Each date that has a day-of-week matching one of these days is not a business day.
-   * @return the value of the property, not null
-   */
-  public ImmutableSet<DayOfWeek> getWeekendDays() {
-    return weekendDays;
   }
 
   //-----------------------------------------------------------------------
@@ -543,25 +691,29 @@ public final class ImmutableHolidayCalendar
     private final MetaProperty<HolidayCalendarId> id = DirectMetaProperty.ofImmutable(
         this, "id", ImmutableHolidayCalendar.class, HolidayCalendarId.class);
     /**
-     * The meta-property for the {@code holidays} property.
+     * The meta-property for the {@code weekends} property.
      */
-    @SuppressWarnings({"unchecked", "rawtypes" })
-    private final MetaProperty<ImmutableSortedSet<LocalDate>> holidays = DirectMetaProperty.ofImmutable(
-        this, "holidays", ImmutableHolidayCalendar.class, (Class) ImmutableSortedSet.class);
+    private final MetaProperty<Integer> weekends = DirectMetaProperty.ofImmutable(
+        this, "weekends", ImmutableHolidayCalendar.class, Integer.TYPE);
     /**
-     * The meta-property for the {@code weekendDays} property.
+     * The meta-property for the {@code startYear} property.
      */
-    @SuppressWarnings({"unchecked", "rawtypes" })
-    private final MetaProperty<ImmutableSet<DayOfWeek>> weekendDays = DirectMetaProperty.ofImmutable(
-        this, "weekendDays", ImmutableHolidayCalendar.class, (Class) ImmutableSet.class);
+    private final MetaProperty<Integer> startYear = DirectMetaProperty.ofImmutable(
+        this, "startYear", ImmutableHolidayCalendar.class, Integer.TYPE);
+    /**
+     * The meta-property for the {@code lookup} property.
+     */
+    private final MetaProperty<int[]> lookup = DirectMetaProperty.ofImmutable(
+        this, "lookup", ImmutableHolidayCalendar.class, int[].class);
     /**
      * The meta-properties.
      */
     private final Map<String, MetaProperty<?>> metaPropertyMap$ = new DirectMetaPropertyMap(
         this, null,
         "id",
-        "holidays",
-        "weekendDays");
+        "weekends",
+        "startYear",
+        "lookup");
 
     /**
      * Restricted constructor.
@@ -574,10 +726,12 @@ public final class ImmutableHolidayCalendar
       switch (propertyName.hashCode()) {
         case 3355:  // id
           return id;
-        case -510663909:  // holidays
-          return holidays;
-        case 563236190:  // weekendDays
-          return weekendDays;
+        case -621930260:  // weekends
+          return weekends;
+        case -2129150017:  // startYear
+          return startYear;
+        case -1097094790:  // lookup
+          return lookup;
       }
       return super.metaPropertyGet(propertyName);
     }
@@ -607,19 +761,27 @@ public final class ImmutableHolidayCalendar
     }
 
     /**
-     * The meta-property for the {@code holidays} property.
+     * The meta-property for the {@code weekends} property.
      * @return the meta-property, not null
      */
-    public MetaProperty<ImmutableSortedSet<LocalDate>> holidays() {
-      return holidays;
+    public MetaProperty<Integer> weekends() {
+      return weekends;
     }
 
     /**
-     * The meta-property for the {@code weekendDays} property.
+     * The meta-property for the {@code startYear} property.
      * @return the meta-property, not null
      */
-    public MetaProperty<ImmutableSet<DayOfWeek>> weekendDays() {
-      return weekendDays;
+    public MetaProperty<Integer> startYear() {
+      return startYear;
+    }
+
+    /**
+     * The meta-property for the {@code lookup} property.
+     * @return the meta-property, not null
+     */
+    public MetaProperty<int[]> lookup() {
+      return lookup;
     }
 
     //-----------------------------------------------------------------------
@@ -628,10 +790,12 @@ public final class ImmutableHolidayCalendar
       switch (propertyName.hashCode()) {
         case 3355:  // id
           return ((ImmutableHolidayCalendar) bean).getId();
-        case -510663909:  // holidays
-          return ((ImmutableHolidayCalendar) bean).getHolidays();
-        case 563236190:  // weekendDays
-          return ((ImmutableHolidayCalendar) bean).getWeekendDays();
+        case -621930260:  // weekends
+          return ((ImmutableHolidayCalendar) bean).weekends;
+        case -2129150017:  // startYear
+          return ((ImmutableHolidayCalendar) bean).startYear;
+        case -1097094790:  // lookup
+          return ((ImmutableHolidayCalendar) bean).lookup;
       }
       return super.propertyGet(bean, propertyName, quiet);
     }
@@ -654,14 +818,14 @@ public final class ImmutableHolidayCalendar
   private static final class Builder extends DirectPrivateBeanBuilder<ImmutableHolidayCalendar> {
 
     private HolidayCalendarId id;
-    private SortedSet<LocalDate> holidays = ImmutableSortedSet.of();
-    private Set<DayOfWeek> weekendDays = ImmutableSet.of();
+    private int weekends;
+    private int startYear;
+    private int[] lookup;
 
     /**
      * Restricted constructor.
      */
     private Builder() {
-      super(meta());
     }
 
     //-----------------------------------------------------------------------
@@ -670,27 +834,31 @@ public final class ImmutableHolidayCalendar
       switch (propertyName.hashCode()) {
         case 3355:  // id
           return id;
-        case -510663909:  // holidays
-          return holidays;
-        case 563236190:  // weekendDays
-          return weekendDays;
+        case -621930260:  // weekends
+          return weekends;
+        case -2129150017:  // startYear
+          return startYear;
+        case -1097094790:  // lookup
+          return lookup;
         default:
           throw new NoSuchElementException("Unknown property: " + propertyName);
       }
     }
 
-    @SuppressWarnings("unchecked")
     @Override
     public Builder set(String propertyName, Object newValue) {
       switch (propertyName.hashCode()) {
         case 3355:  // id
           this.id = (HolidayCalendarId) newValue;
           break;
-        case -510663909:  // holidays
-          this.holidays = (SortedSet<LocalDate>) newValue;
+        case -621930260:  // weekends
+          this.weekends = (Integer) newValue;
           break;
-        case 563236190:  // weekendDays
-          this.weekendDays = (Set<DayOfWeek>) newValue;
+        case -2129150017:  // startYear
+          this.startYear = (Integer) newValue;
+          break;
+        case -1097094790:  // lookup
+          this.lookup = (int[]) newValue;
           break;
         default:
           throw new NoSuchElementException("Unknown property: " + propertyName);
@@ -702,24 +870,25 @@ public final class ImmutableHolidayCalendar
     public ImmutableHolidayCalendar build() {
       return new ImmutableHolidayCalendar(
           id,
-          holidays,
-          weekendDays);
+          weekends,
+          startYear,
+          lookup);
     }
 
     //-----------------------------------------------------------------------
     @Override
     public String toString() {
-      StringBuilder buf = new StringBuilder(128);
+      StringBuilder buf = new StringBuilder(160);
       buf.append("ImmutableHolidayCalendar.Builder{");
       buf.append("id").append('=').append(JodaBeanUtils.toString(id)).append(',').append(' ');
-      buf.append("holidays").append('=').append(JodaBeanUtils.toString(holidays)).append(',').append(' ');
-      buf.append("weekendDays").append('=').append(JodaBeanUtils.toString(weekendDays));
+      buf.append("weekends").append('=').append(JodaBeanUtils.toString(weekends)).append(',').append(' ');
+      buf.append("startYear").append('=').append(JodaBeanUtils.toString(startYear)).append(',').append(' ');
+      buf.append("lookup").append('=').append(JodaBeanUtils.toString(lookup));
       buf.append('}');
       return buf.toString();
     }
 
   }
 
-  ///CLOVER:ON
   //-------------------------- AUTOGENERATED END --------------------------
 }

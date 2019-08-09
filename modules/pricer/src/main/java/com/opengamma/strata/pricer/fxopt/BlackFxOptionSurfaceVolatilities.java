@@ -11,16 +11,16 @@ import java.time.ZonedDateTime;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
-import java.util.Set;
 
 import org.joda.beans.Bean;
-import org.joda.beans.BeanDefinition;
 import org.joda.beans.ImmutableBean;
-import org.joda.beans.ImmutableConstructor;
 import org.joda.beans.JodaBeanUtils;
+import org.joda.beans.MetaBean;
 import org.joda.beans.MetaProperty;
-import org.joda.beans.Property;
-import org.joda.beans.PropertyDefinition;
+import org.joda.beans.gen.BeanDefinition;
+import org.joda.beans.gen.ImmutableConstructor;
+import org.joda.beans.gen.ImmutablePreBuild;
+import org.joda.beans.gen.PropertyDefinition;
 import org.joda.beans.impl.direct.DirectFieldsBeanBuilder;
 import org.joda.beans.impl.direct.DirectMetaBean;
 import org.joda.beans.impl.direct.DirectMetaProperty;
@@ -55,6 +55,11 @@ public final class BlackFxOptionSurfaceVolatilities
     implements BlackFxOptionVolatilities, ImmutableBean, Serializable {
 
   /**
+   * The name of the volatilities.
+   */
+  @PropertyDefinition(validate = "notNull", overrideGet = true)
+  private final FxOptionVolatilitiesName name;
+  /**
    * The currency pair that the volatilities are for.
    */
   @PropertyDefinition(validate = "notNull", overrideGet = true)
@@ -83,6 +88,8 @@ public final class BlackFxOptionSurfaceVolatilities
   /**
    * Obtains an instance from the implied volatility surface and the date-time for which it is valid.
    * <p>
+   * {@code FxOptionVolatilitiesName} is built from the name in {@code Surface}.
+   * <p>
    * The surface is specified by an instance of {@link Surface}, such as {@link InterpolatedNodalSurface}.
    * The surface must contain the correct metadata:
    * <ul>
@@ -104,15 +111,54 @@ public final class BlackFxOptionSurfaceVolatilities
       ZonedDateTime valuationDateTime,
       Surface surface) {
 
-    return new BlackFxOptionSurfaceVolatilities(currencyPair, valuationDateTime, surface);
+    FxOptionVolatilitiesName name = FxOptionVolatilitiesName.of(surface.getName().getName());
+    return of(name, currencyPair, valuationDateTime, surface);
   }
 
-  @ImmutableConstructor
-  private BlackFxOptionSurfaceVolatilities(
+  /**
+   * Obtains an instance from the implied volatility surface and the date-time for which it is valid.
+   * <p>
+   * The surface is specified by an instance of {@link Surface}, such as {@link InterpolatedNodalSurface}.
+   * The surface must contain the correct metadata:
+   * <ul>
+   * <li>The x-value type must be {@link ValueType#YEAR_FRACTION}
+   * <li>The y-value type must be {@link ValueType#STRIKE}
+   * <li>The z-value type must be {@link ValueType#BLACK_VOLATILITY}
+   * <li>The day count must be set in the additional information using {@link SurfaceInfoType#DAY_COUNT}
+   * </ul>
+   * Suitable surface metadata can be created using
+   * {@link Surfaces#blackVolatilityByExpiryStrike(String, DayCount)}.
+   * 
+   * @param name  the name
+   * @param currencyPair  the currency pair
+   * @param valuationDateTime  the valuation date-time
+   * @param surface  the volatility surface
+   * @return the volatilities
+   */
+  public static BlackFxOptionSurfaceVolatilities of(
+      FxOptionVolatilitiesName name,
       CurrencyPair currencyPair,
       ZonedDateTime valuationDateTime,
       Surface surface) {
 
+    return new BlackFxOptionSurfaceVolatilities(name, currencyPair, valuationDateTime, surface);
+  }
+
+  @ImmutablePreBuild
+  private static void preBuild(Builder builder) {
+    if (builder.name == null && builder.surface != null) {
+      builder.name = FxOptionVolatilitiesName.of(builder.surface.getName().getName());
+    }
+  }
+
+  @ImmutableConstructor
+  private BlackFxOptionSurfaceVolatilities(
+      FxOptionVolatilitiesName name,
+      CurrencyPair currencyPair,
+      ZonedDateTime valuationDateTime,
+      Surface surface) {
+
+    ArgChecker.notNull(name, "name");
     ArgChecker.notNull(currencyPair, "currencyPair");
     ArgChecker.notNull(valuationDateTime, "valuationDateTime");
     ArgChecker.notNull(surface, "surface");
@@ -125,6 +171,7 @@ public final class BlackFxOptionSurfaceVolatilities
     DayCount dayCount = surface.getMetadata().findInfo(SurfaceInfoType.DAY_COUNT)
         .orElseThrow(() -> new IllegalArgumentException("Incorrect surface metadata, missing DayCount"));
 
+    this.name = name;
     this.currencyPair = currencyPair;
     this.valuationDateTime = valuationDateTime;
     this.surface = surface;
@@ -133,15 +180,10 @@ public final class BlackFxOptionSurfaceVolatilities
 
   // ensure standard constructor is invoked
   private Object readResolve() {
-    return new BlackFxOptionSurfaceVolatilities(currencyPair, valuationDateTime, surface);
+    return new BlackFxOptionSurfaceVolatilities(name, currencyPair, valuationDateTime, surface);
   }
 
   //-------------------------------------------------------------------------
-  @Override
-  public FxOptionVolatilitiesName getName() {
-    return FxOptionVolatilitiesName.of(surface.getName().getName());
-  }
-
   @Override
   public <T> Optional<T> findData(MarketDataName<T> name) {
     if (surface.getName().equals(name)) {
@@ -168,13 +210,13 @@ public final class BlackFxOptionSurfaceVolatilities
   @Override
   public BlackFxOptionSurfaceVolatilities withParameter(int parameterIndex, double newValue) {
     return new BlackFxOptionSurfaceVolatilities(
-        currencyPair, valuationDateTime, surface.withParameter(parameterIndex, newValue));
+        name, currencyPair, valuationDateTime, surface.withParameter(parameterIndex, newValue));
   }
 
   @Override
   public BlackFxOptionSurfaceVolatilities withPerturbation(ParameterPerturbation perturbation) {
     return new BlackFxOptionSurfaceVolatilities(
-        currencyPair, valuationDateTime, surface.withPerturbation(perturbation));
+        name, currencyPair, valuationDateTime, surface.withPerturbation(perturbation));
   }
 
   //-------------------------------------------------------------------------
@@ -223,7 +265,6 @@ public final class BlackFxOptionSurfaceVolatilities
   }
 
   //------------------------- AUTOGENERATED START -------------------------
-  ///CLOVER:OFF
   /**
    * The meta-bean for {@code BlackFxOptionSurfaceVolatilities}.
    * @return the meta-bean, not null
@@ -233,7 +274,7 @@ public final class BlackFxOptionSurfaceVolatilities
   }
 
   static {
-    JodaBeanUtils.registerMetaBean(BlackFxOptionSurfaceVolatilities.Meta.INSTANCE);
+    MetaBean.register(BlackFxOptionSurfaceVolatilities.Meta.INSTANCE);
   }
 
   /**
@@ -254,14 +295,14 @@ public final class BlackFxOptionSurfaceVolatilities
     return BlackFxOptionSurfaceVolatilities.Meta.INSTANCE;
   }
 
+  //-----------------------------------------------------------------------
+  /**
+   * Gets the name of the volatilities.
+   * @return the value of the property, not null
+   */
   @Override
-  public <R> Property<R> property(String propertyName) {
-    return metaBean().<R>metaProperty(propertyName).createProperty(this);
-  }
-
-  @Override
-  public Set<String> propertyNames() {
-    return metaBean().metaPropertyMap().keySet();
+  public FxOptionVolatilitiesName getName() {
+    return name;
   }
 
   //-----------------------------------------------------------------------
@@ -314,7 +355,8 @@ public final class BlackFxOptionSurfaceVolatilities
     }
     if (obj != null && obj.getClass() == this.getClass()) {
       BlackFxOptionSurfaceVolatilities other = (BlackFxOptionSurfaceVolatilities) obj;
-      return JodaBeanUtils.equal(currencyPair, other.currencyPair) &&
+      return JodaBeanUtils.equal(name, other.name) &&
+          JodaBeanUtils.equal(currencyPair, other.currencyPair) &&
           JodaBeanUtils.equal(valuationDateTime, other.valuationDateTime) &&
           JodaBeanUtils.equal(surface, other.surface);
     }
@@ -324,6 +366,7 @@ public final class BlackFxOptionSurfaceVolatilities
   @Override
   public int hashCode() {
     int hash = getClass().hashCode();
+    hash = hash * 31 + JodaBeanUtils.hashCode(name);
     hash = hash * 31 + JodaBeanUtils.hashCode(currencyPair);
     hash = hash * 31 + JodaBeanUtils.hashCode(valuationDateTime);
     hash = hash * 31 + JodaBeanUtils.hashCode(surface);
@@ -332,8 +375,9 @@ public final class BlackFxOptionSurfaceVolatilities
 
   @Override
   public String toString() {
-    StringBuilder buf = new StringBuilder(128);
+    StringBuilder buf = new StringBuilder(160);
     buf.append("BlackFxOptionSurfaceVolatilities{");
+    buf.append("name").append('=').append(name).append(',').append(' ');
     buf.append("currencyPair").append('=').append(currencyPair).append(',').append(' ');
     buf.append("valuationDateTime").append('=').append(valuationDateTime).append(',').append(' ');
     buf.append("surface").append('=').append(JodaBeanUtils.toString(surface));
@@ -351,6 +395,11 @@ public final class BlackFxOptionSurfaceVolatilities
      */
     static final Meta INSTANCE = new Meta();
 
+    /**
+     * The meta-property for the {@code name} property.
+     */
+    private final MetaProperty<FxOptionVolatilitiesName> name = DirectMetaProperty.ofImmutable(
+        this, "name", BlackFxOptionSurfaceVolatilities.class, FxOptionVolatilitiesName.class);
     /**
      * The meta-property for the {@code currencyPair} property.
      */
@@ -371,6 +420,7 @@ public final class BlackFxOptionSurfaceVolatilities
      */
     private final Map<String, MetaProperty<?>> metaPropertyMap$ = new DirectMetaPropertyMap(
         this, null,
+        "name",
         "currencyPair",
         "valuationDateTime",
         "surface");
@@ -384,6 +434,8 @@ public final class BlackFxOptionSurfaceVolatilities
     @Override
     protected MetaProperty<?> metaPropertyGet(String propertyName) {
       switch (propertyName.hashCode()) {
+        case 3373707:  // name
+          return name;
         case 1005147787:  // currencyPair
           return currencyPair;
         case -949589828:  // valuationDateTime
@@ -410,6 +462,14 @@ public final class BlackFxOptionSurfaceVolatilities
     }
 
     //-----------------------------------------------------------------------
+    /**
+     * The meta-property for the {@code name} property.
+     * @return the meta-property, not null
+     */
+    public MetaProperty<FxOptionVolatilitiesName> name() {
+      return name;
+    }
+
     /**
      * The meta-property for the {@code currencyPair} property.
      * @return the meta-property, not null
@@ -438,6 +498,8 @@ public final class BlackFxOptionSurfaceVolatilities
     @Override
     protected Object propertyGet(Bean bean, String propertyName, boolean quiet) {
       switch (propertyName.hashCode()) {
+        case 3373707:  // name
+          return ((BlackFxOptionSurfaceVolatilities) bean).getName();
         case 1005147787:  // currencyPair
           return ((BlackFxOptionSurfaceVolatilities) bean).getCurrencyPair();
         case -949589828:  // valuationDateTime
@@ -465,6 +527,7 @@ public final class BlackFxOptionSurfaceVolatilities
    */
   public static final class Builder extends DirectFieldsBeanBuilder<BlackFxOptionSurfaceVolatilities> {
 
+    private FxOptionVolatilitiesName name;
     private CurrencyPair currencyPair;
     private ZonedDateTime valuationDateTime;
     private Surface surface;
@@ -480,6 +543,7 @@ public final class BlackFxOptionSurfaceVolatilities
      * @param beanToCopy  the bean to copy from, not null
      */
     private Builder(BlackFxOptionSurfaceVolatilities beanToCopy) {
+      this.name = beanToCopy.getName();
       this.currencyPair = beanToCopy.getCurrencyPair();
       this.valuationDateTime = beanToCopy.getValuationDateTime();
       this.surface = beanToCopy.getSurface();
@@ -489,6 +553,8 @@ public final class BlackFxOptionSurfaceVolatilities
     @Override
     public Object get(String propertyName) {
       switch (propertyName.hashCode()) {
+        case 3373707:  // name
+          return name;
         case 1005147787:  // currencyPair
           return currencyPair;
         case -949589828:  // valuationDateTime
@@ -503,6 +569,9 @@ public final class BlackFxOptionSurfaceVolatilities
     @Override
     public Builder set(String propertyName, Object newValue) {
       switch (propertyName.hashCode()) {
+        case 3373707:  // name
+          this.name = (FxOptionVolatilitiesName) newValue;
+          break;
         case 1005147787:  // currencyPair
           this.currencyPair = (CurrencyPair) newValue;
           break;
@@ -524,45 +593,28 @@ public final class BlackFxOptionSurfaceVolatilities
       return this;
     }
 
-    /**
-     * @deprecated Use Joda-Convert in application code
-     */
-    @Override
-    @Deprecated
-    public Builder setString(String propertyName, String value) {
-      setString(meta().metaProperty(propertyName), value);
-      return this;
-    }
-
-    /**
-     * @deprecated Use Joda-Convert in application code
-     */
-    @Override
-    @Deprecated
-    public Builder setString(MetaProperty<?> property, String value) {
-      super.setString(property, value);
-      return this;
-    }
-
-    /**
-     * @deprecated Loop in application code
-     */
-    @Override
-    @Deprecated
-    public Builder setAll(Map<String, ? extends Object> propertyValueMap) {
-      super.setAll(propertyValueMap);
-      return this;
-    }
-
     @Override
     public BlackFxOptionSurfaceVolatilities build() {
+      preBuild(this);
       return new BlackFxOptionSurfaceVolatilities(
+          name,
           currencyPair,
           valuationDateTime,
           surface);
     }
 
     //-----------------------------------------------------------------------
+    /**
+     * Sets the name of the volatilities.
+     * @param name  the new value, not null
+     * @return this, for chaining, not null
+     */
+    public Builder name(FxOptionVolatilitiesName name) {
+      JodaBeanUtils.notNull(name, "name");
+      this.name = name;
+      return this;
+    }
+
     /**
      * Sets the currency pair that the volatilities are for.
      * @param currencyPair  the new value, not null
@@ -604,8 +656,9 @@ public final class BlackFxOptionSurfaceVolatilities
     //-----------------------------------------------------------------------
     @Override
     public String toString() {
-      StringBuilder buf = new StringBuilder(128);
+      StringBuilder buf = new StringBuilder(160);
       buf.append("BlackFxOptionSurfaceVolatilities.Builder{");
+      buf.append("name").append('=').append(JodaBeanUtils.toString(name)).append(',').append(' ');
       buf.append("currencyPair").append('=').append(JodaBeanUtils.toString(currencyPair)).append(',').append(' ');
       buf.append("valuationDateTime").append('=').append(JodaBeanUtils.toString(valuationDateTime)).append(',').append(' ');
       buf.append("surface").append('=').append(JodaBeanUtils.toString(surface));
@@ -615,6 +668,5 @@ public final class BlackFxOptionSurfaceVolatilities
 
   }
 
-  ///CLOVER:ON
   //-------------------------- AUTOGENERATED END --------------------------
 }

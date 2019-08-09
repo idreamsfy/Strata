@@ -24,7 +24,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.opengamma.strata.basics.ReferenceData;
-import com.opengamma.strata.basics.StandardId;
 import com.opengamma.strata.basics.currency.Currency;
 import com.opengamma.strata.basics.currency.CurrencyAmount;
 import com.opengamma.strata.basics.currency.MultiCurrencyAmount;
@@ -56,6 +55,7 @@ import com.opengamma.strata.pricer.bond.CapitalIndexedBondCurveDataSet;
 import com.opengamma.strata.pricer.bond.DiscountingCapitalIndexedBondTradePricer;
 import com.opengamma.strata.pricer.bond.LegalEntityDiscountingProvider;
 import com.opengamma.strata.pricer.rate.RatesProvider;
+import com.opengamma.strata.product.LegalEntityId;
 import com.opengamma.strata.product.SecurityId;
 import com.opengamma.strata.product.TradeInfo;
 import com.opengamma.strata.product.bond.CapitalIndexedBond;
@@ -82,7 +82,7 @@ public class CapitalIndexedBondTradeCalculationFunctionTest {
   private static final PeriodicSchedule SCHEDULE =
       PeriodicSchedule.of(date(2006, 1, 15), date(2016, 1, 15), P6M, BUSINESS_ADJUST, StubConvention.NONE, false);
   private static final SecurityId SECURITY_ID = SecurityId.of("OG-Ticker", "BOND1");
-  private static final StandardId ISSUER_ID = CapitalIndexedBondCurveDataSet.ISSUER_ID;
+  private static final LegalEntityId ISSUER_ID = CapitalIndexedBondCurveDataSet.ISSUER_ID;
   private static final CapitalIndexedBond PRODUCT = CapitalIndexedBond.builder()
       .securityId(SECURITY_ID)
       .notional(10_000_000d)
@@ -130,7 +130,7 @@ public class CapitalIndexedBondTradeCalculationFunctionTest {
 
   //-------------------------------------------------------------------------
   public void test_requirementsAndCurrency() {
-    CapitalIndexedBondTradeCalculationFunction function = new CapitalIndexedBondTradeCalculationFunction();
+    CapitalIndexedBondTradeCalculationFunction<CapitalIndexedBondTrade> function = CapitalIndexedBondTradeCalculationFunction.TRADE;
     Set<Measure> measures = function.supportedMeasures();
     FunctionRequirements reqs = function.requirements(TRADE, measures, PARAMS, REF_DATA);
     assertThat(reqs.getOutputCurrencies()).containsOnly(CURRENCY);
@@ -140,7 +140,7 @@ public class CapitalIndexedBondTradeCalculationFunctionTest {
   }
 
   public void test_simpleMeasures() {
-    CapitalIndexedBondTradeCalculationFunction function = new CapitalIndexedBondTradeCalculationFunction();
+    CapitalIndexedBondTradeCalculationFunction<CapitalIndexedBondTrade> function = CapitalIndexedBondTradeCalculationFunction.TRADE;
     ScenarioMarketData md = marketData();
     RatesProvider ratesProvider = RATES_LOOKUP.marketDataView(md.scenario(0)).ratesProvider();
     LegalEntityDiscountingProvider ledProvider = LED_LOOKUP.marketDataView(md.scenario(0)).discountingProvider();
@@ -166,7 +166,7 @@ public class CapitalIndexedBondTradeCalculationFunctionTest {
   }
 
   public void test_pv01() {
-    CapitalIndexedBondTradeCalculationFunction function = new CapitalIndexedBondTradeCalculationFunction();
+    CapitalIndexedBondTradeCalculationFunction<CapitalIndexedBondTrade> function = CapitalIndexedBondTradeCalculationFunction.TRADE;
     ScenarioMarketData md = marketData();
     RatesProvider ratesProvider = RATES_LOOKUP.marketDataView(md.scenario(0)).ratesProvider();
     LegalEntityDiscountingProvider ledProvider = LED_LOOKUP.marketDataView(md.scenario(0)).discountingProvider();

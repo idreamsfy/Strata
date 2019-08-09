@@ -6,7 +6,6 @@
 package com.opengamma.strata.math.impl.linearalgebra;
 
 import com.opengamma.strata.collect.ArgChecker;
-import com.opengamma.strata.collect.array.DoubleArray;
 import com.opengamma.strata.collect.array.DoubleMatrix;
 import com.opengamma.strata.math.impl.matrix.MatrixAlgebra;
 import com.opengamma.strata.math.impl.matrix.OGMatrixAlgebra;
@@ -46,11 +45,6 @@ public class CholeskyDecompositionOpenGammaResult implements CholeskyDecompositi
     for (int loopdiag = 0; loopdiag < _lArray.length; ++loopdiag) {
       _determinant *= _lArray[loopdiag][loopdiag] * _lArray[loopdiag][loopdiag];
     }
-  }
-
-  @Override
-  public DoubleArray solve(DoubleArray b) {
-    return b;
   }
 
   @Override

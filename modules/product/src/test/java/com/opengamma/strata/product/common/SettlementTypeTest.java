@@ -7,9 +7,11 @@ package com.opengamma.strata.product.common;
 
 import static com.opengamma.strata.collect.TestHelper.assertJodaConvert;
 import static com.opengamma.strata.collect.TestHelper.assertSerialization;
-import static com.opengamma.strata.collect.TestHelper.assertThrowsIllegalArg;
 import static com.opengamma.strata.collect.TestHelper.coverEnum;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.testng.Assert.assertEquals;
+
+import java.util.Locale;
 
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
@@ -22,7 +24,7 @@ public class SettlementTypeTest {
 
   //-------------------------------------------------------------------------
   @DataProvider(name = "name")
-  static Object[][] data_name() {
+  public static Object[][] data_name() {
     return new Object[][] {
         {SettlementType.CASH, "Cash"},
         {SettlementType.PHYSICAL, "Physical"},
@@ -39,12 +41,24 @@ public class SettlementTypeTest {
     assertEquals(SettlementType.of(name), convention);
   }
 
+  @Test(dataProvider = "name")
+  public void test_of_lookupUpperCase(SettlementType convention, String name) {
+    assertEquals(SettlementType.of(name.toUpperCase(Locale.ENGLISH)), convention);
+  }
+
+  @Test(dataProvider = "name")
+  public void test_of_lookupLowerCase(SettlementType convention, String name) {
+    assertEquals(SettlementType.of(name.toLowerCase(Locale.ENGLISH)), convention);
+  }
+
   public void test_of_lookup_notFound() {
-    assertThrowsIllegalArg(() -> SettlementType.of("Rubbish"));
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> SettlementType.of("Rubbish"));
   }
 
   public void test_of_lookup_null() {
-    assertThrowsIllegalArg(() -> SettlementType.of(null));
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> SettlementType.of(null));
   }
 
   //-------------------------------------------------------------------------

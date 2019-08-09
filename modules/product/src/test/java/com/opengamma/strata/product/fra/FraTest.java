@@ -18,7 +18,6 @@ import static com.opengamma.strata.basics.date.Tenor.TENOR_3M;
 import static com.opengamma.strata.basics.index.IborIndices.GBP_LIBOR_2M;
 import static com.opengamma.strata.basics.index.IborIndices.GBP_LIBOR_3M;
 import static com.opengamma.strata.collect.TestHelper.assertSerialization;
-import static com.opengamma.strata.collect.TestHelper.assertThrowsIllegalArg;
 import static com.opengamma.strata.collect.TestHelper.coverBeanEquals;
 import static com.opengamma.strata.collect.TestHelper.coverImmutableBean;
 import static com.opengamma.strata.collect.TestHelper.date;
@@ -26,6 +25,7 @@ import static com.opengamma.strata.product.common.BuySell.BUY;
 import static com.opengamma.strata.product.common.BuySell.SELL;
 import static com.opengamma.strata.product.fra.FraDiscountingMethod.AFMA;
 import static com.opengamma.strata.product.fra.FraDiscountingMethod.ISDA;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.testng.Assert.assertEquals;
 
 import java.time.LocalTime;
@@ -34,6 +34,7 @@ import java.util.Optional;
 
 import org.testng.annotations.Test;
 
+import com.google.common.collect.ImmutableSet;
 import com.opengamma.strata.basics.ReferenceData;
 import com.opengamma.strata.basics.date.AdjustableDate;
 import com.opengamma.strata.basics.date.BusinessDayAdjustment;
@@ -52,6 +53,7 @@ public class FraTest {
   private static final ReferenceData REF_DATA = ReferenceData.standard();
   private static final double NOTIONAL_1M = 1_000_000d;
   private static final double NOTIONAL_2M = 2_000_000d;
+  private static final double FIXED_RATE = 0.025d;
   private static final BusinessDayAdjustment BDA_MOD_FOLLOW = BusinessDayAdjustment.of(MODIFIED_FOLLOWING, GBLO);
   private static final DaysAdjustment PLUS_TWO_DAYS = DaysAdjustment.ofBusinessDays(2, GBLO);
   private static final DaysAdjustment MINUS_TWO_DAYS = DaysAdjustment.ofBusinessDays(-2, GBLO);
@@ -67,12 +69,15 @@ public class FraTest {
     assertEquals(test.getEndDate(), date(2015, 9, 15));
     assertEquals(test.getBusinessDayAdjustment(), Optional.empty());
     assertEquals(test.getPaymentDate(), AdjustableDate.of(date(2015, 6, 15)));
-    assertEquals(test.getFixedRate(), 0.25d, 0d);
+    assertEquals(test.getFixedRate(), FIXED_RATE, 0d);
     assertEquals(test.getIndex(), GBP_LIBOR_3M);
     assertEquals(test.getIndexInterpolated(), Optional.empty());
     assertEquals(test.getFixingDateOffset(), GBP_LIBOR_3M.getFixingDateOffset());  // defaulted
     assertEquals(test.getDayCount(), ACT_365F);  // defaulted
     assertEquals(test.getDiscounting(), ISDA);  // defaulted
+    assertEquals(test.isCrossCurrency(), false);
+    assertEquals(test.allPaymentCurrencies(), ImmutableSet.of(GBP));
+    assertEquals(test.allCurrencies(), ImmutableSet.of(GBP));
   }
 
   public void test_builder_AUD() {
@@ -93,7 +98,7 @@ public class FraTest {
         .startDate(date(2015, 6, 15))
         .endDate(date(2015, 9, 15))
         .paymentDate(AdjustableDate.of(date(2015, 6, 16)))
-        .fixedRate(0.25d)
+        .fixedRate(FIXED_RATE)
         .index(dummyIndex)
         .fixingDateOffset(MINUS_TWO_DAYS)
         .build();
@@ -104,7 +109,7 @@ public class FraTest {
     assertEquals(test.getEndDate(), date(2015, 9, 15));
     assertEquals(test.getBusinessDayAdjustment(), Optional.empty());
     assertEquals(test.getPaymentDate(), AdjustableDate.of(date(2015, 6, 16)));
-    assertEquals(test.getFixedRate(), 0.25d, 0d);
+    assertEquals(test.getFixedRate(), FIXED_RATE, 0d);
     assertEquals(test.getIndex(), dummyIndex);
     assertEquals(test.getIndexInterpolated(), Optional.empty());
     assertEquals(test.getFixingDateOffset(), MINUS_TWO_DAYS);
@@ -130,7 +135,7 @@ public class FraTest {
         .startDate(date(2015, 6, 15))
         .endDate(date(2015, 9, 15))
         .paymentDate(AdjustableDate.of(date(2015, 6, 16)))
-        .fixedRate(0.25d)
+        .fixedRate(FIXED_RATE)
         .index(dummyIndex)
         .fixingDateOffset(MINUS_TWO_DAYS)
         .build();
@@ -141,7 +146,7 @@ public class FraTest {
     assertEquals(test.getEndDate(), date(2015, 9, 15));
     assertEquals(test.getBusinessDayAdjustment(), Optional.empty());
     assertEquals(test.getPaymentDate(), AdjustableDate.of(date(2015, 6, 16)));
-    assertEquals(test.getFixedRate(), 0.25d, 0d);
+    assertEquals(test.getFixedRate(), FIXED_RATE, 0d);
     assertEquals(test.getIndex(), dummyIndex);
     assertEquals(test.getIndexInterpolated(), Optional.empty());
     assertEquals(test.getFixingDateOffset(), MINUS_TWO_DAYS);
@@ -150,32 +155,35 @@ public class FraTest {
   }
 
   public void test_builder_datesInOrder() {
-    assertThrowsIllegalArg(() -> Fra.builder()
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> Fra.builder()
         .buySell(BUY)
         .notional(NOTIONAL_1M)
         .startDate(date(2015, 6, 15))
         .endDate(date(2015, 6, 14))
-        .fixedRate(0.25d)
+        .fixedRate(FIXED_RATE)
         .index(GBP_LIBOR_3M)
         .build());
   }
 
   public void test_builder_noIndex() {
-    assertThrowsIllegalArg(() -> Fra.builder()
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> Fra.builder()
         .buySell(BUY)
         .notional(NOTIONAL_1M)
         .startDate(date(2015, 6, 15))
         .endDate(date(2015, 9, 15))
-        .fixedRate(0.25d)
+        .fixedRate(FIXED_RATE)
         .build());
   }
 
   public void test_builder_noDates() {
-    assertThrowsIllegalArg(() -> Fra.builder()
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> Fra.builder()
         .buySell(BUY)
         .notional(NOTIONAL_1M)
         .endDate(date(2015, 9, 15))
-        .fixedRate(0.25d)
+        .fixedRate(FIXED_RATE)
         .index(GBP_LIBOR_3M)
         .build());
   }
@@ -188,7 +196,7 @@ public class FraTest {
         .startDate(date(2015, 6, 15))
         .endDate(date(2015, 9, 15))
         .paymentDate(AdjustableDate.of(date(2015, 6, 20), BDA_MOD_FOLLOW))
-        .fixedRate(0.25d)
+        .fixedRate(FIXED_RATE)
         .index(GBP_LIBOR_3M)
         .fixingDateOffset(MINUS_TWO_DAYS)
         .build();
@@ -198,7 +206,7 @@ public class FraTest {
     assertEquals(test.getStartDate(), date(2015, 6, 15));
     assertEquals(test.getEndDate(), date(2015, 9, 15));
     assertEquals(test.getPaymentDate(), date(2015, 6, 22));
-    assertEquals(test.getFixedRate(), 0.25d, 0d);
+    assertEquals(test.getFixedRate(), FIXED_RATE, 0d);
     assertEquals(test.getFloatingRate(), IborRateComputation.of(GBP_LIBOR_3M, date(2015, 6, 11), REF_DATA));
     assertEquals(test.getYearFraction(), ACT_365F.yearFraction(date(2015, 6, 15), date(2015, 9, 15)), 0d);
     assertEquals(test.getDiscounting(), ISDA);
@@ -211,7 +219,7 @@ public class FraTest {
         .startDate(date(2015, 6, 12))
         .endDate(date(2015, 9, 5))
         .businessDayAdjustment(BDA_MOD_FOLLOW)
-        .fixedRate(0.25d)
+        .fixedRate(FIXED_RATE)
         .index(GBP_LIBOR_3M)
         .indexInterpolated(GBP_LIBOR_2M)
         .fixingDateOffset(MINUS_TWO_DAYS)
@@ -222,7 +230,7 @@ public class FraTest {
     assertEquals(test.getStartDate(), date(2015, 6, 12));
     assertEquals(test.getEndDate(), date(2015, 9, 7));
     assertEquals(test.getPaymentDate(), date(2015, 6, 12));
-    assertEquals(test.getFixedRate(), 0.25d, 0d);
+    assertEquals(test.getFixedRate(), FIXED_RATE, 0d);
     assertEquals(test.getFloatingRate(),
         IborInterpolatedRateComputation.of(GBP_LIBOR_2M, GBP_LIBOR_3M, date(2015, 6, 10), REF_DATA));
     assertEquals(test.getYearFraction(), ACT_365F.yearFraction(date(2015, 6, 12), date(2015, 9, 7)), 0d);
@@ -246,7 +254,7 @@ public class FraTest {
         .notional(NOTIONAL_1M)
         .startDate(date(2015, 6, 15))
         .endDate(date(2015, 9, 15))
-        .fixedRate(0.25d)
+        .fixedRate(FIXED_RATE)
         .index(GBP_LIBOR_3M)
         .build();
   }

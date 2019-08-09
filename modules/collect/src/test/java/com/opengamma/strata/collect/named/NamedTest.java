@@ -5,21 +5,21 @@
  */
 package com.opengamma.strata.collect.named;
 
-import static com.opengamma.strata.collect.TestHelper.assertThrowsIllegalArg;
-import static org.testng.Assert.assertEquals;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test {@link Named}.
  */
-@Test
 public class NamedTest {
 
+  @Test
   public void test_of() {
     SampleNamed test = Named.of(SampleNamed.class, "Standard");
-    assertEquals(test, SampleNameds.STANDARD);
-    assertThrowsIllegalArg(() -> Named.of(SampleNamed.class, "Rubbish"));
+    assertThat(test).isEqualTo(SampleNameds.STANDARD);
+    assertThatIllegalArgumentException().isThrownBy(() -> Named.of(SampleNamed.class, "Rubbish"));
   }
 
 }

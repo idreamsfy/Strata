@@ -19,12 +19,12 @@ import static com.opengamma.strata.basics.schedule.Frequency.P6M;
 import static com.opengamma.strata.basics.schedule.Frequency.TERM;
 import static com.opengamma.strata.basics.schedule.StubConvention.LONG_INITIAL;
 import static com.opengamma.strata.collect.TestHelper.assertSerialization;
-import static com.opengamma.strata.collect.TestHelper.assertThrowsIllegalArg;
 import static com.opengamma.strata.collect.TestHelper.coverBeanEquals;
 import static com.opengamma.strata.collect.TestHelper.coverImmutableBean;
 import static com.opengamma.strata.product.common.PayReceive.PAY;
 import static com.opengamma.strata.product.swap.OvernightAccrualMethod.AVERAGED;
 import static com.opengamma.strata.product.swap.OvernightAccrualMethod.COMPOUNDED;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.testng.Assert.assertEquals;
 
 import java.time.LocalDate;
@@ -66,8 +66,8 @@ public class OvernightRateSwapLegConventionTest {
     assertEquals(test.getAccrualBusinessDayAdjustment(), BDA_MOD_FOLLOW);
     assertEquals(test.getStartDateBusinessDayAdjustment(), BDA_MOD_FOLLOW);
     assertEquals(test.getEndDateBusinessDayAdjustment(), BDA_MOD_FOLLOW);
-    assertEquals(test.getStubConvention(), StubConvention.SHORT_INITIAL);
-    assertEquals(test.getRollConvention(), RollConventions.NONE);
+    assertEquals(test.getStubConvention(), StubConvention.SMART_INITIAL);
+    assertEquals(test.getRollConvention(), RollConventions.EOM);
     assertEquals(test.getPaymentFrequency(), P12M);
     assertEquals(test.getPaymentDateOffset(), DaysAdjustment.ofBusinessDays(2, GBP_SONIA.getFixingCalendar()));
     assertEquals(test.getCompoundingMethod(), CompoundingMethod.NONE);
@@ -84,8 +84,8 @@ public class OvernightRateSwapLegConventionTest {
     assertEquals(test.getAccrualBusinessDayAdjustment(), BDA_MOD_FOLLOW);
     assertEquals(test.getStartDateBusinessDayAdjustment(), BDA_MOD_FOLLOW);
     assertEquals(test.getEndDateBusinessDayAdjustment(), BDA_MOD_FOLLOW);
-    assertEquals(test.getStubConvention(), StubConvention.SHORT_INITIAL);
-    assertEquals(test.getRollConvention(), RollConventions.NONE);
+    assertEquals(test.getStubConvention(), StubConvention.SMART_INITIAL);
+    assertEquals(test.getRollConvention(), RollConventions.EOM);
     assertEquals(test.getPaymentFrequency(), P12M);
     assertEquals(test.getPaymentDateOffset(), DaysAdjustment.ofBusinessDays(2, GBP_SONIA.getFixingCalendar()));
     assertEquals(test.getCompoundingMethod(), CompoundingMethod.NONE);
@@ -104,8 +104,8 @@ public class OvernightRateSwapLegConventionTest {
     assertEquals(test.getAccrualBusinessDayAdjustment(), BDA_MOD_FOLLOW);
     assertEquals(test.getStartDateBusinessDayAdjustment(), BDA_MOD_FOLLOW);
     assertEquals(test.getEndDateBusinessDayAdjustment(), BDA_MOD_FOLLOW);
-    assertEquals(test.getStubConvention(), StubConvention.SHORT_INITIAL);
-    assertEquals(test.getRollConvention(), RollConventions.NONE);
+    assertEquals(test.getStubConvention(), StubConvention.SMART_INITIAL);
+    assertEquals(test.getRollConvention(), RollConventions.EOM);
     assertEquals(test.getPaymentFrequency(), TERM);
     assertEquals(test.getPaymentDateOffset(), DaysAdjustment.NONE);
     assertEquals(test.getCompoundingMethod(), CompoundingMethod.NONE);
@@ -113,7 +113,8 @@ public class OvernightRateSwapLegConventionTest {
 
   //-------------------------------------------------------------------------
   public void test_builder_notEnoughData() {
-    assertThrowsIllegalArg(() -> OvernightRateSwapLegConvention.builder().build());
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> OvernightRateSwapLegConvention.builder().build());
   }
 
   public void test_builderAllSpecified() {
@@ -128,7 +129,7 @@ public class OvernightRateSwapLegConventionTest {
         .startDateBusinessDayAdjustment(BDA_FOLLOW)
         .endDateBusinessDayAdjustment(BDA_FOLLOW)
         .stubConvention(LONG_INITIAL)
-        .rollConvention(RollConventions.EOM)
+        .rollConvention(RollConventions.DAY_1)
         .paymentFrequency(P6M)
         .paymentDateOffset(PLUS_TWO_DAYS)
         .compoundingMethod(CompoundingMethod.FLAT)
@@ -143,7 +144,7 @@ public class OvernightRateSwapLegConventionTest {
     assertEquals(test.getStartDateBusinessDayAdjustment(), BDA_FOLLOW);
     assertEquals(test.getEndDateBusinessDayAdjustment(), BDA_FOLLOW);
     assertEquals(test.getStubConvention(), StubConvention.LONG_INITIAL);
-    assertEquals(test.getRollConvention(), RollConventions.EOM);
+    assertEquals(test.getRollConvention(), RollConventions.DAY_1);
     assertEquals(test.getPaymentFrequency(), P6M);
     assertEquals(test.getPaymentDateOffset(), PLUS_TWO_DAYS);
     assertEquals(test.getCompoundingMethod(), CompoundingMethod.FLAT);
@@ -162,7 +163,7 @@ public class OvernightRateSwapLegConventionTest {
             .startDate(startDate)
             .endDate(endDate)
             .businessDayAdjustment(BDA_MOD_FOLLOW)
-            .stubConvention(StubConvention.SHORT_INITIAL)
+            .stubConvention(StubConvention.SMART_INITIAL)
             .build())
         .paymentSchedule(PaymentSchedule.builder()
             .paymentFrequency(TERM)

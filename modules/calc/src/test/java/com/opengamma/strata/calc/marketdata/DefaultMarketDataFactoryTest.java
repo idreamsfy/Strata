@@ -6,9 +6,9 @@
 package com.opengamma.strata.calc.marketdata;
 
 import static com.opengamma.strata.collect.Guavate.toImmutableMap;
-import static com.opengamma.strata.collect.TestHelper.assertThrows;
 import static com.opengamma.strata.collect.TestHelper.date;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 
 import java.util.Map;
 import java.util.Objects;
@@ -292,10 +292,11 @@ public class DefaultMarketDataFactoryTest {
         builder);
 
     BuiltScenarioMarketData suppliedData = BuiltScenarioMarketData.builder(date(2011, 3, 8)).build();
-    assertThrows(
-        () -> factory.createMultiScenario(requirements, MARKET_DATA_CONFIG, suppliedData, REF_DATA, ScenarioDefinition.empty()),
-        IllegalStateException.class,
-        "No market data function available for market data ID of type.*");
+    assertThatIllegalStateException()
+        .isThrownBy(
+            () -> factory.createMultiScenario(
+                requirements, MARKET_DATA_CONFIG, suppliedData, REF_DATA, ScenarioDefinition.empty()))
+        .withMessageStartingWith("No market data function available for market data ID of type");
   }
 
   /**
@@ -370,7 +371,6 @@ public class DefaultMarketDataFactoryTest {
     // This mapping doesn't perturb any data but it causes three scenarios to be built
     PerturbationMapping<Double> mapping =
         PerturbationMapping.of(
-            Double.class,
             new FalseFilter<>(TestObservableId.class),
             new AbsoluteDoubleShift(1, 2, 3));
     ScenarioDefinition scenarioDefinition = ScenarioDefinition.ofMappings(ImmutableList.of(mapping));
@@ -401,7 +401,6 @@ public class DefaultMarketDataFactoryTest {
     // This mapping doesn't perturb any data but it causes three scenarios to be built
     PerturbationMapping<Double> mapping =
         PerturbationMapping.of(
-            Double.class,
             new FalseFilter<>(TestObservableId.class),
             new AbsoluteDoubleShift(1, 2, 3));
     ScenarioDefinition scenarioDefinition = ScenarioDefinition.ofMappings(ImmutableList.of(mapping));
@@ -446,7 +445,6 @@ public class DefaultMarketDataFactoryTest {
     MarketDataRequirements requirements = MarketDataRequirements.builder().addTimeSeries(id1, id2).build();
     // This mapping doesn't perturb any data but it causes three scenarios to be built
     PerturbationMapping<Double> mapping = PerturbationMapping.of(
-        Double.class,
         new FalseFilter<>(TestObservableId.class),
         new AbsoluteDoubleShift(1, 2, 3));
     ScenarioDefinition scenarioDefinition = ScenarioDefinition.ofMappings(ImmutableList.of(mapping));
@@ -470,7 +468,6 @@ public class DefaultMarketDataFactoryTest {
     TestObservableId id2 = TestObservableId.of(StandardId.of("reqs", "b"));
     MarketDataRequirements requirements = MarketDataRequirements.builder().addValues(id1, id2).build();
     PerturbationMapping<Double> mapping = PerturbationMapping.of(
-        Double.class,
         new ExactIdFilter<>(id1),
         new AbsoluteDoubleShift(1, 2, 3));
     ScenarioDefinition scenarioDefinition = ScenarioDefinition.ofMappings(ImmutableList.of(mapping));
@@ -497,11 +494,9 @@ public class DefaultMarketDataFactoryTest {
     TestObservableId id2 = TestObservableId.of(StandardId.of("reqs", "b"));
     MarketDataRequirements requirements = MarketDataRequirements.builder().addValues(id1, id2).build();
     PerturbationMapping<Double> mapping1 = PerturbationMapping.of(
-        Double.class,
         new ExactIdFilter<>(id2),
         new RelativeDoubleShift(0.1, 0.2, 0.3));
     PerturbationMapping<Double> mapping2 = PerturbationMapping.of(
-        Double.class,
         new ExactIdFilter<>(id2),
         new AbsoluteDoubleShift(1, 2, 3));
     ScenarioDefinition scenarioDefinition = ScenarioDefinition.ofMappings(ImmutableList.of(mapping1, mapping2));
@@ -531,7 +526,6 @@ public class DefaultMarketDataFactoryTest {
 
     // This mapping doesn't perturb any data but it causes three scenarios to be built
     PerturbationMapping<String> mapping = PerturbationMapping.of(
-        String.class,
         new FalseFilter<>(NonObservableId.class),
         new StringAppender("", "", ""));
     ScenarioDefinition scenarioDefinition = ScenarioDefinition.ofMappings(ImmutableList.of(mapping));
@@ -568,7 +562,6 @@ public class DefaultMarketDataFactoryTest {
     MarketDataRequirements requirements = MarketDataRequirements.builder().addValues(id1, id2).build();
     // This mapping doesn't perturb any data but it causes three scenarios to be built
     PerturbationMapping<String> mapping = PerturbationMapping.of(
-        String.class,
         new FalseFilter<>(NonObservableId.class),
         new StringAppender("", "", ""));
     ScenarioDefinition scenarioDefinition = ScenarioDefinition.ofMappings(ImmutableList.of(mapping));
@@ -629,12 +622,10 @@ public class DefaultMarketDataFactoryTest {
         builderC);
 
     PerturbationMapping<Double> aMapping = PerturbationMapping.of(
-        Double.class,
         new ExactIdFilter<>(new TestIdA("2")),
         new RelativeDoubleShift(0.2, 0.3, 0.4));
 
     PerturbationMapping<TestMarketDataC> cMapping = PerturbationMapping.of(
-        TestMarketDataC.class,
         new ExactIdFilter<>(new TestIdC("1")),
         new TestCPerturbation(1.1, 1.2, 1.3));
 
@@ -681,7 +672,6 @@ public class DefaultMarketDataFactoryTest {
 
     PerturbationMapping<String> mapping =
         PerturbationMapping.of(
-            String.class,
             new ExactIdFilter<>(id1),
             new StringAppender("foo", "bar", "baz"));
     ScenarioDefinition scenarioDefinition = ScenarioDefinition.ofMappings(ImmutableList.of(mapping));
@@ -710,11 +700,9 @@ public class DefaultMarketDataFactoryTest {
     MarketDataRequirements requirements = MarketDataRequirements.builder().addValues(id1, id2).build();
 
     PerturbationMapping<String> mapping1 = PerturbationMapping.of(
-        String.class,
         new ExactIdFilter<>(id1),
         new StringAppender("FOO", "BAR", "BAZ"));
     PerturbationMapping<String> mapping2 = PerturbationMapping.of(
-        String.class,
         new ExactIdFilter<>(id1),
         new StringAppender("foo", "bar", "baz"));
     ScenarioDefinition scenarioDefinition = ScenarioDefinition.ofMappings(ImmutableList.of(mapping1, mapping2));
@@ -744,7 +732,6 @@ public class DefaultMarketDataFactoryTest {
     MarketDataRequirements requirements = MarketDataRequirements.builder().addValues(id1, id2).build();
 
     PerturbationMapping<Double> mapping = PerturbationMapping.of(
-        Double.class,
         new ExactIdFilter<>(quoteId),
         new RelativeDoubleShift(0.1, 0.2, 0.3));
     ScenarioDefinition scenarioDefinition = ScenarioDefinition.ofMappings(ImmutableList.of(mapping));
@@ -774,20 +761,18 @@ public class DefaultMarketDataFactoryTest {
 
     // This mapping doesn't perturb any data but it causes three scenarios to be built
     PerturbationMapping<String> mapping = PerturbationMapping.of(
-        String.class,
         new FalseFilter<>(NonObservableId.class),
         new StringAppender("", "", ""));
     ScenarioDefinition scenarioDefinition = ScenarioDefinition.ofMappings(ImmutableList.of(mapping));
 
-    assertThrows(
-        () -> factory.createMultiScenario(
-            requirements,
-            MARKET_DATA_CONFIG,
-            suppliedData,
-            REF_DATA, scenarioDefinition),
-        IllegalStateException.class,
-        "No market data function available for market data ID of type.*");
-
+    assertThatIllegalStateException()
+        .isThrownBy(
+            () -> factory.createMultiScenario(
+                requirements,
+                MARKET_DATA_CONFIG,
+                suppliedData,
+                REF_DATA, scenarioDefinition))
+        .withMessageStartingWith("No market data function available for market data ID of type");
   }
 
   /**
@@ -799,7 +784,6 @@ public class DefaultMarketDataFactoryTest {
         new TestTimeSeriesProvider(ImmutableMap.of()));
     NonObservableId id = new NonObservableId("a");
     PerturbationMapping<String> mapping = PerturbationMapping.of(
-        String.class,
         new ExactIdFilter<>(id),
         new StringAppender("Foo", "Bar", "Baz"));
     ScenarioDefinition scenarioDefinition = ScenarioDefinition.ofMappings(ImmutableList.of(mapping));
@@ -827,7 +811,6 @@ public class DefaultMarketDataFactoryTest {
     TestObservableId id = TestObservableId.of(StandardId.of("reqs", "a"));
     MarketDataRequirements requirements = MarketDataRequirements.builder().addValues(id).build();
     PerturbationMapping<Double> mapping = PerturbationMapping.of(
-        Double.class,
         new ExactIdFilter<>(id),
         new RelativeDoubleShift(0.1, 0.2, 0.3));
     ScenarioDefinition scenarioDefinition = ScenarioDefinition.ofMappings(ImmutableList.of(mapping));
@@ -1192,6 +1175,11 @@ public class DefaultMarketDataFactoryTest {
     public int getScenarioCount() {
       return shiftAmount.length;
     }
+
+    @Override
+    public Class<Double> getMarketDataType() {
+      return Double.class;
+    }
   }
 
   /**
@@ -1213,6 +1201,11 @@ public class DefaultMarketDataFactoryTest {
     @Override
     public int getScenarioCount() {
       return shiftAmounts.length;
+    }
+
+    @Override
+    public Class<Double> getMarketDataType() {
+      return Double.class;
     }
   }
 
@@ -1309,6 +1302,11 @@ public class DefaultMarketDataFactoryTest {
     public int getScenarioCount() {
       return str.length;
     }
+
+    @Override
+    public Class<String> getMarketDataType() {
+      return String.class;
+    }
   }
 
   /**
@@ -1335,6 +1333,11 @@ public class DefaultMarketDataFactoryTest {
     @Override
     public int getScenarioCount() {
       return scaleFactors.length;
+    }
+
+    @Override
+    public Class<TestMarketDataC> getMarketDataType() {
+      return TestMarketDataC.class;
     }
   }
 }

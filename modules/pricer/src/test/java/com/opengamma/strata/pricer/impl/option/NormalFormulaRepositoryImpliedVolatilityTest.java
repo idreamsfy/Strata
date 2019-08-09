@@ -5,8 +5,8 @@
  */
 package com.opengamma.strata.pricer.impl.option;
 
-import static com.opengamma.strata.collect.TestHelper.assertThrowsIllegalArg;
-import static org.testng.AssertJUnit.assertEquals;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
+import static org.testng.Assert.assertEquals;
 
 import org.testng.annotations.Test;
 
@@ -53,16 +53,18 @@ public class NormalFormulaRepositoryImpliedVolatilityTest {
     double[] impliedVolatility = new double[N];
     for (int i = 0; i < N; i++) {
       impliedVolatility[i] = impliedVolatility(DATA[i], OPTIONS[i], PRICES[i]);
-      assertEquals(SIGMA[i], impliedVolatility[i], 1e-6);
+      assertEquals(impliedVolatility[i], SIGMA[i], 1e-6);
     }
   }
 
   public void intrinsic_price() {
     NormalFunctionData data = NormalFunctionData.of(1.0, 1.0, 0.01);
     EuropeanVanillaOption option1 = EuropeanVanillaOption.of(0.5, 1.0, PutCall.CALL);
-    assertThrowsIllegalArg(() -> impliedVolatility(data, option1, 1e-6));
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> impliedVolatility(data, option1, 1e-6));
     EuropeanVanillaOption option2 = EuropeanVanillaOption.of(1.5, 1.0, PutCall.PUT);
-    assertThrowsIllegalArg(() -> impliedVolatility(data, option2, 1e-6));
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> impliedVolatility(data, option2, 1e-6));
   }
 
   private double impliedVolatility(
@@ -102,7 +104,7 @@ public class NormalFormulaRepositoryImpliedVolatilityTest {
       double priceNormalComputed = 
           NormalFormulaRepository.price(FORWARD, strikes[i], T, ivNormalComputed, PutCall.CALL) * DF;
       double priceBlack = BlackFormulaRepository.price(FORWARD, strikes[i], T, SIGMA_BLACK[i], true) * DF;
-      assertEquals(priceBlack, priceNormalComputed, TOLERANCE_PRICE);
+      assertEquals(priceNormalComputed, priceBlack, TOLERANCE_PRICE);
     }
   }
 
@@ -113,14 +115,14 @@ public class NormalFormulaRepositoryImpliedVolatilityTest {
           NormalFormulaRepository.impliedVolatilityFromBlackApproximated(FORWARD, STRIKES[i], T, SIGMA_BLACK[i]);
       ValueDerivatives impliedVolAdj =
           NormalFormulaRepository.impliedVolatilityFromBlackApproximatedAdjoint(FORWARD, STRIKES[i], T, SIGMA_BLACK[i]);
-      assertEquals(impliedVol, impliedVolAdj.getValue(), TOLERANCE_VOL);
+      assertEquals(impliedVolAdj.getValue(), impliedVol, TOLERANCE_VOL);
       double impliedVolP =
           NormalFormulaRepository.impliedVolatilityFromBlackApproximated(FORWARD, STRIKES[i], T, SIGMA_BLACK[i] + shiftFd);
       double impliedVolM =
           NormalFormulaRepository.impliedVolatilityFromBlackApproximated(FORWARD, STRIKES[i], T, SIGMA_BLACK[i] - shiftFd);
       double derivativeApproximated = (impliedVolP - impliedVolM) / (2 * shiftFd);
-      assertEquals(1, impliedVolAdj.getDerivatives().size());
-      assertEquals(derivativeApproximated, impliedVolAdj.getDerivative(0), TOLERANCE_VOL);
+      assertEquals(impliedVolAdj.getDerivatives().size(), 1);
+      assertEquals(impliedVolAdj.getDerivative(0), derivativeApproximated, TOLERANCE_VOL);
     }
   }
 

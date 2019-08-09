@@ -6,8 +6,8 @@
 package com.opengamma.strata.basics.currency;
 
 import static com.opengamma.strata.collect.TestHelper.assertSerialization;
-import static com.opengamma.strata.collect.TestHelper.assertThrowsIllegalArg;
 import static com.opengamma.strata.collect.TestHelper.coverImmutableBean;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 
@@ -25,6 +25,7 @@ public class FxRateTest {
   private static final Currency EUR = Currency.EUR;
   private static final Currency GBP = Currency.GBP;
   private static final Currency USD = Currency.USD;
+  private static final Object ANOTHER_TYPE = "";
 
   //-------------------------------------------------------------------------
   public void test_of_CurrencyCurrencyDouble() {
@@ -49,14 +50,14 @@ public class FxRateTest {
   }
 
   public void test_of_CurrencyCurrencyDouble_invalid() {
-    assertThrowsIllegalArg(() -> FxRate.of(GBP, USD, -1.5d));
-    assertThrowsIllegalArg(() -> FxRate.of(GBP, GBP, 2d));
+    assertThatIllegalArgumentException().isThrownBy(() -> FxRate.of(GBP, USD, -1.5d));
+    assertThatIllegalArgumentException().isThrownBy(() -> FxRate.of(GBP, GBP, 2d));
   }
 
   public void test_of_CurrencyCurrencyDouble_null() {
-    assertThrowsIllegalArg(() -> FxRate.of(null, USD, 1.5d));
-    assertThrowsIllegalArg(() -> FxRate.of(USD, null, 1.5d));
-    assertThrowsIllegalArg(() -> FxRate.of(null, null, 1.5d));
+    assertThatIllegalArgumentException().isThrownBy(() -> FxRate.of(null, USD, 1.5d));
+    assertThatIllegalArgumentException().isThrownBy(() -> FxRate.of(USD, null, 1.5d));
+    assertThatIllegalArgumentException().isThrownBy(() -> FxRate.of(null, null, 1.5d));
   }
 
   //-------------------------------------------------------------------------
@@ -82,12 +83,12 @@ public class FxRateTest {
   }
 
   public void test_of_CurrencyPairDouble_invalid() {
-    assertThrowsIllegalArg(() -> FxRate.of(CurrencyPair.of(GBP, USD), -1.5d));
-    assertThrowsIllegalArg(() -> FxRate.of(CurrencyPair.of(USD, USD), 2d));
+    assertThatIllegalArgumentException().isThrownBy(() -> FxRate.of(CurrencyPair.of(GBP, USD), -1.5d));
+    assertThatIllegalArgumentException().isThrownBy(() -> FxRate.of(CurrencyPair.of(USD, USD), 2d));
   }
 
   public void test_of_CurrencyPairDouble_null() {
-    assertThrowsIllegalArg(() -> FxRate.of(null, 1.5d));
+    assertThatIllegalArgumentException().isThrownBy(() -> FxRate.of(null, 1.5d));
   }
 
   public void test_toConventional() {
@@ -97,7 +98,7 @@ public class FxRateTest {
 
   //-------------------------------------------------------------------------
   @DataProvider(name = "parseGood")
-  Object[][] data_parseGood() {
+  public static Object[][] data_parseGood() {
     return new Object[][] {
         {"USD/EUR 205.123", USD, EUR, 205.123d},
         {"USD/EUR 3.00000000", USD, EUR, 3d},
@@ -115,7 +116,7 @@ public class FxRateTest {
   }
 
   @DataProvider(name = "parseBad")
-  Object[][] data_parseBad() {
+  public static Object[][] data_parseBad() {
     return new Object[][] {
         {"AUD 1.25"},
         {"AUD/GB 1.25"},
@@ -130,9 +131,9 @@ public class FxRateTest {
     };
   }
 
-  @Test(dataProvider = "parseBad", expectedExceptions = IllegalArgumentException.class)
+  @Test(dataProvider = "parseBad")
   public void test_parse_String_bad(String input) {
-    FxRate.parse(input);
+    assertThatIllegalArgumentException().isThrownBy(() -> FxRate.parse(input));
   }
 
   //-------------------------------------------------------------------------
@@ -151,7 +152,7 @@ public class FxRateTest {
     FxRate test = FxRate.of(GBP, USD, 1.25d);
     assertEquals(test.fxRate(GBP, USD), 1.25d);
     assertEquals(test.fxRate(USD, GBP), 1d / 1.25d);
-    assertThrowsIllegalArg(() -> test.fxRate(GBP, AUD));
+    assertThatIllegalArgumentException().isThrownBy(() -> test.fxRate(GBP, AUD));
   }
 
   public void test_fxRate_forPair() {
@@ -161,11 +162,11 @@ public class FxRateTest {
     assertEquals(test.fxRate(GBP, GBP), 1d);
     assertEquals(test.fxRate(USD, USD), 1d);
     assertEquals(test.fxRate(AUD, AUD), 1d);
-    assertThrowsIllegalArg(() -> test.fxRate(AUD, GBP));
-    assertThrowsIllegalArg(() -> test.fxRate(GBP, AUD));
-    assertThrowsIllegalArg(() -> test.fxRate(AUD, USD));
-    assertThrowsIllegalArg(() -> test.fxRate(USD, AUD));
-    assertThrowsIllegalArg(() -> test.fxRate(EUR, AUD));
+    assertThatIllegalArgumentException().isThrownBy(() -> test.fxRate(AUD, GBP));
+    assertThatIllegalArgumentException().isThrownBy(() -> test.fxRate(GBP, AUD));
+    assertThatIllegalArgumentException().isThrownBy(() -> test.fxRate(AUD, USD));
+    assertThatIllegalArgumentException().isThrownBy(() -> test.fxRate(USD, AUD));
+    assertThatIllegalArgumentException().isThrownBy(() -> test.fxRate(EUR, AUD));
   }
 
   //-------------------------------------------------------------------------
@@ -173,7 +174,7 @@ public class FxRateTest {
     FxRate test = FxRate.of(GBP, USD, 1.25d);
     assertEquals(test.convert(100, GBP, USD), 125d);
     assertEquals(test.convert(100, USD, GBP), 100d / 1.25d);
-    assertThrowsIllegalArg(() -> test.convert(100, GBP, AUD));
+    assertThatIllegalArgumentException().isThrownBy(() -> test.convert(100, GBP, AUD));
   }
 
   //-------------------------------------------------------------------------
@@ -196,11 +197,11 @@ public class FxRateTest {
     assertEquals(usdGbp.crossRate(usdEur), eurGbp);
     assertEquals(usdGbp.crossRate(eurUsd), eurGbp);
 
-    assertThrowsIllegalArg(() -> gbpGbp.crossRate(gbpUsd));  // identity
-    assertThrowsIllegalArg(() -> usdUsd.crossRate(gbpUsd));  // identity
-    assertThrowsIllegalArg(() -> gbpUsd.crossRate(gbpUsd));  // same currencies
-    assertThrowsIllegalArg(() -> gbpUsd.crossRate(usdGbp));  // same currencies
-    assertThrowsIllegalArg(() -> gbpUsd.crossRate(FxRate.of(EUR, CAD, 12d / 5d)));  // no common currency
+    assertThatIllegalArgumentException().isThrownBy(() -> gbpGbp.crossRate(gbpUsd));  // identity
+    assertThatIllegalArgumentException().isThrownBy(() -> usdUsd.crossRate(gbpUsd));  // identity
+    assertThatIllegalArgumentException().isThrownBy(() -> gbpUsd.crossRate(gbpUsd));  // same currencies
+    assertThatIllegalArgumentException().isThrownBy(() -> gbpUsd.crossRate(usdGbp));  // same currencies
+    assertThatIllegalArgumentException().isThrownBy(() -> gbpUsd.crossRate(FxRate.of(EUR, CAD, 12d / 5d)));  // no common currency
   }
 
   //-------------------------------------------------------------------------
@@ -230,7 +231,7 @@ public class FxRateTest {
 
   public void test_equals_bad() {
     FxRate test = FxRate.of(AUD, GBP, 1.25d);
-    assertFalse(test.equals(""));
+    assertFalse(test.equals(ANOTHER_TYPE));
     assertFalse(test.equals(null));
   }
 

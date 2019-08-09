@@ -7,7 +7,6 @@ package com.opengamma.strata.market.curve.interpolator;
 
 import static com.opengamma.strata.collect.TestHelper.assertJodaConvert;
 import static com.opengamma.strata.collect.TestHelper.assertSerialization;
-import static com.opengamma.strata.collect.TestHelper.assertThrowsIllegalArg;
 import static com.opengamma.strata.collect.TestHelper.coverPrivateConstructor;
 import static com.opengamma.strata.market.curve.interpolator.CurveInterpolators.DOUBLE_QUADRATIC;
 import static com.opengamma.strata.market.curve.interpolator.CurveInterpolators.LINEAR;
@@ -20,6 +19,7 @@ import static com.opengamma.strata.market.curve.interpolator.CurveInterpolators.
 import static com.opengamma.strata.market.curve.interpolator.CurveInterpolators.PRODUCT_NATURAL_SPLINE;
 import static com.opengamma.strata.market.curve.interpolator.CurveInterpolators.SQUARE_LINEAR;
 import static com.opengamma.strata.market.curve.interpolator.CurveInterpolators.TIME_SQUARE;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertNotNull;
@@ -37,9 +37,11 @@ import com.opengamma.strata.collect.array.DoubleArray;
 @Test
 public class CurveInterpolatorTest {
 
+  private static final Object ANOTHER_TYPE = "";
+
   //-------------------------------------------------------------------------
   @DataProvider(name = "name")
-  static Object[][] data_name() {
+  public static Object[][] data_name() {
     return new Object[][] {
         {LINEAR, "Linear"},
         {LOG_LINEAR, "LogLinear"},
@@ -77,11 +79,13 @@ public class CurveInterpolatorTest {
   }
 
   public void test_of_lookup_notFound() {
-    assertThrowsIllegalArg(() -> CurveInterpolator.of("Rubbish"));
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> CurveInterpolator.of("Rubbish"));
   }
 
   public void test_of_lookup_null() {
-    assertThrowsIllegalArg(() -> CurveInterpolator.of(null));
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> CurveInterpolator.of(null));
   }
 
   //-------------------------------------------------------------------------
@@ -136,7 +140,7 @@ public class CurveInterpolatorTest {
     coverPrivateConstructor(CurveInterpolators.class);
     coverPrivateConstructor(StandardCurveInterpolators.class);
     assertFalse(LINEAR.equals(null));
-    assertFalse(LINEAR.equals(""));
+    assertFalse(LINEAR.equals(ANOTHER_TYPE));
   }
 
   public void test_serialization() {

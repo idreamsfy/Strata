@@ -21,12 +21,12 @@ import com.opengamma.strata.data.ImmutableMarketData;
 import com.opengamma.strata.examples.data.export.ExportUtils;
 import com.opengamma.strata.loader.csv.QuotesCsvLoader;
 import com.opengamma.strata.loader.csv.RatesCalibrationCsvLoader;
-import com.opengamma.strata.market.curve.CurveGroupDefinition;
 import com.opengamma.strata.market.curve.CurveGroupName;
+import com.opengamma.strata.market.curve.RatesCurveGroupDefinition;
 import com.opengamma.strata.market.observable.QuoteId;
 import com.opengamma.strata.market.param.CurrencyParameterSensitivities;
 import com.opengamma.strata.market.sensitivity.PointSensitivities;
-import com.opengamma.strata.pricer.curve.CurveCalibrator;
+import com.opengamma.strata.pricer.curve.RatesCurveCalibrator;
 import com.opengamma.strata.pricer.rate.ImmutableRatesProvider;
 import com.opengamma.strata.pricer.sensitivity.MarketQuoteSensitivityCalculator;
 import com.opengamma.strata.pricer.swap.DiscountingSwapTradePricer;
@@ -83,7 +83,7 @@ public class CalibrationInterpolationExample {
   private static final ImmutableMarketData MARKET_QUOTES =
       ImmutableMarketData.builder(VALUATION_DATE).values(MAP_MQ).build();
 
-  private static final CurveCalibrator CALIBRATOR = CurveCalibrator.standard();
+  private static final RatesCurveCalibrator CALIBRATOR = RatesCurveCalibrator.standard();
 
   private static final DiscountingSwapTradePricer PRICER_SWAP = DiscountingSwapTradePricer.DEFAULT;
   private static final MarketQuoteSensitivityCalculator MQC = MarketQuoteSensitivityCalculator.DEFAULT;
@@ -93,7 +93,7 @@ public class CalibrationInterpolationExample {
   public static void main(String[] arg) {
 
     /* Load the curve configurations from csv files */
-    List<Map<CurveGroupName, CurveGroupDefinition>> configs = new ArrayList<>();
+    List<Map<CurveGroupName, RatesCurveGroupDefinition>> configs = new ArrayList<>();
     for (int loopconfig = 0; loopconfig < NB_SETTINGS; loopconfig++) {
       configs.add(RatesCalibrationCsvLoader.load(GROUP_RESOURCE, SETTINGS_RESOURCE[loopconfig], NODES_RESOURCE));
     }

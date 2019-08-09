@@ -53,10 +53,7 @@ public class Money
    * @return the currency amount
    */
   public static Money of(CurrencyAmount currencyAmount) {
-    Currency currency = currencyAmount.getCurrency();
-    BigDecimal roundedAmount = BigDecimal.valueOf(currencyAmount.getAmount())
-        .setScale(currency.getMinorUnitDigits(), BigDecimal.ROUND_HALF_UP);
-    return new Money(currency, roundedAmount);
+    return new Money(currencyAmount.getCurrency(), BigDecimal.valueOf(currencyAmount.getAmount()));
   }
 
   /**
@@ -67,9 +64,7 @@ public class Money
    * @return the currency amount
    */
   public static Money of(Currency currency, double amount) {
-    BigDecimal roundedAmount = BigDecimal.valueOf(amount)
-        .setScale(currency.getMinorUnitDigits(), BigDecimal.ROUND_HALF_UP);
-    return new Money(currency, roundedAmount);
+    return new Money(currency, BigDecimal.valueOf(amount));
   }
 
   /**
@@ -80,8 +75,7 @@ public class Money
    * @return the currency amount
    */
   public static Money of(Currency currency, BigDecimal amount) {
-    BigDecimal roundedAmount = amount.setScale(currency.getMinorUnitDigits(), BigDecimal.ROUND_HALF_UP);
-    return new Money(currency, roundedAmount);
+    return new Money(currency, amount);
   }
 
   //-------------------------------------------------------------------------
@@ -120,7 +114,7 @@ public class Money
     ArgChecker.notNull(currency, "currency");
     ArgChecker.notNull(amount, "amount");
     this.currency = currency;
-    this.amount = amount;
+    this.amount = currency.roundMinorUnits(amount);
   }
 
   //-------------------------------------------------------------------------

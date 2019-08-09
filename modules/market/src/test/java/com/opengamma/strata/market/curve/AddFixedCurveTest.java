@@ -6,9 +6,9 @@
 package com.opengamma.strata.market.curve;
 
 import static com.opengamma.strata.basics.date.DayCounts.ACT_365F;
-import static com.opengamma.strata.collect.TestHelper.assertThrowsIllegalArg;
 import static com.opengamma.strata.collect.TestHelper.coverBeanEquals;
 import static com.opengamma.strata.collect.TestHelper.coverImmutableBean;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertTrue;
 
@@ -18,6 +18,7 @@ import java.util.List;
 
 import org.testng.annotations.Test;
 
+import com.google.common.collect.ImmutableList;
 import com.opengamma.strata.collect.array.DoubleArray;
 import com.opengamma.strata.market.ValueType;
 import com.opengamma.strata.market.curve.interpolator.CurveInterpolator;
@@ -73,9 +74,11 @@ public class AddFixedCurveTest {
 
   public void test_invalid() {
     // null fixed
-    assertThrowsIllegalArg(() -> AddFixedCurve.of(null, SPREAD_CURVE));
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> AddFixedCurve.of(null, SPREAD_CURVE));
     // null spread
-    assertThrowsIllegalArg(() -> AddFixedCurve.of(FIXED_CURVE, null));
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> AddFixedCurve.of(FIXED_CURVE, null));
   }
 
   public void getter() {
@@ -113,6 +116,27 @@ public class AddFixedCurveTest {
       assertTrue(dComputed.compareKey(dExpected) == 0);
       assertTrue(dComputed.getSensitivity().equalWithTolerance(dExpected.getSensitivity(), TOLERANCE_Y));
     }
+  }
+
+  public void underlyingCurve() {
+    assertEquals(ADD_FIXED_CURVE.split(), ImmutableList.of(FIXED_CURVE, SPREAD_CURVE));
+    CurveMetadata metadata = DefaultCurveMetadata.builder()
+        .curveName(CurveName.of("newCurve"))
+        .xValueType(ValueType.YEAR_FRACTION)
+        .yValueType(ValueType.ZERO_RATE)
+        .dayCount(ACT_365F)
+        .parameterMetadata(PARAM_METADATA_SPREAD)
+        .build();
+    InterpolatedNodalCurve newCurve = InterpolatedNodalCurve.of(
+        metadata, XVALUES_SPREAD, YVALUES_SPREAD, INTERPOLATOR);
+    assertEquals(
+        ADD_FIXED_CURVE.withUnderlyingCurve(0, newCurve),
+        AddFixedCurve.of(newCurve, SPREAD_CURVE));
+    assertEquals(
+        ADD_FIXED_CURVE.withUnderlyingCurve(1, newCurve),
+        AddFixedCurve.of(FIXED_CURVE, newCurve));
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> ADD_FIXED_CURVE.withUnderlyingCurve(2, newCurve));
   }
 
   //-------------------------------------------------------------------------

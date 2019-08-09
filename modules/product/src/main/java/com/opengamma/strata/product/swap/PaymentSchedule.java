@@ -11,17 +11,18 @@ import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
-import java.util.Set;
-import java.util.function.Function;
+import java.util.function.BiFunction;
+import java.util.function.IntFunction;
 
 import org.joda.beans.Bean;
-import org.joda.beans.BeanDefinition;
 import org.joda.beans.ImmutableBean;
-import org.joda.beans.ImmutableDefaults;
 import org.joda.beans.JodaBeanUtils;
+import org.joda.beans.MetaBean;
 import org.joda.beans.MetaProperty;
-import org.joda.beans.Property;
-import org.joda.beans.PropertyDefinition;
+import org.joda.beans.gen.BeanDefinition;
+import org.joda.beans.gen.ImmutableDefaults;
+import org.joda.beans.gen.ImmutableValidator;
+import org.joda.beans.gen.PropertyDefinition;
 import org.joda.beans.impl.direct.DirectFieldsBeanBuilder;
 import org.joda.beans.impl.direct.DirectMetaBean;
 import org.joda.beans.impl.direct.DirectMetaProperty;
@@ -39,7 +40,9 @@ import com.opengamma.strata.basics.date.DayCount;
 import com.opengamma.strata.basics.date.DaysAdjustment;
 import com.opengamma.strata.basics.schedule.Frequency;
 import com.opengamma.strata.basics.schedule.Schedule;
+import com.opengamma.strata.basics.schedule.ScheduleException;
 import com.opengamma.strata.basics.schedule.SchedulePeriod;
+import com.opengamma.strata.collect.ArgChecker;
 import com.opengamma.strata.collect.array.DoubleArray;
 import com.opengamma.strata.product.common.PayReceive;
 
@@ -119,8 +122,51 @@ public final class PaymentSchedule
    */
   @PropertyDefinition(validate = "notNull")
   private final CompoundingMethod compoundingMethod;
+  /**
+   * The optional start date of the first regular payment schedule period, which is the end date of the initial stub.
+   * <p>
+   * This is used to identify the boundary date between the initial stub and the first regular period.
+   * In most cases there is no need to specify this as it can be worked out from other information.
+   * It must be used when there is a need to produce a payment schedule with an initial stub that combines
+   * an initial stub from the accrual schedule with the first regular period of the accrual schedule.
+   * <p>
+   * This is an unadjusted date, and as such it might not be a valid business day.
+   * It must equal one of the unadjusted dates on the accrual schedule.
+   * <p>
+   * If {@linkplain #getPaymentRelativeTo() paymentRelativeTo} is 'PeriodEnd' then this field
+   * corresponds to {@code firstPaymentDate} in FpML.
+   */
+  @PropertyDefinition(get = "optional")
+  private final LocalDate firstRegularStartDate;
+  /**
+   * The optional end date of the last regular payment schedule period, which is the start date of the final stub.
+   * <p>
+   * This is used to identify the boundary date between the last regular period and the final stub.
+   * In most cases there is no need to specify this as it can be worked out from other information.
+   * It must be used when there is a need to produce a payment schedule with a final stub that combines
+   * a final stub from the accrual schedule with the last regular period of the accrual schedule.
+   * <p>
+   * This is used to identify the boundary date between the last regular schedule period and the final stub.
+   * <p>
+   * This is an unadjusted date, and as such it might not be a valid business day.
+   * This date must be after 'firstPaymentDate'.
+   * It must equal one of the unadjusted dates on the accrual schedule.
+   * <p>
+   * If {@linkplain #getPaymentRelativeTo() paymentRelativeTo} is 'PeriodEnd' then this field
+   * corresponds to {@code lastRegularPaymentDate} in FpML.
+   */
+  @PropertyDefinition(get = "optional")
+  private final LocalDate lastRegularEndDate;
 
   //-------------------------------------------------------------------------
+  @ImmutableValidator
+  private void validate() {
+    if (firstRegularStartDate != null && lastRegularEndDate != null) {
+      ArgChecker.inOrderNotEqual(
+          firstRegularStartDate, lastRegularEndDate, "firstPaymentDate", "lastRegularPaymentDate");
+    }
+  }
+
   @ImmutableDefaults
   private static void applyDefaults(Builder builder) {
     builder.paymentRelativeTo(PaymentRelativeTo.PERIOD_END);
@@ -151,12 +197,45 @@ public final class PaymentSchedule
   public Schedule createSchedule(Schedule accrualSchedule, ReferenceData refData) {
     // payment frequency of Term absorbs everything
     if (paymentFrequency.equals(Frequency.TERM)) {
+      if (firstRegularStartDate != null &&
+          !firstRegularStartDate.equals(accrualSchedule.getUnadjustedStartDate()) &&
+          !firstRegularStartDate.equals(accrualSchedule.getStartDate())) {
+        throw new ScheduleException("Unable to create schedule for frequency 'Term' when firstRegularStartDate != startDate");
+      }
+      if (lastRegularEndDate != null &&
+          !lastRegularEndDate.equals(accrualSchedule.getUnadjustedEndDate()) &&
+          !lastRegularEndDate.equals(accrualSchedule.getEndDate())) {
+        throw new ScheduleException("Unable to create schedule for frequency 'Term' when lastRegularEndDate != endDate");
+      }
       return accrualSchedule.mergeToTerm();
     }
     // derive schedule, retaining stubs as payment periods
     int accrualPeriodsPerPayment = paymentFrequency.exactDivide(accrualSchedule.getFrequency());
-    boolean rollForwards = !accrualSchedule.getInitialStub().isPresent();
-    Schedule paySchedule = accrualSchedule.mergeRegular(accrualPeriodsPerPayment, rollForwards);
+    Schedule paySchedule;
+    if (firstRegularStartDate != null && lastRegularEndDate != null) {
+      paySchedule = accrualSchedule.merge(accrualPeriodsPerPayment, firstRegularStartDate, lastRegularEndDate);
+
+    } else if (firstRegularStartDate != null || lastRegularEndDate != null) {
+      LocalDate firstRegular = firstRegularStartDate != null ?
+          firstRegularStartDate :
+          accrualSchedule.getInitialStub()
+              .map(stub -> stub.getUnadjustedEndDate())
+              .orElse(accrualSchedule.getUnadjustedStartDate());
+      LocalDate lastRegular = lastRegularEndDate != null ?
+          lastRegularEndDate :
+          accrualSchedule.getFinalStub()
+              .map(stub -> stub.getUnadjustedStartDate())
+              .orElse(accrualSchedule.getUnadjustedEndDate());
+      paySchedule = accrualSchedule.merge(
+          accrualPeriodsPerPayment,
+          firstRegular,
+          lastRegular);
+
+    } else {
+      boolean rollForwards = !accrualSchedule.getInitialStub().isPresent();
+      paySchedule = accrualSchedule.mergeRegular(accrualPeriodsPerPayment, rollForwards);
+    }
+    // adjust for business days
     if (businessDayAdjustment != null) {
       return paySchedule.toAdjusted(businessDayAdjustment.resolve(refData));
     }
@@ -190,27 +269,36 @@ public final class PaymentSchedule
     DoubleArray notionals = notionalSchedule.getAmount().resolveValues(paymentSchedule);
     // resolve against reference data once
     DateAdjuster paymentDateAdjuster = paymentDateOffset.resolve(refData);
-    Function<SchedulePeriod, FxReset> fxResetFn =
-        notionalSchedule.getFxReset().map(calc -> calc.resolve(refData)).orElse(p -> null);
+    BiFunction<Integer, SchedulePeriod, Optional<FxReset>> fxResetFn =
+        notionalSchedule.getFxReset().map(calc -> calc.resolve(refData)).orElse((i, p) -> Optional.empty());
+
     // build up payment periods using schedule
-    Currency currency = notionalSchedule.getCurrency();
     ImmutableList.Builder<NotionalPaymentPeriod> paymentPeriods = ImmutableList.builder();
+    IntFunction<CurrencyAmount> notionalFunction =
+        getNotionalSupplierFunction(notionalSchedule, notionals, payReceive);
+
     // compare using == as Schedule.mergeRegular() will return same schedule
     if (accrualSchedule == paymentSchedule) {
       // same schedule means one accrual period per payment period
       for (int index = 0; index < paymentSchedule.size(); index++) {
         SchedulePeriod period = paymentSchedule.getPeriod(index);
-        double notional = payReceive.normalize(notionals.get(index));
+        CurrencyAmount notional = notionalFunction.apply(index);
         ImmutableList<RateAccrualPeriod> paymentAccrualPeriods = ImmutableList.of(accrualPeriods.get(index));
         paymentPeriods.add(createPaymentPeriod(
-            period, paymentAccrualPeriods, paymentDateAdjuster, fxResetFn, dayCount, currency, notional));
+            index,
+            period,
+            paymentAccrualPeriods,
+            paymentDateAdjuster,
+            fxResetFn,
+            dayCount,
+            notional));
       }
     } else {
       // multiple accrual periods per payment period, or accrual/payment schedules differ
       int accrualIndex = 0;
       for (int paymentIndex = 0; paymentIndex < paymentSchedule.size(); paymentIndex++) {
         SchedulePeriod payPeriod = paymentSchedule.getPeriod(paymentIndex);
-        double notional = payReceive.normalize(notionals.get(paymentIndex));
+        CurrencyAmount notional = notionalFunction.apply(paymentIndex);
         int accrualStartIndex = accrualIndex;
         RateAccrualPeriod accrual = accrualPeriods.get(accrualIndex);
         while (accrual.getUnadjustedEndDate().isBefore(payPeriod.getUnadjustedEndDate())) {
@@ -218,47 +306,84 @@ public final class PaymentSchedule
         }
         List<RateAccrualPeriod> paymentAccrualPeriods = accrualPeriods.subList(accrualStartIndex, accrualIndex + 1);
         paymentPeriods.add(createPaymentPeriod(
-            payPeriod, paymentAccrualPeriods, paymentDateAdjuster, fxResetFn, dayCount, currency, notional));
+            paymentIndex, payPeriod,
+            paymentAccrualPeriods,
+            paymentDateAdjuster,
+            fxResetFn,
+            dayCount,
+            notional));
         accrualIndex++;
       }
     }
     return paymentPeriods.build();
   }
 
+  //Returns a function which takes a payment period index and returns the notional for the index
+  private IntFunction<CurrencyAmount> getNotionalSupplierFunction(
+      NotionalSchedule notionalSchedule,
+      DoubleArray notionals,
+      PayReceive payReceive) {
+
+    boolean hasInitialFxNotional = notionalSchedule.getFxReset().isPresent() &&
+        notionalSchedule.getFxReset().get().getInitialNotionalValue().isPresent();
+
+    return index -> {
+      if (hasInitialFxNotional && index == 0) {
+        FxResetCalculation fxReset = notionalSchedule.getFxReset().get();
+        //If Fx reset leg with fixed initial notional then return the fixed amount in the payment currency
+        double notional = payReceive.normalize(fxReset.getInitialNotionalValue().getAsDouble());
+        Currency currency = fxReset.getIndex().getCurrencyPair().other(fxReset.getReferenceCurrency());
+        return CurrencyAmount.of(currency, notional);
+      } else {
+        double notional = payReceive.normalize(notionals.get(index));
+        return CurrencyAmount.of(notionalSchedule.getCurrency(), notional);
+      }
+    };
+  }
+
   // create the payment period
   private NotionalPaymentPeriod createPaymentPeriod(
+      int paymentPeriodIndex,
       SchedulePeriod paymentPeriod,
       List<RateAccrualPeriod> periods,
       DateAdjuster paymentDateAdjuster,
-      Function<SchedulePeriod, FxReset> fxResetFn,
+      BiFunction<Integer, SchedulePeriod, Optional<FxReset>> fxResetFn,
       DayCount dayCount,
-      Currency currency,
-      double notional) {
+      CurrencyAmount notional) {
 
     // FpML cash flow example 3 shows payment offset calculated from adjusted accrual date (not unadjusted)
     LocalDate paymentDate = paymentDateAdjuster.adjust(paymentRelativeTo.selectBaseDate(paymentPeriod));
 
     // extract FX reset information
-    FxReset fxReset = fxResetFn.apply(paymentPeriod);
+    FxReset fxReset = fxResetFn.apply(paymentPeriodIndex, paymentPeriod).orElse(null);
 
     // handle special case where amount is known
     if (periods.size() == 1 && periods.get(0).getRateComputation() instanceof KnownAmountRateComputation) {
       CurrencyAmount amount = ((KnownAmountRateComputation) periods.get(0).getRateComputation()).getAmount();
       Payment payment = Payment.of(amount, paymentDate);
       if (fxReset != null) {
-        CurrencyAmount notionalAmount = CurrencyAmount.of(fxReset.getReferenceCurrency(), notional);
-        return KnownAmountNotionalSwapPaymentPeriod.of(payment, paymentPeriod, notionalAmount, fxReset.getObservation());
+        CurrencyAmount notionalAmount = CurrencyAmount.of(fxReset.getReferenceCurrency(), amount.getAmount());
+        return KnownAmountNotionalSwapPaymentPeriod.of(
+            payment,
+            paymentPeriod,
+            notionalAmount,
+            fxReset.getObservation());
       } else {
-        CurrencyAmount notionalAmount = CurrencyAmount.of(currency, notional);
-        return KnownAmountNotionalSwapPaymentPeriod.of(payment, paymentPeriod, notionalAmount);
+        return KnownAmountNotionalSwapPaymentPeriod.of(payment, paymentPeriod, notional);
       }
     }
     // rate based computation
-    return new RatePaymentPeriod(paymentDate, periods, dayCount, currency, fxReset, notional, compoundingMethod);
+    return new RatePaymentPeriod(
+        paymentDate,
+        periods,
+        dayCount,
+        notional.getCurrency(),
+        fxReset,
+        notional.getAmount(),
+        compoundingMethod);
   }
 
   //------------------------- AUTOGENERATED START -------------------------
-  ///CLOVER:OFF
   /**
    * The meta-bean for {@code PaymentSchedule}.
    * @return the meta-bean, not null
@@ -268,7 +393,7 @@ public final class PaymentSchedule
   }
 
   static {
-    JodaBeanUtils.registerMetaBean(PaymentSchedule.Meta.INSTANCE);
+    MetaBean.register(PaymentSchedule.Meta.INSTANCE);
   }
 
   /**
@@ -289,7 +414,9 @@ public final class PaymentSchedule
       BusinessDayAdjustment businessDayAdjustment,
       PaymentRelativeTo paymentRelativeTo,
       DaysAdjustment paymentDateOffset,
-      CompoundingMethod compoundingMethod) {
+      CompoundingMethod compoundingMethod,
+      LocalDate firstRegularStartDate,
+      LocalDate lastRegularEndDate) {
     JodaBeanUtils.notNull(paymentFrequency, "paymentFrequency");
     JodaBeanUtils.notNull(paymentRelativeTo, "paymentRelativeTo");
     JodaBeanUtils.notNull(paymentDateOffset, "paymentDateOffset");
@@ -299,21 +426,14 @@ public final class PaymentSchedule
     this.paymentRelativeTo = paymentRelativeTo;
     this.paymentDateOffset = paymentDateOffset;
     this.compoundingMethod = compoundingMethod;
+    this.firstRegularStartDate = firstRegularStartDate;
+    this.lastRegularEndDate = lastRegularEndDate;
+    validate();
   }
 
   @Override
   public PaymentSchedule.Meta metaBean() {
     return PaymentSchedule.Meta.INSTANCE;
-  }
-
-  @Override
-  public <R> Property<R> property(String propertyName) {
-    return metaBean().<R>metaProperty(propertyName).createProperty(this);
-  }
-
-  @Override
-  public Set<String> propertyNames() {
-    return metaBean().metaPropertyMap().keySet();
   }
 
   //-----------------------------------------------------------------------
@@ -385,6 +505,49 @@ public final class PaymentSchedule
 
   //-----------------------------------------------------------------------
   /**
+   * Gets the optional start date of the first regular payment schedule period, which is the end date of the initial stub.
+   * <p>
+   * This is used to identify the boundary date between the initial stub and the first regular period.
+   * In most cases there is no need to specify this as it can be worked out from other information.
+   * It must be used when there is a need to produce a payment schedule with an initial stub that combines
+   * an initial stub from the accrual schedule with the first regular period of the accrual schedule.
+   * <p>
+   * This is an unadjusted date, and as such it might not be a valid business day.
+   * It must equal one of the unadjusted dates on the accrual schedule.
+   * <p>
+   * If {@linkplain #getPaymentRelativeTo() paymentRelativeTo} is 'PeriodEnd' then this field
+   * corresponds to {@code firstPaymentDate} in FpML.
+   * @return the optional value of the property, not null
+   */
+  public Optional<LocalDate> getFirstRegularStartDate() {
+    return Optional.ofNullable(firstRegularStartDate);
+  }
+
+  //-----------------------------------------------------------------------
+  /**
+   * Gets the optional end date of the last regular payment schedule period, which is the start date of the final stub.
+   * <p>
+   * This is used to identify the boundary date between the last regular period and the final stub.
+   * In most cases there is no need to specify this as it can be worked out from other information.
+   * It must be used when there is a need to produce a payment schedule with a final stub that combines
+   * a final stub from the accrual schedule with the last regular period of the accrual schedule.
+   * <p>
+   * This is used to identify the boundary date between the last regular schedule period and the final stub.
+   * <p>
+   * This is an unadjusted date, and as such it might not be a valid business day.
+   * This date must be after 'firstPaymentDate'.
+   * It must equal one of the unadjusted dates on the accrual schedule.
+   * <p>
+   * If {@linkplain #getPaymentRelativeTo() paymentRelativeTo} is 'PeriodEnd' then this field
+   * corresponds to {@code lastRegularPaymentDate} in FpML.
+   * @return the optional value of the property, not null
+   */
+  public Optional<LocalDate> getLastRegularEndDate() {
+    return Optional.ofNullable(lastRegularEndDate);
+  }
+
+  //-----------------------------------------------------------------------
+  /**
    * Returns a builder that allows this bean to be mutated.
    * @return the mutable builder, not null
    */
@@ -403,7 +566,9 @@ public final class PaymentSchedule
           JodaBeanUtils.equal(businessDayAdjustment, other.businessDayAdjustment) &&
           JodaBeanUtils.equal(paymentRelativeTo, other.paymentRelativeTo) &&
           JodaBeanUtils.equal(paymentDateOffset, other.paymentDateOffset) &&
-          JodaBeanUtils.equal(compoundingMethod, other.compoundingMethod);
+          JodaBeanUtils.equal(compoundingMethod, other.compoundingMethod) &&
+          JodaBeanUtils.equal(firstRegularStartDate, other.firstRegularStartDate) &&
+          JodaBeanUtils.equal(lastRegularEndDate, other.lastRegularEndDate);
     }
     return false;
   }
@@ -416,18 +581,22 @@ public final class PaymentSchedule
     hash = hash * 31 + JodaBeanUtils.hashCode(paymentRelativeTo);
     hash = hash * 31 + JodaBeanUtils.hashCode(paymentDateOffset);
     hash = hash * 31 + JodaBeanUtils.hashCode(compoundingMethod);
+    hash = hash * 31 + JodaBeanUtils.hashCode(firstRegularStartDate);
+    hash = hash * 31 + JodaBeanUtils.hashCode(lastRegularEndDate);
     return hash;
   }
 
   @Override
   public String toString() {
-    StringBuilder buf = new StringBuilder(192);
+    StringBuilder buf = new StringBuilder(256);
     buf.append("PaymentSchedule{");
     buf.append("paymentFrequency").append('=').append(paymentFrequency).append(',').append(' ');
     buf.append("businessDayAdjustment").append('=').append(businessDayAdjustment).append(',').append(' ');
     buf.append("paymentRelativeTo").append('=').append(paymentRelativeTo).append(',').append(' ');
     buf.append("paymentDateOffset").append('=').append(paymentDateOffset).append(',').append(' ');
-    buf.append("compoundingMethod").append('=').append(JodaBeanUtils.toString(compoundingMethod));
+    buf.append("compoundingMethod").append('=').append(compoundingMethod).append(',').append(' ');
+    buf.append("firstRegularStartDate").append('=').append(firstRegularStartDate).append(',').append(' ');
+    buf.append("lastRegularEndDate").append('=').append(JodaBeanUtils.toString(lastRegularEndDate));
     buf.append('}');
     return buf.toString();
   }
@@ -468,6 +637,16 @@ public final class PaymentSchedule
     private final MetaProperty<CompoundingMethod> compoundingMethod = DirectMetaProperty.ofImmutable(
         this, "compoundingMethod", PaymentSchedule.class, CompoundingMethod.class);
     /**
+     * The meta-property for the {@code firstRegularStartDate} property.
+     */
+    private final MetaProperty<LocalDate> firstRegularStartDate = DirectMetaProperty.ofImmutable(
+        this, "firstRegularStartDate", PaymentSchedule.class, LocalDate.class);
+    /**
+     * The meta-property for the {@code lastRegularEndDate} property.
+     */
+    private final MetaProperty<LocalDate> lastRegularEndDate = DirectMetaProperty.ofImmutable(
+        this, "lastRegularEndDate", PaymentSchedule.class, LocalDate.class);
+    /**
      * The meta-properties.
      */
     private final Map<String, MetaProperty<?>> metaPropertyMap$ = new DirectMetaPropertyMap(
@@ -476,7 +655,9 @@ public final class PaymentSchedule
         "businessDayAdjustment",
         "paymentRelativeTo",
         "paymentDateOffset",
-        "compoundingMethod");
+        "compoundingMethod",
+        "firstRegularStartDate",
+        "lastRegularEndDate");
 
     /**
      * Restricted constructor.
@@ -497,6 +678,10 @@ public final class PaymentSchedule
           return paymentDateOffset;
         case -1376171496:  // compoundingMethod
           return compoundingMethod;
+        case 2011803076:  // firstRegularStartDate
+          return firstRegularStartDate;
+        case -1540679645:  // lastRegularEndDate
+          return lastRegularEndDate;
       }
       return super.metaPropertyGet(propertyName);
     }
@@ -557,6 +742,22 @@ public final class PaymentSchedule
       return compoundingMethod;
     }
 
+    /**
+     * The meta-property for the {@code firstRegularStartDate} property.
+     * @return the meta-property, not null
+     */
+    public MetaProperty<LocalDate> firstRegularStartDate() {
+      return firstRegularStartDate;
+    }
+
+    /**
+     * The meta-property for the {@code lastRegularEndDate} property.
+     * @return the meta-property, not null
+     */
+    public MetaProperty<LocalDate> lastRegularEndDate() {
+      return lastRegularEndDate;
+    }
+
     //-----------------------------------------------------------------------
     @Override
     protected Object propertyGet(Bean bean, String propertyName, boolean quiet) {
@@ -571,6 +772,10 @@ public final class PaymentSchedule
           return ((PaymentSchedule) bean).getPaymentDateOffset();
         case -1376171496:  // compoundingMethod
           return ((PaymentSchedule) bean).getCompoundingMethod();
+        case 2011803076:  // firstRegularStartDate
+          return ((PaymentSchedule) bean).firstRegularStartDate;
+        case -1540679645:  // lastRegularEndDate
+          return ((PaymentSchedule) bean).lastRegularEndDate;
       }
       return super.propertyGet(bean, propertyName, quiet);
     }
@@ -597,6 +802,8 @@ public final class PaymentSchedule
     private PaymentRelativeTo paymentRelativeTo;
     private DaysAdjustment paymentDateOffset;
     private CompoundingMethod compoundingMethod;
+    private LocalDate firstRegularStartDate;
+    private LocalDate lastRegularEndDate;
 
     /**
      * Restricted constructor.
@@ -615,6 +822,8 @@ public final class PaymentSchedule
       this.paymentRelativeTo = beanToCopy.getPaymentRelativeTo();
       this.paymentDateOffset = beanToCopy.getPaymentDateOffset();
       this.compoundingMethod = beanToCopy.getCompoundingMethod();
+      this.firstRegularStartDate = beanToCopy.firstRegularStartDate;
+      this.lastRegularEndDate = beanToCopy.lastRegularEndDate;
     }
 
     //-----------------------------------------------------------------------
@@ -631,6 +840,10 @@ public final class PaymentSchedule
           return paymentDateOffset;
         case -1376171496:  // compoundingMethod
           return compoundingMethod;
+        case 2011803076:  // firstRegularStartDate
+          return firstRegularStartDate;
+        case -1540679645:  // lastRegularEndDate
+          return lastRegularEndDate;
         default:
           throw new NoSuchElementException("Unknown property: " + propertyName);
       }
@@ -654,6 +867,12 @@ public final class PaymentSchedule
         case -1376171496:  // compoundingMethod
           this.compoundingMethod = (CompoundingMethod) newValue;
           break;
+        case 2011803076:  // firstRegularStartDate
+          this.firstRegularStartDate = (LocalDate) newValue;
+          break;
+        case -1540679645:  // lastRegularEndDate
+          this.lastRegularEndDate = (LocalDate) newValue;
+          break;
         default:
           throw new NoSuchElementException("Unknown property: " + propertyName);
       }
@@ -666,36 +885,6 @@ public final class PaymentSchedule
       return this;
     }
 
-    /**
-     * @deprecated Use Joda-Convert in application code
-     */
-    @Override
-    @Deprecated
-    public Builder setString(String propertyName, String value) {
-      setString(meta().metaProperty(propertyName), value);
-      return this;
-    }
-
-    /**
-     * @deprecated Use Joda-Convert in application code
-     */
-    @Override
-    @Deprecated
-    public Builder setString(MetaProperty<?> property, String value) {
-      super.setString(property, value);
-      return this;
-    }
-
-    /**
-     * @deprecated Loop in application code
-     */
-    @Override
-    @Deprecated
-    public Builder setAll(Map<String, ? extends Object> propertyValueMap) {
-      super.setAll(propertyValueMap);
-      return this;
-    }
-
     @Override
     public PaymentSchedule build() {
       return new PaymentSchedule(
@@ -703,7 +892,9 @@ public final class PaymentSchedule
           businessDayAdjustment,
           paymentRelativeTo,
           paymentDateOffset,
-          compoundingMethod);
+          compoundingMethod,
+          firstRegularStartDate,
+          lastRegularEndDate);
     }
 
     //-----------------------------------------------------------------------
@@ -783,22 +974,68 @@ public final class PaymentSchedule
       return this;
     }
 
+    /**
+     * Sets the optional start date of the first regular payment schedule period, which is the end date of the initial stub.
+     * <p>
+     * This is used to identify the boundary date between the initial stub and the first regular period.
+     * In most cases there is no need to specify this as it can be worked out from other information.
+     * It must be used when there is a need to produce a payment schedule with an initial stub that combines
+     * an initial stub from the accrual schedule with the first regular period of the accrual schedule.
+     * <p>
+     * This is an unadjusted date, and as such it might not be a valid business day.
+     * It must equal one of the unadjusted dates on the accrual schedule.
+     * <p>
+     * If {@linkplain #getPaymentRelativeTo() paymentRelativeTo} is 'PeriodEnd' then this field
+     * corresponds to {@code firstPaymentDate} in FpML.
+     * @param firstRegularStartDate  the new value
+     * @return this, for chaining, not null
+     */
+    public Builder firstRegularStartDate(LocalDate firstRegularStartDate) {
+      this.firstRegularStartDate = firstRegularStartDate;
+      return this;
+    }
+
+    /**
+     * Sets the optional end date of the last regular payment schedule period, which is the start date of the final stub.
+     * <p>
+     * This is used to identify the boundary date between the last regular period and the final stub.
+     * In most cases there is no need to specify this as it can be worked out from other information.
+     * It must be used when there is a need to produce a payment schedule with a final stub that combines
+     * a final stub from the accrual schedule with the last regular period of the accrual schedule.
+     * <p>
+     * This is used to identify the boundary date between the last regular schedule period and the final stub.
+     * <p>
+     * This is an unadjusted date, and as such it might not be a valid business day.
+     * This date must be after 'firstPaymentDate'.
+     * It must equal one of the unadjusted dates on the accrual schedule.
+     * <p>
+     * If {@linkplain #getPaymentRelativeTo() paymentRelativeTo} is 'PeriodEnd' then this field
+     * corresponds to {@code lastRegularPaymentDate} in FpML.
+     * @param lastRegularEndDate  the new value
+     * @return this, for chaining, not null
+     */
+    public Builder lastRegularEndDate(LocalDate lastRegularEndDate) {
+      this.lastRegularEndDate = lastRegularEndDate;
+      return this;
+    }
+
     //-----------------------------------------------------------------------
     @Override
     public String toString() {
-      StringBuilder buf = new StringBuilder(192);
+      StringBuilder buf = new StringBuilder(256);
       buf.append("PaymentSchedule.Builder{");
       buf.append("paymentFrequency").append('=').append(JodaBeanUtils.toString(paymentFrequency)).append(',').append(' ');
       buf.append("businessDayAdjustment").append('=').append(JodaBeanUtils.toString(businessDayAdjustment)).append(',').append(' ');
       buf.append("paymentRelativeTo").append('=').append(JodaBeanUtils.toString(paymentRelativeTo)).append(',').append(' ');
       buf.append("paymentDateOffset").append('=').append(JodaBeanUtils.toString(paymentDateOffset)).append(',').append(' ');
-      buf.append("compoundingMethod").append('=').append(JodaBeanUtils.toString(compoundingMethod));
+      buf.append("compoundingMethod").append('=').append(JodaBeanUtils.toString(compoundingMethod)).append(',').append(' ');
+      buf.append("firstRegularStartDate").append('=').append(JodaBeanUtils.toString(firstRegularStartDate)).append(',').append(' ');
+      buf.append("lastRegularEndDate").append('=').append(JodaBeanUtils.toString(lastRegularEndDate));
       buf.append('}');
       return buf.toString();
     }
 
   }
 
-  ///CLOVER:ON
   //-------------------------- AUTOGENERATED END --------------------------
 }

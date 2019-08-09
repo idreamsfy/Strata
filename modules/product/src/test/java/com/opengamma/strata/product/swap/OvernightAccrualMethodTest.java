@@ -7,8 +7,8 @@ package com.opengamma.strata.product.swap;
 
 import static com.opengamma.strata.collect.TestHelper.assertJodaConvert;
 import static com.opengamma.strata.collect.TestHelper.assertSerialization;
-import static com.opengamma.strata.collect.TestHelper.assertThrows;
 import static com.opengamma.strata.collect.TestHelper.coverEnum;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.testng.Assert.assertEquals;
 
 import org.testng.annotations.DataProvider;
@@ -22,10 +22,12 @@ public class OvernightAccrualMethodTest {
 
   //-------------------------------------------------------------------------
   @DataProvider(name = "name")
-  static Object[][] data_name() {
+  public static Object[][] data_name() {
     return new Object[][] {
         {OvernightAccrualMethod.AVERAGED, "Averaged"},
         {OvernightAccrualMethod.COMPOUNDED, "Compounded"},
+        {OvernightAccrualMethod.OVERNIGHT_COMPOUNDED_ANNUAL_RATE, "OvernightCompoundedAnnualRate"},
+        {OvernightAccrualMethod.AVERAGED_DAILY, "AveragedDaily"},
     };
   }
 
@@ -40,11 +42,13 @@ public class OvernightAccrualMethodTest {
   }
 
   public void test_of_lookup_notFound() {
-    assertThrows(() -> OvernightAccrualMethod.of("Rubbish"), IllegalArgumentException.class);
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> OvernightAccrualMethod.of("Rubbish"));
   }
 
   public void test_of_lookup_null() {
-    assertThrows(() -> OvernightAccrualMethod.of(null), IllegalArgumentException.class);
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> OvernightAccrualMethod.of(null));
   }
 
   //-------------------------------------------------------------------------

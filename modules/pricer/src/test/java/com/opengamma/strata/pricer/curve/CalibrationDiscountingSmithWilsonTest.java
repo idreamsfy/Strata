@@ -35,7 +35,7 @@ import com.opengamma.strata.data.ImmutableMarketData;
 import com.opengamma.strata.data.ImmutableMarketDataBuilder;
 import com.opengamma.strata.data.MarketData;
 import com.opengamma.strata.market.ValueType;
-import com.opengamma.strata.market.curve.CurveGroupDefinition;
+import com.opengamma.strata.market.curve.RatesCurveGroupDefinition;
 import com.opengamma.strata.market.curve.CurveGroupName;
 import com.opengamma.strata.market.curve.CurveMetadata;
 import com.opengamma.strata.market.curve.CurveName;
@@ -130,7 +130,7 @@ public class CalibrationDiscountingSmithWilsonTest {
     CURVES_METADATA.add(groupMetadata);
   }
   private static final DiscountingSwapProductPricer SWAP_PRICER = DiscountingSwapProductPricer.DEFAULT;
-  private static final CurveCalibrator CALIBRATOR = CurveCalibrator.of(1e-9, 1e-9, 100);
+  private static final RatesCurveCalibrator CALIBRATOR = RatesCurveCalibrator.of(1e-9, 1e-9, 100);
 
   /** Test with CurveGroupDefinition */
   private static final String CURVE_GROUP_NAME_STR = "GBP-SINGLE-CURVE";
@@ -168,7 +168,7 @@ public class CalibrationDiscountingSmithWilsonTest {
       .sensitivityFunction(SENSI_FUNCTION)
       .nodes(ALL_NODES)
       .build();
-  private static final CurveGroupDefinition CURVE_GROUP_DEFN = CurveGroupDefinition.builder()
+  private static final RatesCurveGroupDefinition CURVE_GROUP_DEFN = RatesCurveGroupDefinition.builder()
       .name(CURVE_GROUP_NAME)
       .addCurve(CURVE_DEFN, GBP, GBP_LIBOR_6M)
       .build();

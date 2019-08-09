@@ -10,7 +10,7 @@ import com.opengamma.strata.collect.named.ExtendedEnum;
 /**
  * Market standard cross-currency Ibor-Ibor swap conventions.
  * <p>
- * http://www.opengamma.com/sites/default/files/interest-rate-instruments-and-market-conventions.pdf
+ * https://developers.opengamma.com/quantitative-research/Interest-Rate-Instruments-and-Market-Conventions.pdf
  */
 public final class XCcyIborIborSwapConventions {
 
@@ -46,6 +46,15 @@ public final class XCcyIborIborSwapConventions {
    */
   public static final XCcyIborIborSwapConvention GBP_LIBOR_3M_EUR_EURIBOR_3M =
       XCcyIborIborSwapConvention.of(StandardXCcyIborIborSwapConventions.GBP_LIBOR_3M_EUR_EURIBOR_3M.getName());
+
+  /**
+   * The 'GBP-LIBOR-3M-JPY-LIBOR-3M' swap convention.
+   * <p>
+   * GBP LIBOR 3M v JPY LIBOR 3M.
+   * The spread is on the GBP leg.
+   */
+  public static final XCcyIborIborSwapConvention GBP_LIBOR_3M_JPY_LIBOR_3M =
+      XCcyIborIborSwapConvention.of(StandardXCcyIborIborSwapConventions.GBP_LIBOR_3M_JPY_LIBOR_3M.getName());
 
   //-------------------------------------------------------------------------
   /**

@@ -6,10 +6,10 @@
 package com.opengamma.strata.product.bond;
 
 import static com.opengamma.strata.collect.TestHelper.assertSerialization;
-import static com.opengamma.strata.collect.TestHelper.assertThrows;
 import static com.opengamma.strata.collect.TestHelper.coverBeanEquals;
 import static com.opengamma.strata.collect.TestHelper.coverImmutableBean;
 import static com.opengamma.strata.collect.TestHelper.date;
+import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 import static org.testng.Assert.assertEquals;
 
 import java.time.LocalDate;
@@ -17,6 +17,10 @@ import java.time.LocalDate;
 import org.testng.annotations.Test;
 
 import com.opengamma.strata.basics.ReferenceData;
+import com.opengamma.strata.basics.currency.Currency;
+import com.opengamma.strata.product.PortfolioItemSummary;
+import com.opengamma.strata.product.PortfolioItemType;
+import com.opengamma.strata.product.ProductType;
 import com.opengamma.strata.product.TradeInfo;
 
 /**
@@ -48,6 +52,22 @@ public class FixedCouponBondTradeTest {
     assertEquals(test.getInfo(), TRADE_INFO);
     assertEquals(test.getQuantity(), QUANTITY);
     assertEquals(test.getPrice(), PRICE);
+    assertEquals(test.withInfo(TRADE_INFO).getInfo(), TRADE_INFO);
+    assertEquals(test.withQuantity(129).getQuantity(), 129d, 0d);
+    assertEquals(test.withPrice(129).getPrice(), 129d, 0d);
+  }
+
+  //-------------------------------------------------------------------------
+  public void test_summarize() {
+    FixedCouponBondTrade trade = sut();
+    PortfolioItemSummary expected = PortfolioItemSummary.builder()
+        .id(TRADE_INFO.getId().orElse(null))
+        .portfolioItemType(PortfolioItemType.TRADE)
+        .productType(ProductType.BOND)
+        .currencies(Currency.EUR)
+        .description("Bond x 10")
+        .build();
+    assertEquals(trade.summarize(), expected);
   }
 
   //-------------------------------------------------------------------------
@@ -56,7 +76,7 @@ public class FixedCouponBondTradeTest {
         .info(TRADE_INFO)
         .product(PRODUCT.resolve(REF_DATA))
         .quantity(QUANTITY)
-        .price(PRICE)
+        .settlement(ResolvedFixedCouponBondSettlement.of(SETTLEMENT_DATE, PRICE))
         .build();
     assertEquals(sut().resolve(REF_DATA), expected);
   }
@@ -68,7 +88,35 @@ public class FixedCouponBondTradeTest {
         .quantity(QUANTITY)
         .price(PRICE)
         .build();
-    assertThrows(() -> test.resolve(REF_DATA), IllegalStateException.class);
+    assertThatIllegalStateException()
+        .isThrownBy(() -> test.resolve(REF_DATA));
+  }
+
+  //-------------------------------------------------------------------------
+  public void test_withQuantity() {
+    FixedCouponBondTrade base = sut();
+    double quantity = 75343d;
+    FixedCouponBondTrade computed = base.withQuantity(quantity);
+    FixedCouponBondTrade expected = FixedCouponBondTrade.builder()
+        .info(TRADE_INFO)
+        .product(PRODUCT)
+        .quantity(quantity)
+        .price(PRICE)
+        .build();
+    assertEquals(computed, expected);
+  }
+
+  public void test_withPrice() {
+    FixedCouponBondTrade base = sut();
+    double price = 135d;
+    FixedCouponBondTrade computed = base.withPrice(price);
+    FixedCouponBondTrade expected = FixedCouponBondTrade.builder()
+        .info(TRADE_INFO)
+        .product(PRODUCT)
+        .quantity(QUANTITY)
+        .price(price)
+        .build();
+    assertEquals(computed, expected);
   }
 
   //-------------------------------------------------------------------------

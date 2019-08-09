@@ -9,6 +9,7 @@ import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Function;
 import java.util.regex.Pattern;
 
 import com.google.common.collect.ImmutableList;
@@ -22,6 +23,7 @@ import com.google.common.collect.ImmutableMap;
  * If the CSV file has headers, the headers can also be used to lookup the fields.
  */
 public final class CsvRow {
+  // some methods have been inlined/simplified for startup/performance reasons
 
   /**
    * The header row, ordered as the headers appear in the file.
@@ -35,6 +37,10 @@ public final class CsvRow {
    * The fields in the row.
    */
   private final ImmutableList<String> fields;
+  /**
+   * The line number in the source file.
+   */
+  private final int lineNumber;
 
   //------------------------------------------------------------------------
   /**
@@ -45,7 +51,7 @@ public final class CsvRow {
    * @param headers  the headers
    * @param fields  the fields
    */
-  private CsvRow(ImmutableList<String> headers, ImmutableList<String> fields) {
+  private CsvRow(ImmutableList<String> headers, int lineNumber, ImmutableList<String> fields) {
     this.headers = headers;
     // need to allow duplicate headers and only store the first instance
     Map<String, Integer> searchHeaders = new HashMap<>();
@@ -54,6 +60,7 @@ public final class CsvRow {
       searchHeaders.putIfAbsent(searchHeader, i);
     }
     this.searchHeaders = ImmutableMap.copyOf(searchHeaders);
+    this.lineNumber = lineNumber;
     this.fields = fields;
   }
 
@@ -64,12 +71,18 @@ public final class CsvRow {
    * 
    * @param headers  the headers
    * @param searchHeaders  the search headers
+   * @param lineNumber  the line number
    * @param fields  the fields
    */
-  CsvRow(ImmutableList<String> headers, ImmutableMap<String, Integer> searchHeaders, ImmutableList<String> fields) {
+  CsvRow(
+      ImmutableList<String> headers,
+      ImmutableMap<String, Integer> searchHeaders,
+      int lineNumber,
+      ImmutableList<String> fields) {
 
     this.headers = headers;
     this.searchHeaders = searchHeaders;
+    this.lineNumber = lineNumber;
     this.fields = fields;
   }
 
@@ -83,6 +96,15 @@ public final class CsvRow {
    */
   public ImmutableList<String> headers() {
     return headers;
+  }
+
+  /**
+   * Gets the line number in the source file.
+   * 
+   * @return the line number
+   */
+  public int lineNumber() {
+    return lineNumber;
   }
 
   /**
@@ -119,6 +141,7 @@ public final class CsvRow {
     return fields.get(index);
   }
 
+  //-------------------------------------------------------------------------
   /**
    * Gets a single field value from the row by header.
    * <p>
@@ -126,12 +149,34 @@ public final class CsvRow {
    * Matching is case insensitive.
    * 
    * @param header  the column header
-   * @return the trimmed field value
+   * @return the field value, trimmed unless surrounded by quotes
    * @throws IllegalArgumentException if the header is not found
    */
   public String getField(String header) {
-    return findField(header)
-        .orElseThrow(() -> new IllegalArgumentException("Header not found: " + header));
+    Integer index = findIndex(header);
+    if (index == null) {
+      throw new IllegalArgumentException("Header not found: '" + header + "'");
+    }
+    return field(index);
+  }
+
+  /**
+   * Gets a single field value from the row by header, post processing the result.
+   * <p>
+   * This returns the value of the first column where the header matches the specified header.
+   * Matching is case insensitive.
+   * <p>
+   * The value is post processed via the specified function.
+   * 
+   * @param <T>  the post process result type
+   * @param header  the column header
+   * @param postProcessor  the post processor
+   * @return the post processed field value
+   * @throws IllegalArgumentException if the header is not found
+   */
+  public <T> T getField(String header, Function<String, T> postProcessor) {
+    String value = getField(header);
+    return postProcessor.apply(value);
   }
 
   /**
@@ -139,36 +184,68 @@ public final class CsvRow {
    * <p>
    * This returns the value of the first column where the header matches the specified header.
    * Matching is case insensitive.
+   * <p>
+   * If the value needs post processing, use {@link Optional#map(Function)}.
    * 
    * @param header  the column header
-   * @return the trimmed field value, empty if not found
+   * @return the field value, trimmed unless surrounded by quotes, empty if not found
    */
   public Optional<String> findField(String header) {
-    return Optional.ofNullable(searchHeaders.get(header.toLowerCase(Locale.ENGLISH)))
-        .map(idx -> field(idx));
+    Integer index = findIndex(header);
+    return index == null ? Optional.empty() : Optional.of(field(index));
   }
 
+  // finds the index of the specified header
+  private Integer findIndex(String header) {
+    return searchHeaders.get(header.toLowerCase(Locale.ENGLISH));
+  }
+
+  //-------------------------------------------------------------------------
   /**
    * Gets a single field value from the row by header pattern.
    * <p>
    * This returns the value of the first column where the header matches the specified header pattern.
    * 
    * @param headerPattern  the header pattern to match
-   * @return the trimmed field value, empty
+   * @return the field value, trimmed unless surrounded by quotes
    * @throws IllegalArgumentException if the header is not found
    */
   public String getField(Pattern headerPattern) {
-    return findField(headerPattern)
-        .orElseThrow(() -> new IllegalArgumentException("Header pattern not found: " + headerPattern));
+    for (int i = 0; i < headers.size(); i++) {
+      if (headerPattern.matcher(headers.get(i)).matches()) {
+        return field(i);
+      }
+    }
+    throw new IllegalArgumentException("Header pattern not found: '" + headerPattern + "'");
+  }
+
+  /**
+   * Gets a single field value from the row by header pattern, post processing the result.
+   * <p>
+   * This returns the value of the first column where the header matches the specified header pattern.
+   * <p>
+   * The value is post processed via the specified function.
+   * 
+   * @param <T>  the post process result type
+   * @param headerPattern  the header pattern to match
+   * @param postProcessor  the post processor
+   * @return the post processed field value
+   * @throws IllegalArgumentException if the header is not found
+   */
+  public <T> T getField(Pattern headerPattern, Function<String, T> postProcessor) {
+    String value = getField(headerPattern);
+    return postProcessor.apply(value);
   }
 
   /**
    * Gets a single field value from the row by header pattern.
    * <p>
    * This returns the value of the first column where the header matches the specified header pattern.
+   * <p>
+   * If the value needs post processing, use {@link Optional#map(Function)}.
    * 
    * @param headerPattern  the header pattern to match
-   * @return the trimmed field value, empty if not found
+   * @return the field value, trimmed unless surrounded by quotes, empty if not found
    */
   public Optional<String> findField(Pattern headerPattern) {
     for (int i = 0; i < headers.size(); i++) {
@@ -179,60 +256,42 @@ public final class CsvRow {
     return Optional.empty();
   }
 
+  //-------------------------------------------------------------------------
   /**
-   * Gets a single field value from the row by header pattern
-   * <p>
-   * This returns the value of the first column where the header matches the specified header pattern.
-   * If the header is not found or the value found is an empty string, then an IllegalArgumentException is thrown.
-   *
-   * @param headerPattern the header pattern to match
-   * @return the trimmed field value
-   * @throws IllegalArgumentException if the header is not found or if the value in the field is empty.
-   */
-  public String getValue(Pattern headerPattern) {
-    String value = getField(headerPattern);
-    if (value.isEmpty()) {
-      throw new IllegalArgumentException("No value was found for header pattern" + headerPattern);
-    } else {
-      return value;
-    }
-  }
-
-  /**
-   * Gets a single field value from the row by header
+   * Gets a single field value from the row by header.
    * <p>
    * This returns the value of the first column where the header matches the specified header.
    * If the header is not found or the value found is an empty string, then an IllegalArgumentException is thrown.
    *
-   * @param header the column header
-   * @return the trimmed field value, empty
+   * @param header  the column header
+   * @return the field value, trimmed unless surrounded by quotes
    * @throws IllegalArgumentException if the header is not found or if the value in the field is empty.
    */
   public String getValue(String header) {
     String value = getField(header);
     if (value.isEmpty()) {
-      throw new IllegalArgumentException("No value was found for field " + header);
-    } else {
-      return value;
+      throw new IllegalArgumentException("No value was found for field: '" + header + "'");
     }
+    return value;
   }
 
   /**
-   * Gets a single value from the row by header pattern.
+   * Gets a single field value from the row by header, post processing the result.
    * <p>
-   * This returns the value of the first column where the header matches the specified header pattern.
-   * If the value is an empty string, then an empty optional is returned.
+   * This returns the value of the first column where the header matches the specified header.
+   * If the header is not found or the value found is an empty string, then an IllegalArgumentException is thrown.
+   * <p>
+   * The value is post processed via the specified function.
    *
-   * @param headerPattern the header pattern to match
-   * @return the trimmed field value, empty
+   * @param <T>  the post process result type
+   * @param header  the column header
+   * @param postProcessor  the post processor
+   * @return the post processed field value
+   * @throws IllegalArgumentException if the header is not found or if the value in the field is empty.
    */
-  public Optional<String> findValue(Pattern headerPattern) {
-    Optional<String> value = findField(headerPattern);
-    if (value.isPresent() && !value.get().isEmpty()) {
-      return value;
-    } else {
-      return Optional.empty();
-    }
+  public <T> T getValue(String header, Function<String, T> postProcessor) {
+    String value = getValue(header);
+    return postProcessor.apply(value);
   }
 
   /**
@@ -240,17 +299,67 @@ public final class CsvRow {
    * <p>
    * This returns the value of the first column where the header matches the specified header pattern.
    * If the value is an empty string, then an empty optional is returned.
+   * <p>
+   * If the value needs post processing, use {@link Optional#map(Function)}.
    *
-   * @param header the column header
-   * @return the trimmed field value, empty
+   * @param header  the column header
+   * @return the field value, trimmed unless surrounded by quotes, empty if not found
    */
   public Optional<String> findValue(String header) {
-    Optional<String> value = findField(header);
-    if (value.isPresent() && !value.get().isEmpty()) {
-      return value;
-    } else {
-      return Optional.empty();
+    return findField(header).filter(str -> !str.isEmpty());
+  }
+
+  //-------------------------------------------------------------------------
+  /**
+   * Gets a single field value from the row by header pattern.
+   * <p>
+   * This returns the value of the first column where the header matches the specified header pattern.
+   * If the header is not found or the value found is an empty string, then an IllegalArgumentException is thrown.
+   *
+   * @param headerPattern  the header pattern to match
+   * @return the field value, trimmed unless surrounded by quotes
+   * @throws IllegalArgumentException if the header is not found or if the value in the field is empty.
+   */
+  public String getValue(Pattern headerPattern) {
+    String value = getField(headerPattern);
+    if (value.isEmpty()) {
+      throw new IllegalArgumentException("No value was found for header pattern: '" + headerPattern + "'");
     }
+    return value;
+  }
+
+  /**
+   * Gets a single field value from the row by header pattern, post processing the result.
+   * <p>
+   * This returns the value of the first column where the header matches the specified header pattern.
+   * If the header is not found or the value found is an empty string, then an IllegalArgumentException is thrown.
+   * <p>
+   * The value is post processed via the specified function.
+   *
+   * @param <T>  the post process result type
+   * @param headerPattern  the header pattern to match
+   * @param postProcessor  the post processor
+   * @return the post processed field value
+   * @throws IllegalArgumentException if the header is not found or if the value in the field is empty.
+   */
+  public <T> T getValue(Pattern headerPattern, Function<String, T> postProcessor) {
+    String value = getValue(headerPattern);
+    return postProcessor.apply(value);
+  }
+
+  /**
+   * Gets a single value from the row by header pattern.
+   * <p>
+   * This returns the value of the first column where the header matches the specified header pattern.
+   * If the value is an empty string, then an empty optional is returned.
+   * <p>
+   * If the value needs post processing, use {@link Optional#map(Function)}.
+   *
+   * @param headerPattern  the header pattern to match
+   * @return the field value, trimmed unless surrounded by quotes, empty if not found
+   */
+  public Optional<String> findValue(Pattern headerPattern) {
+    return findField(headerPattern).filter(str -> !str.isEmpty());
   }
 
   //-------------------------------------------------------------------------
@@ -276,6 +385,7 @@ public final class CsvRow {
   public CsvRow subRow(int startInclusive, int endExclusive) {
     return new CsvRow(
         headers.subList(Math.min(startInclusive, headers.size()), Math.min(endExclusive, headers.size())),
+        lineNumber,
         fields.subList(startInclusive, endExclusive));
   }
 

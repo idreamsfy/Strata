@@ -8,6 +8,7 @@ package com.opengamma.strata.basics.date;
 import static com.opengamma.strata.collect.TestHelper.caputureLog;
 import static com.opengamma.strata.collect.TestHelper.date;
 import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertFalse;
 import static org.testng.Assert.assertTrue;
 
 import java.time.format.DateTimeParseException;
@@ -18,6 +19,7 @@ import java.util.logging.LogRecord;
 import org.testng.annotations.Test;
 
 import com.google.common.collect.ImmutableMap;
+import com.opengamma.strata.basics.currency.Currency;
 
 /**
  * Test {@link HolidayCalendar}.
@@ -37,6 +39,23 @@ public class HolidayCalendarIniLookupTest {
     assertTrue(test.isHoliday(date(2016, 1, 1)));
     assertEquals(test.getName(), "TEST-VALID");
     assertEquals(test.toString(), "HolidayCalendar[TEST-VALID]");
+  }
+
+  public void test_workingDays() {
+    ImmutableMap<String, HolidayCalendar> lookup =
+        HolidayCalendarIniLookup.loadFromIni("HolidayCalendarDataWorkingDays.ini");
+    assertEquals(lookup.size(), 1);
+
+    HolidayCalendar test = lookup.get("TEST-WORKINGDAYS");
+    assertTrue(test.isHoliday(date(2015, 1, 1)));
+    assertTrue(test.isHoliday(date(2015, 1, 6)));
+    assertTrue(test.isHoliday(date(2015, 4, 5)));
+    assertTrue(test.isHoliday(date(2015, 12, 25)));
+    assertTrue(test.isHoliday(date(2016, 1, 1)));
+    assertFalse(test.isHoliday(date(2016, 1, 2)));
+    assertFalse(test.isHoliday(date(2016, 1, 3)));
+    assertEquals(test.getName(), "TEST-WORKINGDAYS");
+    assertEquals(test.toString(), "HolidayCalendar[TEST-WORKINGDAYS]");
   }
 
   public void test_valid2() {
@@ -78,6 +97,26 @@ public class HolidayCalendarIniLookupTest {
     assertEquals(record.getLevel(), Level.SEVERE);
     assertTrue(record.getThrown() instanceof DateTimeParseException);
     assertTrue(record.getThrown().getMessage().contains("'Bob'"));
+  }
+
+  //-------------------------------------------------------------------------
+  public synchronized void test_defaultByCurrency_valid() {
+    ImmutableMap<Currency, HolidayCalendarId> test =
+        HolidayCalendarIniLookup.loadDefaultsFromIni("HolidayCalendarDefaultDataValid.ini");
+    assertEquals(test.size(), 2);
+
+    assertEquals(test.get(Currency.GBP), HolidayCalendarIds.GBLO);
+    assertEquals(test.get(Currency.USD), HolidayCalendarIds.NYSE);
+  }
+
+  public synchronized void test_defaultByCurrency_invalid() {
+    List<LogRecord> captured = caputureLog(
+        HolidayCalendarIniLookup.class,
+        () -> HolidayCalendarIniLookup.loadFromIni("HolidayCalendarDefaultDataInvalid.ini"));
+    assertEquals(captured.size(), 1);
+    LogRecord record = captured.get(0);
+    assertEquals(record.getLevel(), Level.SEVERE);
+    assertTrue(record.getMessage().contains("Error processing resource"));
   }
 
 }

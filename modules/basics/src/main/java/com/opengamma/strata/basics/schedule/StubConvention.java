@@ -12,8 +12,9 @@ import java.time.LocalDate;
 import org.joda.convert.FromString;
 import org.joda.convert.ToString;
 
-import com.google.common.base.CaseFormat;
 import com.opengamma.strata.collect.ArgChecker;
+import com.opengamma.strata.collect.named.EnumNames;
+import com.opengamma.strata.collect.named.NamedEnum;
 
 /**
  * A convention defining how to calculate stub periods.
@@ -31,10 +32,10 @@ import com.opengamma.strata.collect.ArgChecker;
  * Instead, there will be a 2 month "initial" stub at the start, a 2 month "final" stub at the end
  * or both an initial and final stub with a combined length of 2 months.
  * <p>
- * The 'ShortInitial' or 'LongInitial' convention causes the regular periods to be determined
+ * The 'ShortInitial', 'LongInitial' or 'SmartInitial' convention causes the regular periods to be determined
  * <i>backwards</i> from the end date of the schedule, with remaining days allocated to the stub.
  * <p>
- * The 'ShortFinal' or 'LongFinal' convention causes the regular periods to be determined
+ * The 'ShortFinal', 'LongFinal' or 'SmartFinal' convention causes the regular periods to be determined
  * <i>forwards</i> from the start date of the schedule, with remaining days allocated to the stub.
  * <p>
  * The 'None' convention may be used to explicitly indicate there are no stubs.
@@ -42,7 +43,7 @@ import com.opengamma.strata.collect.ArgChecker;
  * The 'Both' convention may be used to explicitly indicate there is both an initial and final stub.
  * In this case, dates must be used to identify the stubs.
  */
-public enum StubConvention {
+public enum StubConvention implements NamedEnum {
 
   /**
    * Explicitly states that there are no stubs.
@@ -69,7 +70,7 @@ public enum StubConvention {
   /**
    * A short initial stub.
    * <p>
-   * The schedule periods will be determined backwards from the end date.
+   * The schedule periods will be determined backwards from the regular period end date.
    * Any remaining period, shorter than the standard frequency, will be allocated at the start.
    * <p>
    * For example, an 8 month trade with a 3 month periodic frequency would result in
@@ -95,7 +96,7 @@ public enum StubConvention {
   /**
    * A long initial stub.
    * <p>
-   * The schedule periods will be determined backwards from the end date.
+   * The schedule periods will be determined backwards from the regular period end date.
    * Any remaining period, shorter than the standard frequency, will be allocated at the start
    * and combined with the next period, making a total period longer than the standard frequency.
    * <p>
@@ -117,6 +118,44 @@ public enum StubConvention {
             definition, "Dates specify an explicit final stub, but stub convention is 'LongInitial'");
       }
       return (explicitInitialStub ? NONE : LONG_INITIAL);
+    }
+
+    @Override
+    boolean isStubLong(LocalDate date1, LocalDate date2) {
+      return true;
+    }
+  },
+  /**
+   * A smart initial stub.
+   * <p>
+   * The schedule periods will be determined backwards from the regular period end date.
+   * Any remaining period, shorter than the standard frequency, will be allocated at the start.
+   * If this results in a stub of less than 7 days, the stub will be combined with the next period.
+   * If this results in a stub of 7 days or more, the stub will be retained.
+   * This is the equivalent of {@link #LONG_INITIAL} up to 7 days and {@link #SHORT_INITIAL} beyond that.
+   * The 7 days are calculated based on unadjusted dates.
+   * This convention appears to match that used by Bloomberg.
+   * <p>
+   * If there is no remaining period when calculating, then there is no stub.
+   * For example, a 6 month trade can be exactly divided by a 3 month frequency.
+   * <p>
+   * When creating a schedule, there must be no explicit final stub.
+   * If there is an explicit initial stub, then this convention is considered to be matched
+   * and the remaining period is calculated using the stub convention 'None'.
+   */
+  SMART_INITIAL {
+    @Override
+    StubConvention toImplicit(PeriodicSchedule definition, boolean explicitInitialStub, boolean explicitFinalStub) {
+      if (explicitFinalStub) {
+        throw new ScheduleException(
+            definition, "Dates specify an explicit final stub, but stub convention is 'SmartInitial'");
+      }
+      return (explicitInitialStub ? NONE : SMART_INITIAL);
+    }
+
+    @Override
+    boolean isStubLong(LocalDate date1, LocalDate date2) {
+      return date1.plusDays(7).isAfter(date2);
     }
   },
   /**
@@ -171,6 +210,44 @@ public enum StubConvention {
       }
       return (explicitFinalStub ? NONE : LONG_FINAL);
     }
+
+    @Override
+    boolean isStubLong(LocalDate date1, LocalDate date2) {
+      return true;
+    }
+  },
+  /**
+   * A smart final stub.
+   * <p>
+   * The schedule periods will be determined forwards from the regular period start date.
+   * Any remaining period, shorter than the standard frequency, will be allocated at the end.
+   * If this results in a stub of less than 7 days, the stub will be combined with the next period.
+   * If this results in a stub of 7 days or more, the stub will be retained.
+   * This is the equivalent of {@link #LONG_FINAL} up to 7 days and {@link #SHORT_FINAL} beyond that.
+   * The 7 days are calculated based on unadjusted dates.
+   * This convention appears to match that used by Bloomberg.
+   * <p>
+   * If there is no remaining period when calculating, then there is no stub.
+   * For example, a 6 month trade can be exactly divided by a 3 month frequency.
+   * <p>
+   * When creating a schedule, there must be no explicit initial stub.
+   * If there is an explicit final stub, then this convention is considered to be matched
+   * and the remaining period is calculated using the stub convention 'None'.
+   */
+  SMART_FINAL {
+    @Override
+    StubConvention toImplicit(PeriodicSchedule definition, boolean explicitInitialStub, boolean explicitFinalStub) {
+      if (explicitInitialStub) {
+        throw new ScheduleException(
+            definition, "Dates specify an explicit initial stub, but stub convention is 'SmartFinal'");
+      }
+      return (explicitFinalStub ? NONE : SMART_FINAL);
+    }
+
+    @Override
+    boolean isStubLong(LocalDate date1, LocalDate date2) {
+      return date1.plusDays(7).isAfter(date2);
+    }
   },
   /**
    * Both ends of the schedule have a stub.
@@ -193,18 +270,23 @@ public enum StubConvention {
     }
   };
 
+  // helper for name conversions
+  private static final EnumNames<StubConvention> NAMES = EnumNames.of(StubConvention.class);
+
   //-------------------------------------------------------------------------
   /**
-   * Obtains an instance from the specified unique name.
+   * Obtains an instance from the specified name.
+   * <p>
+   * Parsing handles the mixed case form produced by {@link #toString()} and
+   * the upper and lower case variants of the enum constant name.
    * 
-   * @param uniqueName  the unique name
+   * @param name  the name to parse
    * @return the type
    * @throws IllegalArgumentException if the name is not known
    */
   @FromString
-  public static StubConvention of(String uniqueName) {
-    ArgChecker.notNull(uniqueName, "uniqueName");
-    return valueOf(CaseFormat.UPPER_CAMEL.to(CaseFormat.UPPER_UNDERSCORE, uniqueName));
+  public static StubConvention of(String name) {
+    return NAMES.parse(name);
   }
 
   //-------------------------------------------------------------------------
@@ -251,11 +333,14 @@ public enum StubConvention {
     ArgChecker.notNull(frequency, "frequency");
     // if the day-of-month differs, need to handle case where one or both
     // dates are at the end of the month, and in different months
-    if (this == NONE) {
+    if (this == NONE && frequency.isMonthBased()) {
       if (start.getDayOfMonth() != end.getDayOfMonth() &&
           start.getLong(PROLEPTIC_MONTH) != end.getLong(PROLEPTIC_MONTH) &&
           (start.getDayOfMonth() == start.lengthOfMonth() || end.getDayOfMonth() == end.lengthOfMonth())) {
-        return RollConvention.ofDayOfMonth(Math.max(start.getDayOfMonth(), end.getDayOfMonth()));
+
+        return preferEndOfMonth ?
+            RollConventions.EOM :
+            RollConvention.ofDayOfMonth(Math.max(start.getDayOfMonth(), end.getDayOfMonth()));
       }
     }
     if (isCalculateBackwards()) {
@@ -310,19 +395,32 @@ public enum StubConvention {
   abstract StubConvention toImplicit(
       PeriodicSchedule definition, boolean explicitInitialStub, boolean explicitFinalStub);
 
+  /**
+   * Decides if the period between two dates implies a long stub.
+   * <p>
+   * This is used by the smart conventions.
+   * 
+   * @param date1  the first date
+   * @param date2  the second date
+   * @return true if a long stub should be created by deleting one of the two input dates
+   */
+  boolean isStubLong(LocalDate date1, LocalDate date2) {
+    return false;
+  }
+
   //-------------------------------------------------------------------------
   /**
    * Checks if the schedule is calculated forwards from the start date to the end date.
    * <p>
    * If true, then there will typically be a stub at the end of the schedule.
    * <p>
-   * The 'None', 'ShortFinal' and 'LongFinal' conventions return true.
+   * The 'None', 'ShortFinal', 'LongFinal' and 'SmartFinal' conventions return true.
    * Other conventions return false.
    * 
    * @return true if calculation occurs forwards from the start date to the end date
    */
   public boolean isCalculateForwards() {
-    return this == SHORT_FINAL || this == LONG_FINAL || this == NONE;
+    return this == SHORT_FINAL || this == LONG_FINAL || this == SMART_FINAL || this == NONE;
   }
 
   /**
@@ -330,17 +428,17 @@ public enum StubConvention {
    * <p>
    * If true, then there will typically be a stub at the start of the schedule.
    * <p>
-   * The 'ShortInitial' and 'LongInitial' conventions return true.
+   * The 'ShortInitial', 'LongInitial' and 'SmartInitial' conventions return true.
    * Other conventions return false.
    * 
    * @return true if calculation occurs backwards from the end date to the start date
    */
   public boolean isCalculateBackwards() {
-    return this == SHORT_INITIAL || this == LONG_INITIAL;
+    return this == SHORT_INITIAL || this == LONG_INITIAL || this == SMART_INITIAL;
   }
 
   /**
-   * Checks if this convention may result in a long stub.
+   * Checks if this convention tries to produce a long stub.
    * <p>
    * The 'LongInitial' and 'LongFinal' conventions return true.
    * Other conventions return false.
@@ -352,7 +450,7 @@ public enum StubConvention {
   }
 
   /**
-   * Checks if this convention may result in a short stub.
+   * Checks if this convention tries to produce a short stub.
    * <p>
    * The 'ShortInitial' and 'ShortFinal' conventions return true.
    * Other conventions return false.
@@ -363,16 +461,28 @@ public enum StubConvention {
     return this == SHORT_INITIAL || this == SHORT_FINAL;
   }
 
+  /**
+   * Checks if this convention uses smart rules to create a stub.
+   * <p>
+   * The 'SmartInitial' and 'SmartFinal' conventions return true.
+   * Other conventions return false.
+   * 
+   * @return true if there may be a long stub
+   */
+  public boolean isSmart() {
+    return this == SMART_INITIAL || this == SMART_FINAL;
+  }
+
   //-------------------------------------------------------------------------
   /**
-   * Returns the formatted unique name of the type.
+   * Returns the formatted name of the type.
    * 
    * @return the formatted string representing the type
    */
   @ToString
   @Override
   public String toString() {
-    return CaseFormat.UPPER_UNDERSCORE.to(CaseFormat.UPPER_CAMEL, name());
+    return NAMES.format(this);
   }
 
 }

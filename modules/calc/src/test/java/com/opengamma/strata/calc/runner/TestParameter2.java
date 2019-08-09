@@ -8,6 +8,6 @@ package com.opengamma.strata.calc.runner;
 /**
  * Test implementation of {@link CalculationParameter}.
  */
-public class TestParameter2 implements CalculationParameter {
+public class TestParameter2 implements CalculationParameter, TestInterfaceParameter {
 
 }

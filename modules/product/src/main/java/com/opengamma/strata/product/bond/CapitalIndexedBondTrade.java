@@ -9,16 +9,15 @@ import java.io.Serializable;
 import java.time.LocalDate;
 import java.util.Map;
 import java.util.NoSuchElementException;
-import java.util.Set;
 
 import org.joda.beans.Bean;
-import org.joda.beans.BeanDefinition;
 import org.joda.beans.ImmutableBean;
-import org.joda.beans.ImmutableDefaults;
 import org.joda.beans.JodaBeanUtils;
+import org.joda.beans.MetaBean;
 import org.joda.beans.MetaProperty;
-import org.joda.beans.Property;
-import org.joda.beans.PropertyDefinition;
+import org.joda.beans.gen.BeanDefinition;
+import org.joda.beans.gen.ImmutableDefaults;
+import org.joda.beans.gen.PropertyDefinition;
 import org.joda.beans.impl.direct.DirectFieldsBeanBuilder;
 import org.joda.beans.impl.direct.DirectMetaBean;
 import org.joda.beans.impl.direct.DirectMetaProperty;
@@ -28,9 +27,12 @@ import com.opengamma.strata.basics.ReferenceData;
 import com.opengamma.strata.basics.currency.Payment;
 import com.opengamma.strata.basics.schedule.SchedulePeriod;
 import com.opengamma.strata.collect.ArgChecker;
+import com.opengamma.strata.product.PortfolioItemSummary;
+import com.opengamma.strata.product.ProductType;
 import com.opengamma.strata.product.ResolvableTrade;
 import com.opengamma.strata.product.SecuritizedProductTrade;
 import com.opengamma.strata.product.TradeInfo;
+import com.opengamma.strata.product.common.SummarizerUtils;
 import com.opengamma.strata.product.rate.RateComputation;
 
 /**
@@ -44,7 +46,8 @@ import com.opengamma.strata.product.rate.RateComputation;
  */
 @BeanDefinition(constructorScope = "package")
 public final class CapitalIndexedBondTrade
-    implements SecuritizedProductTrade, ResolvableTrade<ResolvedCapitalIndexedBondTrade>, ImmutableBean, Serializable {
+    implements
+    SecuritizedProductTrade<CapitalIndexedBond>, ResolvableTrade<ResolvedCapitalIndexedBondTrade>, ImmutableBean, Serializable {
 
   /**
    * The additional trade information, defaulted to an empty instance.
@@ -52,7 +55,7 @@ public final class CapitalIndexedBondTrade
    * This allows additional information to be attached to the trade.
    * Either the trade or settlement date is required when calling {@link CapitalIndexedBondTrade#resolve(ReferenceData)}.
    */
-  @PropertyDefinition(overrideGet = true)
+  @PropertyDefinition(validate = "notNull", overrideGet = true)
   private final TradeInfo info;
   /**
    * The bond that was traded.
@@ -87,18 +90,40 @@ public final class CapitalIndexedBondTrade
 
   //-------------------------------------------------------------------------
   @Override
+  public CapitalIndexedBondTrade withInfo(TradeInfo info) {
+    return new CapitalIndexedBondTrade(info, product, quantity, price);
+  }
+
+  @Override
+  public CapitalIndexedBondTrade withQuantity(double quantity) {
+    return new CapitalIndexedBondTrade(info, product, quantity, price);
+  }
+
+  @Override
+  public CapitalIndexedBondTrade withPrice(double price) {
+    return new CapitalIndexedBondTrade(info, product, quantity, price);
+  }
+
+  //-------------------------------------------------------------------------
+  @Override
+  public PortfolioItemSummary summarize() {
+    // ID x 200
+    String description = getSecurityId().getStandardId().getValue() + " x " + SummarizerUtils.value(getQuantity());
+    return SummarizerUtils.summary(this, ProductType.BOND, description, getCurrency());
+  }
+
+  @Override
   public ResolvedCapitalIndexedBondTrade resolve(ReferenceData refData) {
     ResolvedCapitalIndexedBond resolvedProduct = product.resolve(refData);
-    TradeInfo completedInfo = calculateSettlementDate(refData);
-    LocalDate settlementDate = completedInfo.getSettlementDate().get();
+    LocalDate settlementDate = calculateSettlementDate(refData);
 
     double accruedInterest = resolvedProduct.accruedInterest(settlementDate) / product.getNotional();
     if (settlementDate.isBefore(resolvedProduct.getStartDate())) {
       throw new IllegalArgumentException("Settlement date must not be before bond starts");
     }
-    BondPaymentPeriod settlement;
+    BondPaymentPeriod settlePeriod;
     if (product.getYieldConvention().equals(CapitalIndexedBondYieldConvention.GB_IL_FLOAT)) {
-      settlement = KnownAmountBondPaymentPeriod.of(
+      settlePeriod = KnownAmountBondPaymentPeriod.of(
           Payment.of(product.getCurrency(),
               -product.getNotional() * quantity * (price + accruedInterest), settlementDate),
           SchedulePeriod.of(
@@ -108,7 +133,7 @@ public final class CapitalIndexedBondTrade
               settlementDate));
     } else {
       RateComputation rateComputation = product.getRateCalculation().createRateComputation(settlementDate);
-      settlement = CapitalIndexedBondPaymentPeriod.builder()
+      settlePeriod = CapitalIndexedBondPaymentPeriod.builder()
           .startDate(resolvedProduct.getStartDate())
           .unadjustedStartDate(product.getAccrualSchedule().getStartDate())
           .endDate(settlementDate)
@@ -120,29 +145,26 @@ public final class CapitalIndexedBondTrade
     }
 
     return ResolvedCapitalIndexedBondTrade.builder()
-        .info(completedInfo)
+        .info(info)
         .product(resolvedProduct)
         .quantity(quantity)
-        .price(price)
-        .settlement(settlement)
+        .settlement(ResolvedCapitalIndexedBondSettlement.of(settlementDate, price, settlePeriod))
         .build();
   }
 
   // calculates the settlement date from the trade date if necessary
-  private TradeInfo calculateSettlementDate(ReferenceData refData) {
+  private LocalDate calculateSettlementDate(ReferenceData refData) {
     if (info.getSettlementDate().isPresent()) {
-      return info;
+      return info.getSettlementDate().get();
     }
     if (info.getTradeDate().isPresent()) {
       LocalDate tradeDate = info.getTradeDate().get();
-      LocalDate settlementDate = product.getSettlementDateOffset().adjust(tradeDate, refData);
-      return info.toBuilder().settlementDate(settlementDate).build();
+      return product.getSettlementDateOffset().adjust(tradeDate, refData);
     }
     throw new IllegalStateException("CapitalIndexedBondTrade.resolve() requires either trade date or settlement date");
   }
 
   //------------------------- AUTOGENERATED START -------------------------
-  ///CLOVER:OFF
   /**
    * The meta-bean for {@code CapitalIndexedBondTrade}.
    * @return the meta-bean, not null
@@ -152,7 +174,7 @@ public final class CapitalIndexedBondTrade
   }
 
   static {
-    JodaBeanUtils.registerMetaBean(CapitalIndexedBondTrade.Meta.INSTANCE);
+    MetaBean.register(CapitalIndexedBondTrade.Meta.INSTANCE);
   }
 
   /**
@@ -170,7 +192,7 @@ public final class CapitalIndexedBondTrade
 
   /**
    * Creates an instance.
-   * @param info  the value of the property
+   * @param info  the value of the property, not null
    * @param product  the value of the property, not null
    * @param quantity  the value of the property
    * @param price  the value of the property
@@ -180,6 +202,7 @@ public final class CapitalIndexedBondTrade
       CapitalIndexedBond product,
       double quantity,
       double price) {
+    JodaBeanUtils.notNull(info, "info");
     JodaBeanUtils.notNull(product, "product");
     ArgChecker.notNegative(price, "price");
     this.info = info;
@@ -193,23 +216,13 @@ public final class CapitalIndexedBondTrade
     return CapitalIndexedBondTrade.Meta.INSTANCE;
   }
 
-  @Override
-  public <R> Property<R> property(String propertyName) {
-    return metaBean().<R>metaProperty(propertyName).createProperty(this);
-  }
-
-  @Override
-  public Set<String> propertyNames() {
-    return metaBean().metaPropertyMap().keySet();
-  }
-
   //-----------------------------------------------------------------------
   /**
    * Gets the additional trade information, defaulted to an empty instance.
    * <p>
    * This allows additional information to be attached to the trade.
    * Either the trade or settlement date is required when calling {@link CapitalIndexedBondTrade#resolve(ReferenceData)}.
-   * @return the value of the property
+   * @return the value of the property, not null
    */
   @Override
   public TradeInfo getInfo() {
@@ -510,36 +523,6 @@ public final class CapitalIndexedBondTrade
       return this;
     }
 
-    /**
-     * @deprecated Use Joda-Convert in application code
-     */
-    @Override
-    @Deprecated
-    public Builder setString(String propertyName, String value) {
-      setString(meta().metaProperty(propertyName), value);
-      return this;
-    }
-
-    /**
-     * @deprecated Use Joda-Convert in application code
-     */
-    @Override
-    @Deprecated
-    public Builder setString(MetaProperty<?> property, String value) {
-      super.setString(property, value);
-      return this;
-    }
-
-    /**
-     * @deprecated Loop in application code
-     */
-    @Override
-    @Deprecated
-    public Builder setAll(Map<String, ? extends Object> propertyValueMap) {
-      super.setAll(propertyValueMap);
-      return this;
-    }
-
     @Override
     public CapitalIndexedBondTrade build() {
       return new CapitalIndexedBondTrade(
@@ -555,10 +538,11 @@ public final class CapitalIndexedBondTrade
      * <p>
      * This allows additional information to be attached to the trade.
      * Either the trade or settlement date is required when calling {@link CapitalIndexedBondTrade#resolve(ReferenceData)}.
-     * @param info  the new value
+     * @param info  the new value, not null
      * @return this, for chaining, not null
      */
     public Builder info(TradeInfo info) {
+      JodaBeanUtils.notNull(info, "info");
       this.info = info;
       return this;
     }
@@ -619,6 +603,5 @@ public final class CapitalIndexedBondTrade
 
   }
 
-  ///CLOVER:ON
   //-------------------------- AUTOGENERATED END --------------------------
 }

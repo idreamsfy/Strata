@@ -8,24 +8,33 @@ package com.opengamma.strata.product.etd;
 import java.io.Serializable;
 import java.util.Map;
 import java.util.NoSuchElementException;
-import java.util.Set;
 
 import org.joda.beans.Bean;
-import org.joda.beans.BeanDefinition;
-import org.joda.beans.DerivedProperty;
 import org.joda.beans.ImmutableBean;
-import org.joda.beans.ImmutableDefaults;
 import org.joda.beans.JodaBeanUtils;
+import org.joda.beans.MetaBean;
 import org.joda.beans.MetaProperty;
-import org.joda.beans.Property;
-import org.joda.beans.PropertyDefinition;
+import org.joda.beans.gen.BeanDefinition;
+import org.joda.beans.gen.DerivedProperty;
+import org.joda.beans.gen.ImmutableDefaults;
+import org.joda.beans.gen.PropertyDefinition;
 import org.joda.beans.impl.direct.DirectFieldsBeanBuilder;
 import org.joda.beans.impl.direct.DirectMetaBean;
 import org.joda.beans.impl.direct.DirectMetaProperty;
 import org.joda.beans.impl.direct.DirectMetaPropertyMap;
 
+import com.opengamma.strata.basics.ReferenceData;
 import com.opengamma.strata.collect.ArgChecker;
+import com.opengamma.strata.collect.Messages;
+import com.opengamma.strata.product.PortfolioItemSummary;
+import com.opengamma.strata.product.Position;
 import com.opengamma.strata.product.PositionInfo;
+import com.opengamma.strata.product.ProductType;
+import com.opengamma.strata.product.ResolvableSecurityPosition;
+import com.opengamma.strata.product.SecuritizedProductPosition;
+import com.opengamma.strata.product.Security;
+import com.opengamma.strata.product.SecurityId;
+import com.opengamma.strata.product.common.SummarizerUtils;
 
 /**
  * A position in an ETD future, where the security is embedded ready for mark-to-market pricing.
@@ -41,7 +50,7 @@ import com.opengamma.strata.product.PositionInfo;
  */
 @BeanDefinition
 public final class EtdFuturePosition
-    implements EtdPosition, ImmutableBean, Serializable {
+    implements EtdPosition, ResolvableSecurityPosition, ImmutableBean, Serializable {
 
   /**
    * The additional position information, defaulted to an empty instance.
@@ -92,6 +101,8 @@ public final class EtdFuturePosition
    * Obtains an instance from position information, security and net quantity.
    * <p>
    * The net quantity is the long quantity minus the short quantity, which may be negative.
+   * If the quantity is positive it is treated as a long quantity.
+   * Otherwise it is treated as a short quantity.
    *
    * @param positionInfo  the position information
    * @param security  the underlying security
@@ -108,6 +119,8 @@ public final class EtdFuturePosition
    * Obtains an instance from the security, long quantity and short quantity.
    * <p>
    * The long quantity and short quantity must be zero or positive, not negative.
+   * In many cases, only a long quantity or short quantity will be present with the other set to zero.
+   * However it is also possible for both to be non-zero, allowing long and short positions to be treated separately.
    *
    * @param security  the underlying security
    * @param longQuantity  the long quantity of the underlying security
@@ -120,6 +133,10 @@ public final class EtdFuturePosition
 
   /**
    * Obtains an instance from position information, security, long quantity and short quantity.
+   * <p>
+   * The long quantity and short quantity must be zero or positive, not negative.
+   * In many cases, only a long quantity or short quantity will be present with the other set to zero.
+   * However it is also possible for both to be non-zero, allowing long and short positions to be treated separately.
    *
    * @param positionInfo  the position information
    * @param security  the underlying security
@@ -142,6 +159,26 @@ public final class EtdFuturePosition
   }
 
   //-------------------------------------------------------------------------
+  @Override
+  public EtdFuturePosition withInfo(PositionInfo info) {
+    return new EtdFuturePosition(info, security, longQuantity, shortQuantity);
+  }
+
+  @Override
+  public EtdFuturePosition withQuantity(double quantity) {
+    return EtdFuturePosition.ofNet(info, security, quantity);
+  }
+
+  //-------------------------------------------------------------------------
+  @Override
+  public PortfolioItemSummary summarize() {
+    // F-ECAG-FGBS-201706 x 200, Jun17
+    String future = security.summaryDescription();
+    String description =
+        getSecurityId().getStandardId().getValue() + " x " + SummarizerUtils.value(getQuantity()) + ", " + future;
+    return SummarizerUtils.summary(this, ProductType.ETD_FUTURE, description, getCurrency());
+  }
+
   /**
    * Gets the net quantity of the security.
    * <p>
@@ -159,8 +196,21 @@ public final class EtdFuturePosition
     return longQuantity - shortQuantity;
   }
 
+  @Override
+  public SecuritizedProductPosition<?> resolveTarget(ReferenceData refData) {
+    SecurityId securityId = getSecurityId();
+    Security security = refData.getValue(securityId);
+    Position position = security.createPosition(getInfo(), getLongQuantity(), getShortQuantity(), refData);
+    if (position instanceof SecuritizedProductPosition) {
+      return (SecuritizedProductPosition<?>) position;
+    }
+    throw new ClassCastException(Messages.format(
+        "Reference data for security '{}' did not implement SecuritizedProductPosition: ",
+        securityId,
+        position.getClass().getName()));
+  }
+
   //------------------------- AUTOGENERATED START -------------------------
-  ///CLOVER:OFF
   /**
    * The meta-bean for {@code EtdFuturePosition}.
    * @return the meta-bean, not null
@@ -170,7 +220,7 @@ public final class EtdFuturePosition
   }
 
   static {
-    JodaBeanUtils.registerMetaBean(EtdFuturePosition.Meta.INSTANCE);
+    MetaBean.register(EtdFuturePosition.Meta.INSTANCE);
   }
 
   /**
@@ -204,16 +254,6 @@ public final class EtdFuturePosition
   @Override
   public EtdFuturePosition.Meta metaBean() {
     return EtdFuturePosition.Meta.INSTANCE;
-  }
-
-  @Override
-  public <R> Property<R> property(String propertyName) {
-    return metaBean().<R>metaProperty(propertyName).createProperty(this);
-  }
-
-  @Override
-  public Set<String> propertyNames() {
-    return metaBean().metaPropertyMap().keySet();
   }
 
   //-----------------------------------------------------------------------
@@ -537,36 +577,6 @@ public final class EtdFuturePosition
       return this;
     }
 
-    /**
-     * @deprecated Use Joda-Convert in application code
-     */
-    @Override
-    @Deprecated
-    public Builder setString(String propertyName, String value) {
-      setString(meta().metaProperty(propertyName), value);
-      return this;
-    }
-
-    /**
-     * @deprecated Use Joda-Convert in application code
-     */
-    @Override
-    @Deprecated
-    public Builder setString(MetaProperty<?> property, String value) {
-      super.setString(property, value);
-      return this;
-    }
-
-    /**
-     * @deprecated Loop in application code
-     */
-    @Override
-    @Deprecated
-    public Builder setAll(Map<String, ? extends Object> propertyValueMap) {
-      super.setAll(propertyValueMap);
-      return this;
-    }
-
     @Override
     public EtdFuturePosition build() {
       return new EtdFuturePosition(
@@ -644,6 +654,5 @@ public final class EtdFuturePosition
 
   }
 
-  ///CLOVER:ON
   //-------------------------- AUTOGENERATED END --------------------------
 }

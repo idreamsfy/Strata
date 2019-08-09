@@ -18,13 +18,15 @@ import static com.opengamma.strata.basics.index.PriceIndices.US_CPI_U;
 import static com.opengamma.strata.basics.schedule.Frequency.P3M;
 import static com.opengamma.strata.basics.schedule.Frequency.P6M;
 import static com.opengamma.strata.collect.TestHelper.assertSerialization;
-import static com.opengamma.strata.collect.TestHelper.assertThrowsIllegalArg;
 import static com.opengamma.strata.collect.TestHelper.coverBeanEquals;
 import static com.opengamma.strata.collect.TestHelper.coverImmutableBean;
 import static com.opengamma.strata.collect.TestHelper.date;
 import static com.opengamma.strata.product.common.BuySell.BUY;
 import static com.opengamma.strata.product.common.PayReceive.PAY;
 import static com.opengamma.strata.product.common.PayReceive.RECEIVE;
+import static com.opengamma.strata.product.swap.PriceIndexCalculationMethod.INTERPOLATED;
+import static com.opengamma.strata.product.swap.PriceIndexCalculationMethod.MONTHLY;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.testng.Assert.assertEquals;
 
 import java.time.LocalDate;
@@ -58,8 +60,8 @@ public class FixedInflationSwapTemplateTest {
       FixedRateSwapLegConvention.of(GBP, ACT_360, P6M, BDA_FOLLOW);
   private static final FixedRateSwapLegConvention FIXED2 =
       FixedRateSwapLegConvention.of(USD, ACT_365F, P3M, BDA_MOD_FOLLOW);
-  private static final InflationRateSwapLegConvention INFL = InflationRateSwapLegConvention.of(GB_HICP, LAG_3M, BDA_MOD_FOLLOW);
-  private static final InflationRateSwapLegConvention INFL2 = InflationRateSwapLegConvention.of(US_CPI_U, LAG_3M, BDA_MOD_FOLLOW);
+  private static final InflationRateSwapLegConvention INFL = InflationRateSwapLegConvention.of(GB_HICP, LAG_3M, MONTHLY, BDA_MOD_FOLLOW);
+  private static final InflationRateSwapLegConvention INFL2 = InflationRateSwapLegConvention.of(US_CPI_U, LAG_3M, INTERPOLATED, BDA_MOD_FOLLOW);
   private static final FixedInflationSwapConvention CONV = ImmutableFixedInflationSwapConvention.of(
       NAME,
       FIXED,
@@ -86,7 +88,8 @@ public class FixedInflationSwapTemplateTest {
 
   //-------------------------------------------------------------------------
   public void test_builder_notEnoughData() {
-    assertThrowsIllegalArg(() -> FixedIborSwapTemplate.builder()
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> FixedIborSwapTemplate.builder()
         .build());
   }
 

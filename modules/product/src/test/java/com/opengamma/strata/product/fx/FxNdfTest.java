@@ -10,15 +10,16 @@ import static com.opengamma.strata.basics.currency.Currency.GBP;
 import static com.opengamma.strata.basics.currency.Currency.USD;
 import static com.opengamma.strata.basics.index.FxIndices.GBP_USD_WM;
 import static com.opengamma.strata.collect.TestHelper.assertSerialization;
-import static com.opengamma.strata.collect.TestHelper.assertThrowsIllegalArg;
 import static com.opengamma.strata.collect.TestHelper.coverBeanEquals;
 import static com.opengamma.strata.collect.TestHelper.coverImmutableBean;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.testng.Assert.assertEquals;
 
 import java.time.LocalDate;
 
 import org.testng.annotations.Test;
 
+import com.google.common.collect.ImmutableSet;
 import com.opengamma.strata.basics.ReferenceData;
 import com.opengamma.strata.basics.currency.CurrencyAmount;
 import com.opengamma.strata.basics.currency.FxRate;
@@ -49,6 +50,9 @@ public class FxNdfTest {
     assertEquals(test.getSettlementCurrencyNotional(), CURRENCY_NOTIONAL);
     assertEquals(test.getPaymentDate(), PAYMENT_DATE);
     assertEquals(test.getSettlementCurrency(), GBP);
+    assertEquals(test.isCrossCurrency(), true);
+    assertEquals(test.allPaymentCurrencies(), ImmutableSet.of(GBP));
+    assertEquals(test.allCurrencies(), ImmutableSet.of(GBP, USD));
   }
 
   public void test_builder_inverse() {
@@ -69,7 +73,8 @@ public class FxNdfTest {
 
   public void test_builder_wrongRate() {
     FxRate fxRate = FxRate.of(GBP, EUR, 1.1d);
-    assertThrowsIllegalArg(() -> FxNdf.builder()
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> FxNdf.builder()
         .agreedFxRate(fxRate)
         .settlementCurrencyNotional(CURRENCY_NOTIONAL)
         .index(GBP_USD_WM)
@@ -78,7 +83,8 @@ public class FxNdfTest {
   }
 
   public void test_builder_wrongCurrency() {
-    assertThrowsIllegalArg(() -> FxNdf.builder()
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> FxNdf.builder()
         .agreedFxRate(FX_RATE)
         .settlementCurrencyNotional(CurrencyAmount.of(EUR, NOTIONAL))
         .index(GBP_USD_WM)
@@ -119,7 +125,7 @@ public class FxNdfTest {
         .build();
   }
 
-  FxNdf sut2() {
+  static FxNdf sut2() {
     return FxNdf.builder()
         .agreedFxRate(FX_RATE)
         .settlementCurrencyNotional(CurrencyAmount.of(USD, -NOTIONAL))

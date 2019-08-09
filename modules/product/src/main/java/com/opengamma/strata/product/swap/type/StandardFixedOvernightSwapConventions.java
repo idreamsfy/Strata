@@ -12,6 +12,7 @@ import static com.opengamma.strata.basics.index.OvernightIndices.EUR_EONIA;
 import static com.opengamma.strata.basics.index.OvernightIndices.GBP_SONIA;
 import static com.opengamma.strata.basics.index.OvernightIndices.JPY_TONAR;
 import static com.opengamma.strata.basics.index.OvernightIndices.USD_FED_FUND;
+import static com.opengamma.strata.basics.index.OvernightIndices.USD_SOFR;
 import static com.opengamma.strata.basics.schedule.Frequency.P12M;
 import static com.opengamma.strata.basics.schedule.Frequency.TERM;
 import static com.opengamma.strata.product.swap.OvernightAccrualMethod.COMPOUNDED;
@@ -27,7 +28,7 @@ import com.opengamma.strata.basics.schedule.StubConvention;
 /**
  * Market standard Fixed-Overnight swap conventions.
  * <p>
- * http://www.opengamma.com/sites/default/files/interest-rate-instruments-and-market-conventions.pdf
+ * https://developers.opengamma.com/quantitative-research/Interest-Rate-Instruments-and-Market-Conventions.pdf
  */
 final class StandardFixedOvernightSwapConventions {
 
@@ -48,6 +49,16 @@ final class StandardFixedOvernightSwapConventions {
    */
   public static final FixedOvernightSwapConvention USD_FIXED_1Y_FED_FUND_OIS =
       makeConvention("USD-FIXED-1Y-FED-FUND-OIS", USD_FED_FUND, ACT_360, P12M, 2, 2);
+
+  //-------------------------------------------------------------------------
+  /**
+   * USD fixed vs SOFR OIS swap for terms greater than one year.
+   * <p>
+   * Both legs pay annually and use day count 'Act/360'.
+   * The spot date offset is 2 days and the payment date offset is 2 days.
+   */
+  public static final FixedOvernightSwapConvention USD_FIXED_1Y_SOFR_OIS =
+      makeConvention("USD-FIXED-1Y-SOFR-OIS", USD_SOFR, ACT_360, P12M, 2, 2);
 
   //-------------------------------------------------------------------------
   /**
@@ -128,7 +139,7 @@ final class StandardFixedOvernightSwapConventions {
             .accrualBusinessDayAdjustment(BusinessDayAdjustment.of(MODIFIED_FOLLOWING, calendar))
             .paymentFrequency(frequency)
             .paymentDateOffset(paymentDateOffset)
-            .stubConvention(StubConvention.SHORT_INITIAL)
+            .stubConvention(StubConvention.SMART_INITIAL)
             .build(),
         OvernightRateSwapLegConvention.builder()
             .index(index)
@@ -136,7 +147,7 @@ final class StandardFixedOvernightSwapConventions {
             .accrualFrequency(frequency)
             .paymentFrequency(frequency)
             .paymentDateOffset(paymentDateOffset)
-            .stubConvention(StubConvention.SHORT_INITIAL)
+            .stubConvention(StubConvention.SMART_INITIAL)
             .build(),
         spotDateOffset);
   }

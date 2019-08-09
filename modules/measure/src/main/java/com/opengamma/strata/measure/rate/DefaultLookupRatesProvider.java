@@ -5,23 +5,24 @@
  */
 package com.opengamma.strata.measure.rate;
 
+import static com.opengamma.strata.collect.Guavate.filtering;
 import static com.opengamma.strata.collect.Guavate.toImmutableSet;
 
 import java.io.Serializable;
+import java.lang.invoke.MethodHandles;
 import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.stream.Stream;
 
-import org.joda.beans.BeanDefinition;
 import org.joda.beans.ImmutableBean;
-import org.joda.beans.ImmutableConstructor;
 import org.joda.beans.JodaBeanUtils;
 import org.joda.beans.MetaBean;
-import org.joda.beans.Property;
-import org.joda.beans.PropertyDefinition;
+import org.joda.beans.TypedMetaBean;
+import org.joda.beans.gen.BeanDefinition;
+import org.joda.beans.gen.ImmutableConstructor;
+import org.joda.beans.gen.PropertyDefinition;
 import org.joda.beans.impl.light.LightMetaBean;
 
 import com.google.common.collect.ImmutableSet;
@@ -49,6 +50,9 @@ import com.opengamma.strata.pricer.fx.DiscountFxForwardRates;
 import com.opengamma.strata.pricer.fx.ForwardFxIndexRates;
 import com.opengamma.strata.pricer.fx.FxForwardRates;
 import com.opengamma.strata.pricer.fx.FxIndexRates;
+import com.opengamma.strata.pricer.rate.HistoricIborIndexRates;
+import com.opengamma.strata.pricer.rate.HistoricOvernightIndexRates;
+import com.opengamma.strata.pricer.rate.HistoricPriceIndexValues;
 import com.opengamma.strata.pricer.rate.IborIndexRates;
 import com.opengamma.strata.pricer.rate.ImmutableRatesProvider;
 import com.opengamma.strata.pricer.rate.OvernightIndexRates;
@@ -120,24 +124,29 @@ final class DefaultLookupRatesProvider
   @Override
   public ImmutableSet<IborIndex> getIborIndices() {
     return lookup.getForwardIndices().stream()
-        .filter(IborIndex.class::isInstance)
-        .map(IborIndex.class::cast)
+        .flatMap(filtering(IborIndex.class))
         .collect(toImmutableSet());
   }
 
   @Override
   public ImmutableSet<OvernightIndex> getOvernightIndices() {
     return lookup.getForwardIndices().stream()
-        .filter(OvernightIndex.class::isInstance)
-        .map(OvernightIndex.class::cast)
+        .flatMap(filtering(OvernightIndex.class))
         .collect(toImmutableSet());
   }
 
   @Override
   public ImmutableSet<PriceIndex> getPriceIndices() {
     return lookup.getForwardIndices().stream()
-        .filter(PriceIndex.class::isInstance)
-        .map(PriceIndex.class::cast)
+        .flatMap(filtering(PriceIndex.class))
+        .collect(toImmutableSet());
+  }
+
+  @Override
+  public ImmutableSet<Index> getTimeSeriesIndices() {
+    return marketData.getTimeSeriesIds().stream()
+        .flatMap(filtering(IndexQuoteId.class))
+        .map(id -> id.getIndex())
         .collect(toImmutableSet());
   }
 
@@ -182,8 +191,9 @@ final class DefaultLookupRatesProvider
   //-------------------------------------------------------------------------
   @Override
   public FxIndexRates fxIndexRates(FxIndex index) {
+    LocalDateDoubleTimeSeries fixings = timeSeries(index);
     FxForwardRates fxForwardRates = fxForwardRates(index.getCurrencyPair());
-    return ForwardFxIndexRates.of(index, fxForwardRates, timeSeries(index));
+    return ForwardFxIndexRates.of(index, fxForwardRates, fixings);
   }
 
   //-------------------------------------------------------------------------
@@ -200,10 +210,18 @@ final class DefaultLookupRatesProvider
   public IborIndexRates iborIndexRates(IborIndex index) {
     CurveId curveId = lookup.getForwardCurves().get(index);
     if (curveId == null) {
+      return historicCurve(index);
+    }
+    return IborIndexRates.of(index, getValuationDate(), marketData.getValue(curveId), timeSeries(index));
+  }
+
+  // creates a historic rates instance if index is inactive and time-series is available
+  private IborIndexRates historicCurve(IborIndex index) {
+    LocalDateDoubleTimeSeries fixings = timeSeries(index);
+    if (index.isActive() || fixings.isEmpty()) {
       throw new MarketDataNotFoundException(lookup.msgIndexNotFound(index));
     }
-    Curve curve = marketData.getValue(curveId);
-    return IborIndexRates.of(index, getValuationDate(), curve, timeSeries(index));
+    return HistoricIborIndexRates.of(index, getValuationDate(), fixings);
   }
 
   //-------------------------------------------------------------------------
@@ -211,10 +229,18 @@ final class DefaultLookupRatesProvider
   public OvernightIndexRates overnightIndexRates(OvernightIndex index) {
     CurveId curveId = lookup.getForwardCurves().get(index);
     if (curveId == null) {
+      return historicCurve(index);
+    }
+    return OvernightIndexRates.of(index, getValuationDate(), marketData.getValue(curveId), timeSeries(index));
+  }
+
+  // creates a historic rates instance if index is inactive and time-series is available
+  private OvernightIndexRates historicCurve(OvernightIndex index) {
+    LocalDateDoubleTimeSeries fixings = timeSeries(index);
+    if (index.isActive() || fixings.isEmpty()) {
       throw new MarketDataNotFoundException(lookup.msgIndexNotFound(index));
     }
-    Curve curve = marketData.getValue(curveId);
-    return OvernightIndexRates.of(index, getValuationDate(), curve, timeSeries(index));
+    return HistoricOvernightIndexRates.of(index, getValuationDate(), fixings);
   }
 
   //-------------------------------------------------------------------------
@@ -222,10 +248,18 @@ final class DefaultLookupRatesProvider
   public PriceIndexValues priceIndexValues(PriceIndex index) {
     CurveId curveId = lookup.getForwardCurves().get(index);
     if (curveId == null) {
+      return historicCurve(index);
+    }
+    return PriceIndexValues.of(index, getValuationDate(), marketData.getValue(curveId), timeSeries(index));
+  }
+
+  // creates a historic rates instance if index is inactive and time-series is available
+  private PriceIndexValues historicCurve(PriceIndex index) {
+    LocalDateDoubleTimeSeries fixings = timeSeries(index);
+    if (index.isActive() || fixings.isEmpty()) {
       throw new MarketDataNotFoundException(lookup.msgIndexNotFound(index));
     }
-    Curve curve = marketData.getValue(curveId);
-    return PriceIndexValues.of(index, getValuationDate(), curve, timeSeries(index));
+    return HistoricPriceIndexValues.of(index, getValuationDate(), fixings);
   }
 
   //-------------------------------------------------------------------------
@@ -265,22 +299,28 @@ final class DefaultLookupRatesProvider
   }
 
   //------------------------- AUTOGENERATED START -------------------------
-  ///CLOVER:OFF
   /**
    * The meta-bean for {@code DefaultLookupRatesProvider}.
    */
-  private static final MetaBean META_BEAN = LightMetaBean.of(DefaultLookupRatesProvider.class);
+  private static final TypedMetaBean<DefaultLookupRatesProvider> META_BEAN =
+      LightMetaBean.of(
+          DefaultLookupRatesProvider.class,
+          MethodHandles.lookup(),
+          new String[] {
+              "lookup",
+              "marketData"},
+          new Object[0]);
 
   /**
    * The meta-bean for {@code DefaultLookupRatesProvider}.
    * @return the meta-bean, not null
    */
-  public static MetaBean meta() {
+  public static TypedMetaBean<DefaultLookupRatesProvider> meta() {
     return META_BEAN;
   }
 
   static {
-    JodaBeanUtils.registerMetaBean(META_BEAN);
+    MetaBean.register(META_BEAN);
   }
 
   /**
@@ -289,18 +329,8 @@ final class DefaultLookupRatesProvider
   private static final long serialVersionUID = 1L;
 
   @Override
-  public MetaBean metaBean() {
+  public TypedMetaBean<DefaultLookupRatesProvider> metaBean() {
     return META_BEAN;
-  }
-
-  @Override
-  public <R> Property<R> property(String propertyName) {
-    return metaBean().<R>metaProperty(propertyName).createProperty(this);
-  }
-
-  @Override
-  public Set<String> propertyNames() {
-    return metaBean().metaPropertyMap().keySet();
   }
 
   //-----------------------------------------------------------------------
@@ -353,6 +383,5 @@ final class DefaultLookupRatesProvider
     return buf.toString();
   }
 
-  ///CLOVER:ON
   //-------------------------- AUTOGENERATED END --------------------------
 }

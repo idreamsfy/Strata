@@ -5,14 +5,14 @@
  */
 package com.opengamma.strata.data.scenario;
 
-import static com.opengamma.strata.collect.TestHelper.assertThrowsIllegalArg;
 import static com.opengamma.strata.collect.TestHelper.date;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 
 import java.time.LocalDate;
 import java.util.Objects;
 
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Test;
 
 import com.google.common.collect.ImmutableSet;
 import com.opengamma.strata.basics.StandardId;
@@ -21,13 +21,16 @@ import com.opengamma.strata.data.FieldName;
 import com.opengamma.strata.data.ObservableId;
 import com.opengamma.strata.data.ObservableSource;
 
-@Test
+/**
+ * Test.
+ */
 public class CombinedScenarioMarketDataTest {
 
   private static final TestId TEST_ID1 = new TestId("1");
   private static final TestId TEST_ID2 = new TestId("2");
   private static final TestId TEST_ID3 = new TestId("3");
 
+  @Test
   public void test_combinedWith() {
     LocalDateDoubleTimeSeries timeSeries1 = LocalDateDoubleTimeSeries.builder()
         .put(date(2011, 3, 8), 1)
@@ -82,6 +85,7 @@ public class CombinedScenarioMarketDataTest {
     assertThat(combined.getIds()).isEqualTo(ImmutableSet.of(TEST_ID1, TEST_ID2, TEST_ID3));
   }
 
+  @Test
   public void test_combinedWithIncompatibleScenarioCount() {
     ImmutableScenarioMarketData marketData1 = ImmutableScenarioMarketData.builder(LocalDate.of(2011, 3, 8))
         .addBox(TEST_ID1, MarketDataBox.ofScenarioValues(1.0, 1.1, 1.2))
@@ -91,9 +95,12 @@ public class CombinedScenarioMarketDataTest {
         .addBox(TEST_ID2, MarketDataBox.ofScenarioValues(1.0, 1.1))
         .build();
 
-    assertThrowsIllegalArg(() -> marketData1.combinedWith(marketData2), ".* same number of scenarios .* 3 and 2");
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> marketData1.combinedWith(marketData2))
+        .withMessageMatching(".*same number of scenarios .* 3 and 2");
   }
 
+  @Test
   public void test_combinedWithReceiverHasOneScenario() {
     ImmutableScenarioMarketData marketData1 = ImmutableScenarioMarketData.builder(LocalDate.of(2011, 3, 8))
         .addBox(TEST_ID1, MarketDataBox.ofSingleValue(1.0))
@@ -113,6 +120,7 @@ public class CombinedScenarioMarketDataTest {
     assertThat(combined.getIds()).isEqualTo(ImmutableSet.of(TEST_ID1, TEST_ID2));
   }
 
+  @Test
   public void test_combinedWithOtherHasOneScenario() {
     ImmutableScenarioMarketData marketData1 = ImmutableScenarioMarketData.builder(LocalDate.of(2011, 3, 8))
         .addBox(TEST_ID2, MarketDataBox.ofScenarioValues(1.0, 1.1))

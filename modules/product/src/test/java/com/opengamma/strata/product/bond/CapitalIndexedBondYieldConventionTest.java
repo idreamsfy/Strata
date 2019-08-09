@@ -7,9 +7,11 @@ package com.opengamma.strata.product.bond;
 
 import static com.opengamma.strata.collect.TestHelper.assertJodaConvert;
 import static com.opengamma.strata.collect.TestHelper.assertSerialization;
-import static com.opengamma.strata.collect.TestHelper.assertThrows;
 import static com.opengamma.strata.collect.TestHelper.coverEnum;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.testng.Assert.assertEquals;
+
+import java.util.Locale;
 
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
@@ -21,7 +23,7 @@ import org.testng.annotations.Test;
 public class CapitalIndexedBondYieldConventionTest {
 
   @DataProvider(name = "name")
-  static Object[][] data_name() {
+  public static Object[][] data_name() {
     return new Object[][] {
         {CapitalIndexedBondYieldConvention.US_IL_REAL, "US-I/L-Real"},
         {CapitalIndexedBondYieldConvention.GB_IL_FLOAT, "GB-I/L-Float"},
@@ -41,12 +43,29 @@ public class CapitalIndexedBondYieldConventionTest {
     assertEquals(CapitalIndexedBondYieldConvention.of(name), convention);
   }
 
+  @Test(dataProvider = "name")
+  public void test_of_lookupUpperCase(CapitalIndexedBondYieldConvention convention, String name) {
+    assertEquals(CapitalIndexedBondYieldConvention.of(name.toUpperCase(Locale.ENGLISH)), convention);
+  }
+
+  @Test(dataProvider = "name")
+  public void test_of_lookupLowerCase(CapitalIndexedBondYieldConvention convention, String name) {
+    assertEquals(CapitalIndexedBondYieldConvention.of(name.toLowerCase(Locale.ENGLISH)), convention);
+  }
+
+  @Test(dataProvider = "name")
+  public void test_of_lookupStandard(CapitalIndexedBondYieldConvention convention, String name) {
+    assertEquals(CapitalIndexedBondYieldConvention.of(convention.name()), convention);
+  }
+
   public void test_of_lookup_notFound() {
-    assertThrows(() -> CapitalIndexedBondYieldConvention.of("Rubbish"), IllegalArgumentException.class);
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> CapitalIndexedBondYieldConvention.of("Rubbish"));
   }
 
   public void test_of_lookup_null() {
-    assertThrows(() -> CapitalIndexedBondYieldConvention.of(null), IllegalArgumentException.class);
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> CapitalIndexedBondYieldConvention.of(null));
   }
 
   //-------------------------------------------------------------------------

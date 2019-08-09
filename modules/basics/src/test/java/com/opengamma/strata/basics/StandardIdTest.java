@@ -8,6 +8,7 @@ package com.opengamma.strata.basics;
 import static com.opengamma.strata.collect.TestHelper.assertSerialization;
 import static com.opengamma.strata.collect.TestHelper.coverImmutableBean;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.testng.Assert.assertEquals;
 
 import org.testng.annotations.DataProvider;
@@ -21,6 +22,7 @@ public class StandardIdTest {
 
   private static final String SCHEME = "Scheme";
   private static final String OTHER_SCHEME = "Other";
+  private static final Object ANOTHER_TYPE = "";
 
   //-------------------------------------------------------------------------
   public void test_factory_String_String() {
@@ -30,23 +32,23 @@ public class StandardIdTest {
     assertEquals(test.toString(), "scheme:/+foo~value");
   }
 
-  @Test(expectedExceptions = IllegalArgumentException.class)
+  @Test
   public void test_factory_String_String_nullScheme() {
-    StandardId.of(null, "value");
+    assertThatIllegalArgumentException().isThrownBy(() -> StandardId.of(null, "value"));
   }
 
-  @Test(expectedExceptions = IllegalArgumentException.class)
+  @Test
   public void test_factory_String_String_nullValue() {
-    StandardId.of("Scheme", null);
+    assertThatIllegalArgumentException().isThrownBy(() -> StandardId.of("Scheme", null));
   }
 
-  @Test(expectedExceptions = IllegalArgumentException.class)
+  @Test
   public void test_factory_String_String_emptyValue() {
-    StandardId.of("Scheme", "");
+    assertThatIllegalArgumentException().isThrownBy(() -> StandardId.of("Scheme", ""));
   }
 
   @DataProvider(name = "factoryValid")
-  Object[][] data_factoryValid() {
+  public static Object[][] data_factoryValid() {
     return new Object[][] {
         {"ABCDEFGHIJKLMNOPQRSTUVWXYZ", "123"},
         {"abcdefghijklmnopqrstuvwxyz", "123"},
@@ -61,7 +63,7 @@ public class StandardIdTest {
   }
 
   @DataProvider(name = "factoryInvalid")
-  Object[][] data_factoryInvalid() {
+  public static Object[][] data_factoryInvalid() {
     return new Object[][] {
         {"", ""},
         {" ", "123"},
@@ -72,20 +74,20 @@ public class StandardIdTest {
     };
   }
 
-  @Test(dataProvider = "factoryInvalid", expectedExceptions = IllegalArgumentException.class)
+  @Test(dataProvider = "factoryInvalid")
   public void test_factory_String_String_invalid(String scheme, String value) {
-    StandardId.of(scheme, value);
+    assertThatIllegalArgumentException().isThrownBy(() -> StandardId.of(scheme, value));
   }
 
   //-------------------------------------------------------------------------
   public void test_encodeScheme() {
-    String test = StandardId.encodeScheme("http://www.opengamma.com/foo/../~bar#test");
-    assertEquals(test, "http://www.opengamma.com/foo/../%7Ebar%23test");
+    String test = StandardId.encodeScheme("https://opengamma.com/foo/../~bar#test");
+    assertEquals(test, "https://opengamma.com/foo/../%7Ebar%23test");
   }
 
   //-------------------------------------------------------------------------
   @DataProvider(name = "formats")
-  Object[][] data_formats() {
+  public static Object[][] data_formats() {
     return new Object[][] {
         {"Value", "A~Value"},
         {"a+b", "A~a+b"},
@@ -114,7 +116,7 @@ public class StandardIdTest {
   }
 
   @DataProvider(name = "parseInvalidFormat")
-  Object[][] data_parseInvalidFormat() {
+  public static Object[][] data_parseInvalidFormat() {
     return new Object[][] {
         {"Scheme"},
         {"Scheme~"},
@@ -124,9 +126,9 @@ public class StandardIdTest {
     };
   }
 
-  @Test(dataProvider = "parseInvalidFormat", expectedExceptions = IllegalArgumentException.class)
+  @Test(dataProvider = "parseInvalidFormat")
   public void test_parse_invalidFormat(String text) {
-    StandardId.parse(text);
+    assertThatIllegalArgumentException().isThrownBy(() -> StandardId.parse(text));
   }
 
   //-------------------------------------------------------------------------
@@ -147,7 +149,7 @@ public class StandardIdTest {
     assertEquals((Object) d3.equals(d1a), false);
     assertEquals((Object) d3.equals(d2), false);
     assertEquals((Object) d3.equals(d3), true);
-    assertEquals((Object) d1b.equals("d1"), false);
+    assertEquals((Object) d1b.equals(ANOTHER_TYPE), false);
     assertEquals((Object) d1b.equals(null), false);
   }
 

@@ -8,10 +8,13 @@ package com.opengamma.strata.basics.currency;
 import static com.opengamma.strata.collect.TestHelper.assertJodaConvert;
 import static com.opengamma.strata.collect.TestHelper.assertSerialization;
 import static com.opengamma.strata.collect.TestHelper.coverPrivateConstructor;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
+import static org.assertj.core.api.Assertions.assertThatNullPointerException;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertSame;
 import static org.testng.Assert.assertTrue;
 
+import java.math.BigDecimal;
 import java.util.Set;
 
 import org.testng.annotations.DataProvider;
@@ -68,13 +71,13 @@ public class CurrencyTest {
     assertSame(test, Currency.of("AAA"));
   }
 
-  @Test(expectedExceptions = IllegalArgumentException.class)
+  @Test
   public void test_of_String_lowerCase() {
-    Currency.of("gbp");
+    assertThatIllegalArgumentException().isThrownBy(() -> Currency.of("gbp"));
   }
 
   @DataProvider(name = "ofBad")
-  Object[][] data_ofBad() {
+  public static Object[][] data_ofBad() {
     return new Object[][] {
         {""},
         {"AB"},
@@ -86,9 +89,9 @@ public class CurrencyTest {
     };
   }
 
-  @Test(dataProvider = "ofBad", expectedExceptions = IllegalArgumentException.class)
+  @Test(dataProvider = "ofBad")
   public void test_of_String_bad(String input) {
-    Currency.of(input);
+    assertThatIllegalArgumentException().isThrownBy(() -> Currency.of(input));
   }
 
   //-----------------------------------------------------------------------
@@ -112,7 +115,7 @@ public class CurrencyTest {
   }
 
   @DataProvider(name = "parseBad")
-  Object[][] data_parseBad() {
+  public static Object[][] data_parseBad() {
     return new Object[][] {
         {""},
         {"AB"},
@@ -123,9 +126,9 @@ public class CurrencyTest {
     };
   }
 
-  @Test(dataProvider = "parseBad", expectedExceptions = IllegalArgumentException.class)
+  @Test(dataProvider = "parseBad")
   public void test_parse_String_bad(String input) {
-    Currency.parse(input);
+    assertThatIllegalArgumentException().isThrownBy(() -> Currency.parse(input));
   }
 
   //-----------------------------------------------------------------------
@@ -150,6 +153,23 @@ public class CurrencyTest {
   }
 
   //-----------------------------------------------------------------------
+  public void test_roundMinorUnits_double() {
+    assertEquals(Currency.USD.roundMinorUnits(63.347d), 63.35d, 0d);
+    assertEquals(Currency.USD.roundMinorUnits(63.34500001d), 63.35d, 0d);
+    assertEquals(Currency.USD.roundMinorUnits(63.34499999d), 63.34d, 0d);
+    assertEquals(Currency.JPY.roundMinorUnits(63.347d), 63d, 0d);
+    assertEquals(Currency.JPY.roundMinorUnits(63.5347d), 64d, 0d);
+  }
+
+  public void test_roundMinorUnits_BigDecimal() {
+    assertEquals(Currency.USD.roundMinorUnits(new BigDecimal(63.347d)), new BigDecimal("63.35"));
+    assertEquals(Currency.USD.roundMinorUnits(new BigDecimal(63.34500001d)), new BigDecimal("63.35"));
+    assertEquals(Currency.USD.roundMinorUnits(new BigDecimal(63.34499999d)), new BigDecimal("63.34"));
+    assertEquals(Currency.JPY.roundMinorUnits(new BigDecimal(63.347d)), new BigDecimal("63"));
+    assertEquals(Currency.JPY.roundMinorUnits(new BigDecimal(63.5347d)), new BigDecimal("64"));
+  }
+
+  //-----------------------------------------------------------------------
   public void test_compareTo() {
     Currency a = Currency.EUR;
     Currency b = Currency.GBP;
@@ -168,9 +188,9 @@ public class CurrencyTest {
     assertTrue(c.compareTo(b) > 0);
   }
 
-  @Test(expectedExceptions = NullPointerException.class)
+  @Test
   public void test_compareTo_null() {
-    Currency.EUR.compareTo(null);
+    assertThatNullPointerException().isThrownBy(() -> Currency.EUR.compareTo(null));
   }
 
   //-----------------------------------------------------------------------

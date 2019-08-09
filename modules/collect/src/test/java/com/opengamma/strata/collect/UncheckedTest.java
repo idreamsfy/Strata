@@ -5,15 +5,15 @@
  */
 package com.opengamma.strata.collect;
 
-import static com.opengamma.strata.collect.TestHelper.assertThrows;
 import static com.opengamma.strata.collect.TestHelper.assertUtilityClass;
-import static org.testng.Assert.assertEquals;
-import static org.testng.Assert.assertSame;
-import static org.testng.Assert.fail;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static org.assertj.core.api.Assertions.fail;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.lang.reflect.InvocationTargetException;
+import java.net.URISyntaxException;
 import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
@@ -24,9 +24,7 @@ import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.function.UnaryOperator;
 
-import javax.naming.NamingException;
-
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Test;
 
 import com.opengamma.strata.collect.function.CheckedRunnable;
 import com.opengamma.strata.collect.function.CheckedSupplier;
@@ -34,318 +32,352 @@ import com.opengamma.strata.collect.function.CheckedSupplier;
 /**
  * Test Unchecked.
  */
-@Test
 public class UncheckedTest {
 
   //-------------------------------------------------------------------------
+  @Test
   public void test_wrap_runnable1() {
     // cannot use assertThrows() here
     try {
       Unchecked.wrap((CheckedRunnable) () -> {
         throw new IOException();
       });
-      fail();
+      fail("Expected UncheckedIOException");
     } catch (UncheckedIOException ex) {
       // success
     }
   }
 
+  @Test
   public void test_wrap_runnable2() {
     // cannot use assertThrows() here
     try {
       Unchecked.wrap((CheckedRunnable) () -> {
         throw new Exception();
       });
-      fail();
+      fail("Expected RuntimeException");
     } catch (RuntimeException ex) {
       // success
     }
   }
 
   //-------------------------------------------------------------------------
+  @Test
   public void test_wrap_supplier() {
     // cannot use assertThrows() here
     try {
       Unchecked.wrap((CheckedSupplier<String>) () -> {
         throw new IOException();
       });
-      fail();
+      fail("Expected UncheckedIOException");
     } catch (UncheckedIOException ex) {
       // success
     }
   }
 
+  @Test
   public void test_wrap_supplier2() {
     // cannot use assertThrows() here
     try {
       Unchecked.wrap((CheckedSupplier<String>) () -> {
         throw new Exception();
       });
-      fail();
+      fail("Expected RuntimeException");
     } catch (RuntimeException ex) {
       // success
     }
   }
 
   //-------------------------------------------------------------------------
+  @Test
   public void test_runnable_fail1() {
     Runnable a = Unchecked.runnable(() -> {
       throw new IOException();
     });
-    assertThrows(() -> a.run(), UncheckedIOException.class);
+    assertThatExceptionOfType(UncheckedIOException.class).isThrownBy(() -> a.run());
   }
 
+  @Test
   public void test_runnable_fail2() {
     Runnable a = Unchecked.runnable(() -> {
       throw new Exception();
     });
-    assertThrows(() -> a.run(), RuntimeException.class);
+    assertThatExceptionOfType(RuntimeException.class).isThrownBy(() -> a.run());
   }
 
   //-------------------------------------------------------------------------
+  @Test
   public void test_function_success() {
     Function<String, String> a = Unchecked.function((t) -> t);
-    assertEquals(a.apply("A"), "A");
+    assertThat(a.apply("A")).isEqualTo("A");
   }
 
+  @Test
   public void test_function_fail1() {
     Function<String, String> a = Unchecked.function((t) -> {
       throw new IOException();
     });
-    assertThrows(() -> a.apply("A"), UncheckedIOException.class);
+    assertThatExceptionOfType(UncheckedIOException.class).isThrownBy(() -> a.apply("A"));
   }
 
+  @Test
   public void test_function_fail2() {
     Function<String, String> a = Unchecked.function((t) -> {
       throw new Exception();
     });
-    assertThrows(() -> a.apply("A"), RuntimeException.class);
+    assertThatExceptionOfType(RuntimeException.class).isThrownBy(() -> a.apply("A"));
   }
 
   //-------------------------------------------------------------------------
+  @Test
   public void test_biFunction_success() {
     BiFunction<String, String, String> a = Unchecked.biFunction((t, u) -> t + u);
-    assertEquals(a.apply("A", "B"), "AB");
+    assertThat(a.apply("A", "B")).isEqualTo("AB");
   }
 
+  @Test
   public void test_biFunction_fail1() {
     BiFunction<String, String, String> a = Unchecked.biFunction((t, u) -> {
       throw new IOException();
     });
-    assertThrows(() -> a.apply("A", "B"), UncheckedIOException.class);
+    assertThatExceptionOfType(UncheckedIOException.class).isThrownBy(() -> a.apply("A", "B"));
   }
 
+  @Test
   public void test_biFunction_fail2() {
     BiFunction<String, String, String> a = Unchecked.biFunction((t, u) -> {
       throw new Exception();
     });
-    assertThrows(() -> a.apply("A", "B"), RuntimeException.class);
+    assertThatExceptionOfType(RuntimeException.class).isThrownBy(() -> a.apply("A", "B"));
   }
 
   //-------------------------------------------------------------------------
+  @Test
   public void test_unaryOperator_success() {
     UnaryOperator<String> a = Unchecked.unaryOperator((t) -> t);
-    assertEquals(a.apply("A"), "A");
+    assertThat(a.apply("A")).isEqualTo("A");
   }
 
+  @Test
   public void test_unaryOperator_fail1() {
     UnaryOperator<String> a = Unchecked.unaryOperator((t) -> {
       throw new IOException();
     });
-    assertThrows(() -> a.apply("A"), UncheckedIOException.class);
+    assertThatExceptionOfType(UncheckedIOException.class).isThrownBy(() -> a.apply("A"));
   }
 
+  @Test
   public void test_unaryOperator_fail2() {
     UnaryOperator<String> a = Unchecked.unaryOperator((t) -> {
       throw new Exception();
     });
-    assertThrows(() -> a.apply("A"), RuntimeException.class);
+    assertThatExceptionOfType(RuntimeException.class).isThrownBy(() -> a.apply("A"));
   }
 
   //-------------------------------------------------------------------------
+  @Test
   public void test_binaryOperator_success() {
     BinaryOperator<String> a = Unchecked.binaryOperator((t, u) -> t + u);
-    assertEquals(a.apply("A", "B"), "AB");
+    assertThat(a.apply("A", "B")).isEqualTo("AB");
   }
 
+  @Test
   public void test_binaryOperator_fail1() {
     BinaryOperator<String> a = Unchecked.binaryOperator((t, u) -> {
       throw new IOException();
     });
-    assertThrows(() -> a.apply("A", "B"), UncheckedIOException.class);
+    assertThatExceptionOfType(UncheckedIOException.class).isThrownBy(() -> a.apply("A", "B"));
   }
 
+  @Test
   public void test_binaryOperator_fail2() {
     BinaryOperator<String> a = Unchecked.binaryOperator((t, u) -> {
       throw new Exception();
     });
-    assertThrows(() -> a.apply("A", "B"), RuntimeException.class);
+    assertThatExceptionOfType(RuntimeException.class).isThrownBy(() -> a.apply("A", "B"));
   }
 
   //-------------------------------------------------------------------------
+  @Test
   public void test_predicate_success() {
     Predicate<String> a = Unchecked.predicate((t) -> true);
-    assertEquals(a.test("A"), true);
+    assertThat(a.test("A")).isEqualTo(true);
   }
 
+  @Test
   public void test_predicate_fail1() {
     Predicate<String> a = Unchecked.predicate((t) -> {
       throw new IOException();
     });
-    assertThrows(() -> a.test("A"), UncheckedIOException.class);
+    assertThatExceptionOfType(UncheckedIOException.class).isThrownBy(() -> a.test("A"));
   }
 
+  @Test
   public void test_predicate_fail2() {
     Predicate<String> a = Unchecked.predicate((t) -> {
       throw new Exception();
     });
-    assertThrows(() -> a.test("A"), RuntimeException.class);
+    assertThatExceptionOfType(RuntimeException.class).isThrownBy(() -> a.test("A"));
   }
 
   //-------------------------------------------------------------------------
+  @Test
   public void test_biPredicate_success() {
     BiPredicate<String, String> a = Unchecked.biPredicate((t, u) -> true);
-    assertEquals(a.test("A", "B"), true);
+    assertThat(a.test("A", "B")).isTrue();
   }
 
+  @Test
   public void test_biPredicate_fail1() {
     BiPredicate<String, String> a = Unchecked.biPredicate((t, u) -> {
       throw new IOException();
     });
-    assertThrows(() -> a.test("A", "B"), UncheckedIOException.class);
+    assertThatExceptionOfType(UncheckedIOException.class).isThrownBy(() -> a.test("A", "B"));
   }
 
+  @Test
   public void test_biPredicate_fail2() {
     BiPredicate<String, String> a = Unchecked.biPredicate((t, u) -> {
       throw new Exception();
     });
-    assertThrows(() -> a.test("A", "B"), RuntimeException.class);
+    assertThatExceptionOfType(RuntimeException.class).isThrownBy(() -> a.test("A", "B"));
   }
 
   //-------------------------------------------------------------------------
+  @Test
   public void test_consumer_success() {
     Consumer<String> a = Unchecked.consumer((t) -> {});
     a.accept("A");
   }
 
+  @Test
   public void test_consumer_fail1() {
     Consumer<String> a = Unchecked.consumer((t) -> {
       throw new IOException();
     });
-    assertThrows(() -> a.accept("A"), UncheckedIOException.class);
+    assertThatExceptionOfType(UncheckedIOException.class).isThrownBy(() -> a.accept("A"));
   }
 
+  @Test
   public void test_consumer_fail2() {
     Consumer<String> a = Unchecked.consumer((t) -> {
       throw new Exception();
     });
-    assertThrows(() -> a.accept("A"), RuntimeException.class);
+    assertThatExceptionOfType(RuntimeException.class).isThrownBy(() -> a.accept("A"));
   }
 
   //-------------------------------------------------------------------------
+  @Test
   public void test_biConsumer_success() {
     BiConsumer<String, String> a = Unchecked.biConsumer((t, u) -> {});
     a.accept("A", "B");
   }
 
+  @Test
   public void test_biConsumer_fail1() {
     BiConsumer<String, String> a = Unchecked.biConsumer((t, u) -> {
       throw new IOException();
     });
-    assertThrows(() -> a.accept("A", "B"), UncheckedIOException.class);
+    assertThatExceptionOfType(UncheckedIOException.class).isThrownBy(() -> a.accept("A", "B"));
   }
 
+  @Test
   public void test_biConsumer_fail2() {
     BiConsumer<String, String> a = Unchecked.biConsumer((t, u) -> {
       throw new Exception();
     });
-    assertThrows(() -> a.accept("A", "B"), RuntimeException.class);
+    assertThatExceptionOfType(RuntimeException.class).isThrownBy(() -> a.accept("A", "B"));
   }
 
   //-------------------------------------------------------------------------
+  @Test
   public void test_supplier_success() {
     Supplier<String> a = Unchecked.supplier(() -> "A");
-    assertEquals(a.get(), "A");
+    assertThat(a.get()).isEqualTo("A");
   }
 
+  @Test
   public void test_supplier_fail1() {
     Supplier<String> a = Unchecked.supplier(() -> {
       throw new IOException();
     });
-    assertThrows(() -> a.get(), UncheckedIOException.class);
+    assertThatExceptionOfType(UncheckedIOException.class).isThrownBy(() -> a.get());
   }
 
+  @Test
   public void test_supplier_fail2() {
     Supplier<String> a = Unchecked.supplier(() -> {
       throw new Exception();
     });
-    assertThrows(() -> a.get(), RuntimeException.class);
+    assertThatExceptionOfType(RuntimeException.class).isThrownBy(() -> a.get());
   }
 
   //-------------------------------------------------------------------------
+  @Test
   public void test_validUtilityClass() {
     assertUtilityClass(Unchecked.class);
   }
 
+  @Test
   public void test_propagate() {
     Error error = new Error("a");
     IllegalArgumentException argEx = new IllegalArgumentException("b");
     IOException ioEx = new IOException("c");
-    NamingException namingEx = new NamingException("d");
+    URISyntaxException namingEx = new URISyntaxException("d", "e");
 
     // use old-style try-catch to ensure test really working
     try {
       Unchecked.propagate(error);
-      fail();
+      fail("Expected Error");
     } catch (Error ex) {
-      assertSame(ex, error);
+      assertThat(ex).isSameAs(error);
     }
     try {
       Unchecked.propagate(argEx);
-      fail();
+      fail("Expected IllegalArgumentException");
     } catch (IllegalArgumentException ex) {
-      assertSame(ex, argEx);
+      assertThat(ex).isSameAs(argEx);
     }
     try {
       Unchecked.propagate(ioEx);
-      fail();
+      fail("Expected UncheckedIOException");
     } catch (UncheckedIOException ex) {
-      assertEquals(ex.getClass(), UncheckedIOException.class);
-      assertSame(ex.getCause(), ioEx);
+      assertThat(ex.getClass()).isEqualTo(UncheckedIOException.class);
+      assertThat(ex.getCause()).isSameAs(ioEx);
     }
     try {
       Unchecked.propagate(namingEx);
-      fail();
+      fail("Expected RuntimeException");
     } catch (RuntimeException ex) {
-      assertEquals(ex.getClass(), RuntimeException.class);
-      assertSame(ex.getCause(), namingEx);
+      assertThat(ex.getClass()).isEqualTo(RuntimeException.class);
+      assertThat(ex.getCause()).isSameAs(namingEx);
     }
 
     try {
       Unchecked.propagate(new InvocationTargetException(error));
-      fail();
+      fail("Expected Error");
     } catch (Error ex) {
-      assertSame(ex, error);
+      assertThat(ex).isSameAs(error);
     }
     try {
       Unchecked.propagate(new InvocationTargetException(argEx));
-      fail();
+      fail("Expected IllegalArgumentException");
     } catch (IllegalArgumentException ex) {
-      assertSame(ex, argEx);
+      assertThat(ex).isSameAs(argEx);
     }
     try {
       Unchecked.propagate(new InvocationTargetException(ioEx));
-      fail();
+      fail("Expected UncheckedIOException");
     } catch (UncheckedIOException ex) {
-      assertEquals(ex.getClass(), UncheckedIOException.class);
-      assertSame(ex.getCause(), ioEx);
+      assertThat(ex.getClass()).isEqualTo(UncheckedIOException.class);
+      assertThat(ex.getCause()).isSameAs(ioEx);
     }
     try {
       Unchecked.propagate(new InvocationTargetException(namingEx));
-      fail();
+      fail("Expected RuntimeException");
     } catch (RuntimeException ex) {
-      assertEquals(ex.getClass(), RuntimeException.class);
-      assertSame(ex.getCause(), namingEx);
+      assertThat(ex.getClass()).isEqualTo(RuntimeException.class);
+      assertThat(ex.getCause()).isSameAs(namingEx);
     }
   }
 

@@ -13,7 +13,7 @@ import com.opengamma.strata.product.swap.CompoundingMethod;
 /**
  * Market standard Ibor-Ibor swap conventions.
  * <p>
- * http://www.opengamma.com/sites/default/files/interest-rate-instruments-and-market-conventions.pdf
+ * https://developers.opengamma.com/quantitative-research/Interest-Rate-Instruments-and-Market-Conventions.pdf
  */
 final class StandardIborIborSwapConventions {
 
@@ -28,7 +28,7 @@ final class StandardIborIborSwapConventions {
               .index(IborIndices.USD_LIBOR_3M)
               .paymentFrequency(Frequency.P6M)
               .compoundingMethod(CompoundingMethod.FLAT)
-              .stubConvention(StubConvention.SHORT_INITIAL)
+              .stubConvention(StubConvention.SMART_INITIAL)
               .build(),
           IborRateSwapLegConvention.of(IborIndices.USD_LIBOR_6M));
 
@@ -43,7 +43,7 @@ final class StandardIborIborSwapConventions {
               .index(IborIndices.USD_LIBOR_1M)
               .paymentFrequency(Frequency.P3M)
               .compoundingMethod(CompoundingMethod.FLAT)
-              .stubConvention(StubConvention.SHORT_INITIAL)
+              .stubConvention(StubConvention.SMART_INITIAL)
               .build(),
           IborRateSwapLegConvention.of(IborIndices.USD_LIBOR_3M));
 

@@ -7,7 +7,7 @@ package com.opengamma.strata.pricer.impl.rate;
 
 import static com.opengamma.strata.basics.date.DayCounts.ACT_ACT_ISDA;
 import static com.opengamma.strata.basics.index.OvernightIndices.CHF_TOIS;
-import static com.opengamma.strata.basics.index.OvernightIndices.GBP_SONIA;
+import static com.opengamma.strata.basics.index.OvernightIndices.EUR_EONIA;
 import static com.opengamma.strata.basics.index.OvernightIndices.USD_FED_FUND;
 import static com.opengamma.strata.collect.TestHelper.assertThrows;
 import static com.opengamma.strata.collect.TestHelper.date;
@@ -48,6 +48,7 @@ import com.opengamma.strata.product.rate.OvernightCompoundedRateComputation;
  * Test {@link ForwardOvernightCompoundedRateComputationFn}.
  */
 @Test
+@SuppressWarnings("deprecation")
 public class ForwardOvernightCompoundedRateComputationFnTest {
 
   private static final ReferenceData REF_DATA = ReferenceData.standard();
@@ -73,13 +74,13 @@ public class ForwardOvernightCompoundedRateComputationFnTest {
       OvernightIndexObservation.of(USD_FED_FUND, date(2015, 1, 14), REF_DATA),
       OvernightIndexObservation.of(USD_FED_FUND, date(2015, 1, 15), REF_DATA)};
   private static final OvernightIndexObservation[] GBP_OBS = new OvernightIndexObservation[] {
-      OvernightIndexObservation.of(GBP_SONIA, date(2015, 1, 7), REF_DATA),
-      OvernightIndexObservation.of(GBP_SONIA, date(2015, 1, 8), REF_DATA),
-      OvernightIndexObservation.of(GBP_SONIA, date(2015, 1, 9), REF_DATA),
-      OvernightIndexObservation.of(GBP_SONIA, date(2015, 1, 12), REF_DATA),
-      OvernightIndexObservation.of(GBP_SONIA, date(2015, 1, 13), REF_DATA),
-      OvernightIndexObservation.of(GBP_SONIA, date(2015, 1, 14), REF_DATA),
-      OvernightIndexObservation.of(GBP_SONIA, date(2015, 1, 15), REF_DATA)};
+      OvernightIndexObservation.of(EUR_EONIA, date(2015, 1, 7), REF_DATA),
+      OvernightIndexObservation.of(EUR_EONIA, date(2015, 1, 8), REF_DATA),
+      OvernightIndexObservation.of(EUR_EONIA, date(2015, 1, 9), REF_DATA),
+      OvernightIndexObservation.of(EUR_EONIA, date(2015, 1, 12), REF_DATA),
+      OvernightIndexObservation.of(EUR_EONIA, date(2015, 1, 13), REF_DATA),
+      OvernightIndexObservation.of(EUR_EONIA, date(2015, 1, 14), REF_DATA),
+      OvernightIndexObservation.of(EUR_EONIA, date(2015, 1, 15), REF_DATA)};
   private static final OvernightIndexObservation[] CHF_OBS = new OvernightIndexObservation[] {
       OvernightIndexObservation.of(CHF_TOIS, date(2015, 1, 7), REF_DATA),
       OvernightIndexObservation.of(CHF_TOIS, date(2015, 1, 8), REF_DATA),
@@ -166,6 +167,64 @@ public class ForwardOvernightCompoundedRateComputationFnTest {
           DUMMY_ACCRUAL_START_DATE, DUMMY_ACCRUAL_END_DATE, simpleProv);
       assertTrue(sensitivityBuilderComputed.build().normalized().equalWithTolerance(
           sensitivityBuilderExpected.build().normalized(), EPS_FD));
+    }
+  }
+
+  /** No cutoff period and the period entirely forward. One day period. */
+  public void rateFedFundNoCutOffForward1d() { // publication=1, cutoff=0, effective offset=0, Forward
+    LocalDate[] valuationDate = {date(2015, 1, 1), date(2015, 1, 8)};
+    OvernightCompoundedRateComputation ro =
+        OvernightCompoundedRateComputation.of(USD_FED_FUND, FIXING_END_DATE.minusDays(1), FIXING_END_DATE, 0, REF_DATA);
+    OvernightIndexRates mockRates = mock(OvernightIndexRates.class);
+    when(mockRates.getIndex()).thenReturn(USD_FED_FUND);
+    SimpleRatesProvider simpleProv = new SimpleRatesProvider(mockRates);
+
+    double rateCmp = 0.0123;
+    when(mockRates.periodRate(USD_OBS[5], FIXING_END_DATE)).thenReturn(rateCmp);
+    double rateExpected = rateCmp;
+    for (int loopvaldate = 0; loopvaldate < 2; loopvaldate++) {
+      when(mockRates.getValuationDate()).thenReturn(valuationDate[loopvaldate]);
+      double rateComputed = OBS_FWD_ONCMP.rate(ro, DUMMY_ACCRUAL_START_DATE, DUMMY_ACCRUAL_END_DATE, simpleProv);
+      assertEquals(rateExpected, rateComputed, TOLERANCE_RATE);
+    }
+  }
+
+  /** No cutoff period and the period entirely forward. Test the forward part only against FD approximation. */
+  public void rateFedFundNoCutOffForwardSensitivit1dy() { // publication=1, cutoff=0, effective offset=0, Forward
+    LocalDate[] valuationDate = {date(2015, 1, 1), date(2015, 1, 8)};
+    OvernightCompoundedRateComputation ro =
+        OvernightCompoundedRateComputation.of(USD_FED_FUND, FIXING_END_DATE.minusDays(1), FIXING_END_DATE, 0, REF_DATA);
+    OvernightIndexRates mockRates = mock(OvernightIndexRates.class);
+    when(mockRates.getIndex()).thenReturn(USD_FED_FUND);
+    SimpleRatesProvider simpleProv = new SimpleRatesProvider(mockRates);
+
+    double rateCmp = 0.0123;
+    when(mockRates.periodRate(USD_OBS[5], FIXING_END_DATE)).thenReturn(rateCmp);
+    PointSensitivityBuilder rateSensitivity = OvernightRateSensitivity.ofPeriod(USD_OBS[5], FIXING_END_DATE, 1.0);
+    when(mockRates.periodRatePointSensitivity(USD_OBS[5], FIXING_END_DATE)).thenReturn(
+        rateSensitivity);
+    OvernightIndexRates mockRatesUp = mock(OvernightIndexRates.class);
+    SimpleRatesProvider simpleProvUp = new SimpleRatesProvider(mockRatesUp);
+    when(mockRatesUp.periodRate(USD_OBS[5], FIXING_END_DATE)).thenReturn(
+        rateCmp + EPS_FD);
+    OvernightIndexRates mockRatesDw = mock(OvernightIndexRates.class);
+    SimpleRatesProvider simpleProvDw = new SimpleRatesProvider(mockRatesDw);
+    when(mockRatesDw.periodRate(USD_OBS[5], FIXING_END_DATE)).thenReturn(
+        rateCmp - EPS_FD);
+
+    for (int loopvaldate = 0; loopvaldate < 2; loopvaldate++) {
+      when(mockRates.getValuationDate()).thenReturn(valuationDate[loopvaldate]);
+      when(mockRatesUp.getValuationDate()).thenReturn(valuationDate[loopvaldate]);
+      when(mockRatesDw.getValuationDate()).thenReturn(valuationDate[loopvaldate]);
+      double rateUp = OBS_FWD_ONCMP.rate(ro, DUMMY_ACCRUAL_START_DATE, DUMMY_ACCRUAL_END_DATE, simpleProvUp);
+      double rateDw = OBS_FWD_ONCMP.rate(ro, DUMMY_ACCRUAL_START_DATE, DUMMY_ACCRUAL_END_DATE, simpleProvDw);
+      double sensitivityExpected = 0.5 * (rateUp - rateDw) / EPS_FD;
+      PointSensitivityBuilder sensitivityBuilderExpected =
+          OvernightRateSensitivity.ofPeriod(USD_OBS[5], FIXING_END_DATE, sensitivityExpected);
+      PointSensitivityBuilder sensitivityBuilderComputed = OBS_FWD_ONCMP.rateSensitivity(ro,
+          DUMMY_ACCRUAL_START_DATE, DUMMY_ACCRUAL_END_DATE, simpleProv);
+      assertTrue(sensitivityBuilderComputed.build().normalized().equalWithTolerance(
+          sensitivityBuilderExpected.build().normalized(), 10*EPS_FD));
     }
   }
 
@@ -397,14 +456,14 @@ public class ForwardOvernightCompoundedRateComputationFnTest {
   }
 
   //-------------------------------------------------------------------------
-  /** No cutoff period and two already fixed ON rate. ON index is SONIA. */
-  public void rateSonia0CutOffValuation2() {
+  /** No cutoff period and two already fixed ON rate. ON index is EONIA. */
+  public void rateEonia0CutOffValuation2() {
     // publication=0, cutoff=0, effective offset=0, TS: Fixing 2
     LocalDate[] valuationDate = {date(2015, 1, 9), date(2015, 1, 12)};
     OvernightCompoundedRateComputation ro =
-        OvernightCompoundedRateComputation.of(GBP_SONIA, FIXING_START_DATE, FIXING_END_DATE, 0, REF_DATA);
+        OvernightCompoundedRateComputation.of(EUR_EONIA, FIXING_START_DATE, FIXING_END_DATE, 0, REF_DATA);
     OvernightIndexRates mockRates = mock(OvernightIndexRates.class);
-    when(mockRates.getIndex()).thenReturn(GBP_SONIA);
+    when(mockRates.getIndex()).thenReturn(EUR_EONIA);
     SimpleRatesProvider simpleProv = new SimpleRatesProvider(mockRates);
 
     LocalDateDoubleTimeSeriesBuilder tsb = LocalDateDoubleTimeSeries.builder();
@@ -423,16 +482,16 @@ public class ForwardOvernightCompoundedRateComputationFnTest {
     double investmentFactorKnown = 1.0d;
     for (int i = 0; i < lastFixing - 1; i++) {
       LocalDate fixingknown = FIXING_DATES[i + 1];
-      LocalDate endDateKnown = GBP_SONIA.calculateMaturityFromEffective(fixingknown, REF_DATA);
-      double af = GBP_SONIA.getDayCount().yearFraction(fixingknown, endDateKnown);
+      LocalDate endDateKnown = EUR_EONIA.calculateMaturityFromEffective(fixingknown, REF_DATA);
+      double af = EUR_EONIA.getDayCount().yearFraction(fixingknown, endDateKnown);
       afKnown += af;
       investmentFactorKnown *= 1.0d + FIXING_RATES[i + 1] * af;
     }
     double afNoCutoff = 0.0d;
     double investmentFactorNoCutoff = 1.0d;
     for (int i = lastFixing; i < 6; i++) {
-      LocalDate endDate = GBP_SONIA.calculateMaturityFromEffective(FIXING_DATES[i], REF_DATA);
-      double af = GBP_SONIA.getDayCount().yearFraction(FIXING_DATES[i], endDate);
+      LocalDate endDate = EUR_EONIA.calculateMaturityFromEffective(FIXING_DATES[i], REF_DATA);
+      double af = EUR_EONIA.getDayCount().yearFraction(FIXING_DATES[i], endDate);
       afNoCutoff += af;
       investmentFactorNoCutoff *= 1.0d + af * FORWARD_RATES[i];
     }
@@ -449,13 +508,13 @@ public class ForwardOvernightCompoundedRateComputationFnTest {
 
   /** Test rate sensitivity against FD approximation.
    * No cutoff period and two already fixed ON rate. ON index is SONIA. */
-  public void rateSonia0CutOffValuation2Sensitivity() {
+  public void rateEonia0CutOffValuation2Sensitivity() {
     // publication=0, cutoff=0, effective offset=0, TS: Fixing 2
     LocalDate[] valuationDate = {date(2015, 1, 9), date(2015, 1, 12)};
     OvernightCompoundedRateComputation ro =
-        OvernightCompoundedRateComputation.of(GBP_SONIA, FIXING_START_DATE, FIXING_END_DATE, 0, REF_DATA);
+        OvernightCompoundedRateComputation.of(EUR_EONIA, FIXING_START_DATE, FIXING_END_DATE, 0, REF_DATA);
     OvernightIndexRates mockRates = mock(OvernightIndexRates.class);
-    when(mockRates.getIndex()).thenReturn(GBP_SONIA);
+    when(mockRates.getIndex()).thenReturn(EUR_EONIA);
     SimpleRatesProvider simpleProv = new SimpleRatesProvider(mockRates);
 
     LocalDateDoubleTimeSeriesBuilder tsb = LocalDateDoubleTimeSeries.builder();
@@ -474,8 +533,8 @@ public class ForwardOvernightCompoundedRateComputationFnTest {
     double afNoCutoff = 0.0d;
     double investmentFactorNoCutoff = 1.0d;
     for (int i = lastFixing; i < 6; i++) {
-      LocalDate endDate = GBP_SONIA.calculateMaturityFromEffective(FIXING_DATES[i], REF_DATA);
-      double af = GBP_SONIA.getDayCount().yearFraction(FIXING_DATES[i], endDate);
+      LocalDate endDate = EUR_EONIA.calculateMaturityFromEffective(FIXING_DATES[i], REF_DATA);
+      double af = EUR_EONIA.getDayCount().yearFraction(FIXING_DATES[i], endDate);
       afNoCutoff += af;
       investmentFactorNoCutoff *= 1.0d + af * FORWARD_RATES[i];
     }

@@ -14,17 +14,16 @@ import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.OptionalDouble;
-import java.util.Set;
 
 import org.joda.beans.Bean;
 import org.joda.beans.BeanBuilder;
-import org.joda.beans.BeanDefinition;
 import org.joda.beans.ImmutableBean;
-import org.joda.beans.ImmutableConstructor;
 import org.joda.beans.JodaBeanUtils;
+import org.joda.beans.MetaBean;
 import org.joda.beans.MetaProperty;
-import org.joda.beans.Property;
-import org.joda.beans.PropertyDefinition;
+import org.joda.beans.gen.BeanDefinition;
+import org.joda.beans.gen.ImmutableConstructor;
+import org.joda.beans.gen.PropertyDefinition;
 import org.joda.beans.impl.direct.DirectMetaBean;
 import org.joda.beans.impl.direct.DirectMetaProperty;
 import org.joda.beans.impl.direct.DirectMetaPropertyMap;
@@ -37,11 +36,9 @@ import com.opengamma.strata.collect.ArgChecker;
 import com.opengamma.strata.collect.array.DoubleArray;
 import com.opengamma.strata.collect.timeseries.LocalDateDoubleTimeSeries;
 import com.opengamma.strata.data.MarketDataName;
-import com.opengamma.strata.market.ShiftType;
 import com.opengamma.strata.market.ValueType;
 import com.opengamma.strata.market.curve.InflationNodalCurve;
 import com.opengamma.strata.market.curve.NodalCurve;
-import com.opengamma.strata.market.curve.SeasonalityDefinition;
 import com.opengamma.strata.market.param.CurrencyParameterSensitivities;
 import com.opengamma.strata.market.param.ParameterMetadata;
 import com.opengamma.strata.market.param.ParameterPerturbation;
@@ -59,14 +56,6 @@ import com.opengamma.strata.market.sensitivity.PointSensitivityBuilder;
 @BeanDefinition(builderScope = "private")
 public final class SimplePriceIndexValues
     implements PriceIndexValues, ImmutableBean, Serializable {
-
-  /**
-   * The list used when there is no seasonality.
-   * It consists of 12 entries, all of value 1.
-   * @deprecated Kept for backward compatibility. The seasonality should be in the curve. See {@link InflationNodalCurve}.
-   */
-  @Deprecated
-  public static final DoubleArray NO_SEASONALITY = DoubleArray.filled(12, 1d);
 
   /**
    * The index that the values are for.
@@ -94,16 +83,6 @@ public final class SimplePriceIndexValues
    */
   @PropertyDefinition(validate = "notNull", overrideGet = true)
   private final LocalDateDoubleTimeSeries fixings;
-  /**
-   * Describes the seasonal adjustments.
-   * The array has a dimension of 12, one element for each month, starting from January.
-   * The adjustments are multiplicative. For each month, the price index is the one obtained
-   * from the interpolated part of the curve multiplied by the seasonal adjustment.
-   * @deprecated Kept for backward compatibility. The seasonality should be in the curve. See {@link InflationNodalCurve}.
-   */
-  @Deprecated
-  @PropertyDefinition(validate = "notNull")
-  private final DoubleArray seasonality;
 
   //-------------------------------------------------------------------------
   /**
@@ -130,47 +109,7 @@ public final class SimplePriceIndexValues
       NodalCurve curve,
       LocalDateDoubleTimeSeries fixings) {
 
-    return new SimplePriceIndexValues(index, valuationDate, curve, fixings, NO_SEASONALITY);
-  }
-
-  /**
-   * Obtains an instance based on a curve with seasonality adjustment.
-   * <p>
-   * Each x-value on the curve is the number of months between the valuation month and the estimation month.
-   * For example, zero represents the valuation month, one the next month and so on.
-   * <p>
-   * The time-series contains one value per month and must have at least one entry.
-   * The value is stored in the time-series on the last date of each month (which may be a non-working day).
-   * <p>
-   * The curve will be altered to be consistent with the time-series. The last element of the
-   * series is added as the first point of the interpolated curve to ensure a coherent transition.
-   * 
-   * @param index  the Price index
-   * @param valuationDate  the valuation date for which the curve is valid
-   * @param fixings  the time-series of fixings
-   * @param curve  the underlying forward curve for index estimation
-   * @param seasonality  the seasonality adjustment, size 12, index zero is January,
-   *   where the value 1 means no seasonality adjustment
-   * @return the values instance
-   * @deprecated the seasonality should not be added at this level anymore but in the nodal curve
-   */
-  @Deprecated
-  public static SimplePriceIndexValues of(
-      PriceIndex index,
-      LocalDate valuationDate,
-      NodalCurve curve,
-      LocalDateDoubleTimeSeries fixings,
-      DoubleArray seasonality) {
-
-    ArgChecker.isFalse(curve instanceof InflationNodalCurve, "Curve cannot be adjusted twice for seasonality");
-    // add the latest element of the time series as the first node on the curve
-    YearMonth lastMonth = YearMonth.from(fixings.getLatestDate());
-    double nbMonth = YearMonth.from(valuationDate).until(lastMonth, MONTHS);
-    DoubleArray x = curve.getXValues();
-    ArgChecker.isTrue(nbMonth < x.get(0), "The first estimation month should be after the last known index fixing");
-    InflationNodalCurve seasonalCurve = InflationNodalCurve.of(
-        curve, valuationDate, lastMonth, nbMonth, SeasonalityDefinition.of(seasonality, ShiftType.SCALED));
-    return new SimplePriceIndexValues(index, valuationDate, seasonalCurve, fixings, seasonality);
+    return new SimplePriceIndexValues(index, valuationDate, curve, fixings);
   }
 
   @ImmutableConstructor
@@ -178,8 +117,7 @@ public final class SimplePriceIndexValues
       PriceIndex index,
       LocalDate valuationDate,
       NodalCurve curve,
-      LocalDateDoubleTimeSeries fixings,
-      DoubleArray seasonality) {
+      LocalDateDoubleTimeSeries fixings) {
 
     ArgChecker.isFalse(fixings.isEmpty(), "Fixings must not be empty");
     curve.getMetadata().getXValueType().checkEquals(ValueType.MONTHS, "Incorrect x-value type for price curve");
@@ -188,7 +126,6 @@ public final class SimplePriceIndexValues
     this.valuationDate = ArgChecker.notNull(valuationDate, "valuationDate");
     this.fixings = ArgChecker.notNull(fixings, "fixings");
     this.curve = ArgChecker.notNull(curve, "curve");
-    this.seasonality = ArgChecker.notNull(seasonality, "seasonality");
   }
 
   //-------------------------------------------------------------------------
@@ -229,10 +166,12 @@ public final class SimplePriceIndexValues
   @Override
   public double value(PriceIndexObservation observation) {
     YearMonth fixingMonth = observation.getFixingMonth();
-    // returns the historic month price index if present in the time series
-    OptionalDouble fixing = fixings.get(fixingMonth.atEndOfMonth());
-    if (fixing.isPresent()) {
-      return fixing.getAsDouble();
+    // If fixing in the past, check time series and returns the historic month price index if present
+    if (fixingMonth.isBefore(YearMonth.from(valuationDate))) {
+      OptionalDouble fixing = fixings.get(fixingMonth.atEndOfMonth());
+      if (fixing.isPresent()) {
+        return fixing.getAsDouble();
+      }
     }
     // otherwise, return the estimate from the curve.
     double nbMonth = numberOfMonths(fixingMonth);
@@ -243,9 +182,11 @@ public final class SimplePriceIndexValues
   @Override
   public PointSensitivityBuilder valuePointSensitivity(PriceIndexObservation observation) {
     YearMonth fixingMonth = observation.getFixingMonth();
-    // no sensitivity if historic month price index present in the time series
-    if (fixings.get(fixingMonth.atEndOfMonth()).isPresent()) {
-      return PointSensitivityBuilder.none();
+    // If fixing in the past, check time series and returns the historic month price index if present
+    if (fixingMonth.isBefore(YearMonth.from(valuationDate))) {
+      if (fixings.get(fixingMonth.atEndOfMonth()).isPresent()) {
+        return PointSensitivityBuilder.none();
+      }
     }
     return InflationRateSensitivity.of(observation, 1d);
   }
@@ -258,9 +199,11 @@ public final class SimplePriceIndexValues
   }
 
   private UnitParameterSensitivities unitParameterSensitivity(YearMonth month) {
-    // no sensitivity if historic month price index present in the time series
-    if (fixings.get(month.atEndOfMonth()).isPresent()) {
-      return UnitParameterSensitivities.empty();
+    // If fixing in the past, check time series and returns the historic month price index if present
+    if (month.isBefore(YearMonth.from(valuationDate))) {
+      if (fixings.get(month.atEndOfMonth()).isPresent()) {
+        return UnitParameterSensitivities.empty();
+      }
     }
     double nbMonth = numberOfMonths(month);
     return UnitParameterSensitivities.of(curve.yValueParameterSensitivity(nbMonth));
@@ -279,7 +222,7 @@ public final class SimplePriceIndexValues
    * @return the new instance
    */
   public SimplePriceIndexValues withCurve(NodalCurve curve) {
-    return new SimplePriceIndexValues(index, valuationDate, curve, fixings, seasonality);
+    return new SimplePriceIndexValues(index, valuationDate, curve, fixings);
   }
 
   private double numberOfMonths(YearMonth month) {
@@ -287,7 +230,6 @@ public final class SimplePriceIndexValues
   }
 
   //------------------------- AUTOGENERATED START -------------------------
-  ///CLOVER:OFF
   /**
    * The meta-bean for {@code SimplePriceIndexValues}.
    * @return the meta-bean, not null
@@ -297,7 +239,7 @@ public final class SimplePriceIndexValues
   }
 
   static {
-    JodaBeanUtils.registerMetaBean(SimplePriceIndexValues.Meta.INSTANCE);
+    MetaBean.register(SimplePriceIndexValues.Meta.INSTANCE);
   }
 
   /**
@@ -308,16 +250,6 @@ public final class SimplePriceIndexValues
   @Override
   public SimplePriceIndexValues.Meta metaBean() {
     return SimplePriceIndexValues.Meta.INSTANCE;
-  }
-
-  @Override
-  public <R> Property<R> property(String propertyName) {
-    return metaBean().<R>metaProperty(propertyName).createProperty(this);
-  }
-
-  @Override
-  public Set<String> propertyNames() {
-    return metaBean().metaPropertyMap().keySet();
   }
 
   //-----------------------------------------------------------------------
@@ -366,20 +298,6 @@ public final class SimplePriceIndexValues
   }
 
   //-----------------------------------------------------------------------
-  /**
-   * Gets describes the seasonal adjustments.
-   * The array has a dimension of 12, one element for each month, starting from January.
-   * The adjustments are multiplicative. For each month, the price index is the one obtained
-   * from the interpolated part of the curve multiplied by the seasonal adjustment.
-   * @deprecated Kept for backward compatibility. The seasonality should be in the curve. See {@link InflationNodalCurve}.
-   * @return the value of the property, not null
-   */
-  @Deprecated
-  public DoubleArray getSeasonality() {
-    return seasonality;
-  }
-
-  //-----------------------------------------------------------------------
   @Override
   public boolean equals(Object obj) {
     if (obj == this) {
@@ -390,8 +308,7 @@ public final class SimplePriceIndexValues
       return JodaBeanUtils.equal(index, other.index) &&
           JodaBeanUtils.equal(valuationDate, other.valuationDate) &&
           JodaBeanUtils.equal(curve, other.curve) &&
-          JodaBeanUtils.equal(fixings, other.fixings) &&
-          JodaBeanUtils.equal(seasonality, other.seasonality);
+          JodaBeanUtils.equal(fixings, other.fixings);
     }
     return false;
   }
@@ -403,19 +320,17 @@ public final class SimplePriceIndexValues
     hash = hash * 31 + JodaBeanUtils.hashCode(valuationDate);
     hash = hash * 31 + JodaBeanUtils.hashCode(curve);
     hash = hash * 31 + JodaBeanUtils.hashCode(fixings);
-    hash = hash * 31 + JodaBeanUtils.hashCode(seasonality);
     return hash;
   }
 
   @Override
   public String toString() {
-    StringBuilder buf = new StringBuilder(192);
+    StringBuilder buf = new StringBuilder(160);
     buf.append("SimplePriceIndexValues{");
     buf.append("index").append('=').append(index).append(',').append(' ');
     buf.append("valuationDate").append('=').append(valuationDate).append(',').append(' ');
     buf.append("curve").append('=').append(curve).append(',').append(' ');
-    buf.append("fixings").append('=').append(fixings).append(',').append(' ');
-    buf.append("seasonality").append('=').append(JodaBeanUtils.toString(seasonality));
+    buf.append("fixings").append('=').append(JodaBeanUtils.toString(fixings));
     buf.append('}');
     return buf.toString();
   }
@@ -451,11 +366,6 @@ public final class SimplePriceIndexValues
     private final MetaProperty<LocalDateDoubleTimeSeries> fixings = DirectMetaProperty.ofImmutable(
         this, "fixings", SimplePriceIndexValues.class, LocalDateDoubleTimeSeries.class);
     /**
-     * The meta-property for the {@code seasonality} property.
-     */
-    private final MetaProperty<DoubleArray> seasonality = DirectMetaProperty.ofImmutable(
-        this, "seasonality", SimplePriceIndexValues.class, DoubleArray.class);
-    /**
      * The meta-properties.
      */
     private final Map<String, MetaProperty<?>> metaPropertyMap$ = new DirectMetaPropertyMap(
@@ -463,8 +373,7 @@ public final class SimplePriceIndexValues
         "index",
         "valuationDate",
         "curve",
-        "fixings",
-        "seasonality");
+        "fixings");
 
     /**
      * Restricted constructor.
@@ -483,8 +392,6 @@ public final class SimplePriceIndexValues
           return curve;
         case -843784602:  // fixings
           return fixings;
-        case -857898080:  // seasonality
-          return seasonality;
       }
       return super.metaPropertyGet(propertyName);
     }
@@ -537,16 +444,6 @@ public final class SimplePriceIndexValues
       return fixings;
     }
 
-    /**
-     * The meta-property for the {@code seasonality} property.
-     * @deprecated Kept for backward compatibility. The seasonality should be in the curve. See {@link InflationNodalCurve}.
-     * @return the meta-property, not null
-     */
-    @Deprecated
-    public MetaProperty<DoubleArray> seasonality() {
-      return seasonality;
-    }
-
     //-----------------------------------------------------------------------
     @Override
     protected Object propertyGet(Bean bean, String propertyName, boolean quiet) {
@@ -559,8 +456,6 @@ public final class SimplePriceIndexValues
           return ((SimplePriceIndexValues) bean).getCurve();
         case -843784602:  // fixings
           return ((SimplePriceIndexValues) bean).getFixings();
-        case -857898080:  // seasonality
-          return ((SimplePriceIndexValues) bean).getSeasonality();
       }
       return super.propertyGet(bean, propertyName, quiet);
     }
@@ -586,13 +481,11 @@ public final class SimplePriceIndexValues
     private LocalDate valuationDate;
     private NodalCurve curve;
     private LocalDateDoubleTimeSeries fixings;
-    private DoubleArray seasonality;
 
     /**
      * Restricted constructor.
      */
     private Builder() {
-      super(meta());
     }
 
     //-----------------------------------------------------------------------
@@ -607,8 +500,6 @@ public final class SimplePriceIndexValues
           return curve;
         case -843784602:  // fixings
           return fixings;
-        case -857898080:  // seasonality
-          return seasonality;
         default:
           throw new NoSuchElementException("Unknown property: " + propertyName);
       }
@@ -629,9 +520,6 @@ public final class SimplePriceIndexValues
         case -843784602:  // fixings
           this.fixings = (LocalDateDoubleTimeSeries) newValue;
           break;
-        case -857898080:  // seasonality
-          this.seasonality = (DoubleArray) newValue;
-          break;
         default:
           throw new NoSuchElementException("Unknown property: " + propertyName);
       }
@@ -644,26 +532,23 @@ public final class SimplePriceIndexValues
           index,
           valuationDate,
           curve,
-          fixings,
-          seasonality);
+          fixings);
     }
 
     //-----------------------------------------------------------------------
     @Override
     public String toString() {
-      StringBuilder buf = new StringBuilder(192);
+      StringBuilder buf = new StringBuilder(160);
       buf.append("SimplePriceIndexValues.Builder{");
       buf.append("index").append('=').append(JodaBeanUtils.toString(index)).append(',').append(' ');
       buf.append("valuationDate").append('=').append(JodaBeanUtils.toString(valuationDate)).append(',').append(' ');
       buf.append("curve").append('=').append(JodaBeanUtils.toString(curve)).append(',').append(' ');
-      buf.append("fixings").append('=').append(JodaBeanUtils.toString(fixings)).append(',').append(' ');
-      buf.append("seasonality").append('=').append(JodaBeanUtils.toString(seasonality));
+      buf.append("fixings").append('=').append(JodaBeanUtils.toString(fixings));
       buf.append('}');
       return buf.toString();
     }
 
   }
 
-  ///CLOVER:ON
   //-------------------------- AUTOGENERATED END --------------------------
 }

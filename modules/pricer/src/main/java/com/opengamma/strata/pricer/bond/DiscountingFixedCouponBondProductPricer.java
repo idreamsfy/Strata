@@ -5,6 +5,7 @@
  */
 package com.opengamma.strata.pricer.bond;
 
+import static com.opengamma.strata.math.MathUtils.pow2;
 import static com.opengamma.strata.product.bond.FixedCouponBondYieldConvention.DE_BONDS;
 import static com.opengamma.strata.product.bond.FixedCouponBondYieldConvention.GB_BUMP_DMO;
 import static com.opengamma.strata.product.bond.FixedCouponBondYieldConvention.JP_SIMPLE;
@@ -15,7 +16,6 @@ import java.util.function.Function;
 
 import com.google.common.collect.ImmutableList;
 import com.opengamma.strata.basics.ReferenceData;
-import com.opengamma.strata.basics.StandardId;
 import com.opengamma.strata.basics.currency.CurrencyAmount;
 import com.opengamma.strata.basics.currency.Payment;
 import com.opengamma.strata.collect.ArgChecker;
@@ -32,7 +32,7 @@ import com.opengamma.strata.product.bond.FixedCouponBondYieldConvention;
 import com.opengamma.strata.product.bond.ResolvedFixedCouponBond;
 
 /**
- * Pricer for for rate fixed coupon bond products.
+ * Pricer for fixed coupon bond products.
  * <p>
  * This function provides the ability to price a {@link ResolvedFixedCouponBond}.
  * 
@@ -104,11 +104,9 @@ public class DiscountingFixedCouponBondProductPricer {
       LegalEntityDiscountingProvider provider,
       LocalDate referenceDate) {
 
-    IssuerCurveDiscountFactors discountFactors = provider.issuerCurveDiscountFactors(
-        bond.getLegalEntityId(), bond.getCurrency());
-    CurrencyAmount pvNominal =
-        nominalPricer.presentValue(bond.getNominalPayment(), discountFactors.getDiscountFactors());
-    CurrencyAmount pvCoupon = presentValueCoupon(bond, discountFactors, referenceDate);
+    IssuerCurveDiscountFactors issuerDf = issuerCurveDf(bond, provider);
+    CurrencyAmount pvNominal = nominalPricer.presentValue(bond.getNominalPayment(), issuerDf.getDiscountFactors());
+    CurrencyAmount pvCoupon = presentValueCoupon(bond, issuerDf, referenceDate);
     return pvNominal.plus(pvCoupon);
   }
 
@@ -148,12 +146,11 @@ public class DiscountingFixedCouponBondProductPricer {
       int periodsPerYear,
       LocalDate referenceDate) {
 
-    IssuerCurveDiscountFactors discountFactors = provider.issuerCurveDiscountFactors(
-        bond.getLegalEntityId(), bond.getCurrency());
+    IssuerCurveDiscountFactors issuerDf = issuerCurveDf(bond, provider);
     CurrencyAmount pvNominal = nominalPricer.presentValueWithSpread(
-        bond.getNominalPayment(), discountFactors.getDiscountFactors(), zSpread, compoundedRateType, periodsPerYear);
+        bond.getNominalPayment(), issuerDf.getDiscountFactors(), zSpread, compoundedRateType, periodsPerYear);
     CurrencyAmount pvCoupon = presentValueCouponFromZSpread(
-        bond, discountFactors, zSpread, compoundedRateType, periodsPerYear, referenceDate);
+        bond, issuerDf, zSpread, compoundedRateType, periodsPerYear, referenceDate);
     return pvNominal.plus(pvCoupon);
   }
 
@@ -195,9 +192,8 @@ public class DiscountingFixedCouponBondProductPricer {
       LocalDate settlementDate) {
 
     CurrencyAmount pv = presentValue(bond, provider, settlementDate);
-    StandardId legalEntityId = bond.getLegalEntityId();
-    double df = provider.repoCurveDiscountFactors(
-        bond.getSecurityId(), legalEntityId, bond.getCurrency()).discountFactor(settlementDate);
+    RepoCurveDiscountFactors repoDf = repoCurveDf(bond, provider);
+    double df = repoDf.discountFactor(settlementDate);
     double notional = bond.getNotional();
     return pv.getAmount() / df / notional;
   }
@@ -255,9 +251,8 @@ public class DiscountingFixedCouponBondProductPricer {
       LocalDate settlementDate) {
 
     CurrencyAmount pv = presentValueWithZSpread(bond, provider, zSpread, compoundedRateType, periodsPerYear, settlementDate);
-    StandardId legalEntityId = bond.getLegalEntityId();
-    double df = provider.repoCurveDiscountFactors(
-        bond.getSecurityId(), legalEntityId, bond.getCurrency()).discountFactor(settlementDate);
+    RepoCurveDiscountFactors repoDf = repoCurveDf(bond, provider);
+    double df = repoDf.discountFactor(settlementDate);
     double notional = bond.getNotional();
     return pv.getAmount() / df / notional;
   }
@@ -352,10 +347,9 @@ public class DiscountingFixedCouponBondProductPricer {
       LegalEntityDiscountingProvider provider,
       LocalDate referenceDate) {
 
-    IssuerCurveDiscountFactors discountFactors = provider.issuerCurveDiscountFactors(
-        bond.getLegalEntityId(), bond.getCurrency());
-    PointSensitivityBuilder pvNominal = presentValueSensitivityNominal(bond, discountFactors);
-    PointSensitivityBuilder pvCoupon = presentValueSensitivityCoupon(bond, discountFactors, referenceDate);
+    IssuerCurveDiscountFactors issuerDf = issuerCurveDf(bond, provider);
+    PointSensitivityBuilder pvNominal = presentValueSensitivityNominal(bond, issuerDf);
+    PointSensitivityBuilder pvCoupon = presentValueSensitivityCoupon(bond, issuerDf, referenceDate);
     return pvNominal.combinedWith(pvCoupon);
   }
 
@@ -395,12 +389,11 @@ public class DiscountingFixedCouponBondProductPricer {
       int periodsPerYear,
       LocalDate referenceDate) {
 
-    IssuerCurveDiscountFactors discountFactors = provider.issuerCurveDiscountFactors(
-        bond.getLegalEntityId(), bond.getCurrency());
+    IssuerCurveDiscountFactors issuerDf = issuerCurveDf(bond, provider);
     PointSensitivityBuilder pvNominal = presentValueSensitivityNominalFromZSpread(
-        bond, discountFactors, zSpread, compoundedRateType, periodsPerYear);
+        bond, issuerDf, zSpread, compoundedRateType, periodsPerYear);
     PointSensitivityBuilder pvCoupon = presentValueSensitivityCouponFromZSpread(
-        bond, discountFactors, zSpread, compoundedRateType, periodsPerYear, referenceDate);
+        bond, issuerDf, zSpread, compoundedRateType, periodsPerYear, referenceDate);
     return pvNominal.combinedWith(pvCoupon);
   }
 
@@ -431,14 +424,12 @@ public class DiscountingFixedCouponBondProductPricer {
       LegalEntityDiscountingProvider provider,
       LocalDate referenceDate) {
 
-    StandardId legalEntityId = bond.getLegalEntityId();
-    RepoCurveDiscountFactors discountFactors =
-        provider.repoCurveDiscountFactors(bond.getSecurityId(), legalEntityId, bond.getCurrency());
-    double df = discountFactors.discountFactor(referenceDate);
+    RepoCurveDiscountFactors repoDf = repoCurveDf(bond, provider);
+    double df = repoDf.discountFactor(referenceDate);
     CurrencyAmount pv = presentValue(bond, provider);
     double notional = bond.getNotional();
     PointSensitivityBuilder pvSensi = presentValueSensitivity(bond, provider).multipliedBy(1d / df / notional);
-    RepoCurveZeroRateSensitivity dfSensi = discountFactors.zeroRatePointSensitivity(referenceDate)
+    RepoCurveZeroRateSensitivity dfSensi = repoDf.zeroRatePointSensitivity(referenceDate)
         .multipliedBy(-pv.getAmount() / df / df / notional);
     return pvSensi.combinedWith(dfSensi);
   }
@@ -481,15 +472,13 @@ public class DiscountingFixedCouponBondProductPricer {
       int periodsPerYear,
       LocalDate referenceDate) {
 
-    StandardId legalEntityId = bond.getLegalEntityId();
-    RepoCurveDiscountFactors discountFactors =
-        provider.repoCurveDiscountFactors(bond.getSecurityId(), legalEntityId, bond.getCurrency());
-    double df = discountFactors.discountFactor(referenceDate);
+    RepoCurveDiscountFactors repoDf = repoCurveDf(bond, provider);
+    double df = repoDf.discountFactor(referenceDate);
     CurrencyAmount pv = presentValueWithZSpread(bond, provider, zSpread, compoundedRateType, periodsPerYear);
     double notional = bond.getNotional();
     PointSensitivityBuilder pvSensi = presentValueSensitivityWithZSpread(
         bond, provider, zSpread, compoundedRateType, periodsPerYear).multipliedBy(1d / df / notional);
-    RepoCurveZeroRateSensitivity dfSensi = discountFactors.zeroRatePointSensitivity(referenceDate)
+    RepoCurveZeroRateSensitivity dfSensi = repoDf.zeroRatePointSensitivity(referenceDate)
         .multipliedBy(-pv.getAmount() / df / df / notional);
     return pvSensi.combinedWith(dfSensi);
   }
@@ -767,7 +756,7 @@ public class DiscountingFixedCouponBondProductPricer {
       double num = 1d + bond.getFixedRate() * maturity;
       double den = 1d + yield * maturity;
       double dirtyPrice = dirtyPriceFromCleanPrice(bond, settlementDate, num / den);
-      return 2d * num * Math.pow(maturity, 2) * Math.pow(den, -3) / dirtyPrice;
+      return 2d * num * pow2(maturity) * Math.pow(den, -3) / dirtyPrice;
     }
     throw new UnsupportedOperationException("The convention " + yieldConv.name() + " is not supported.");
   }
@@ -855,7 +844,7 @@ public class DiscountingFixedCouponBondProductPricer {
 
     double total = 0d;
     for (FixedCouponBondPaymentPeriod period : bond.getPeriodicPayments()) {
-      if (period.getDetachmentDate().isAfter(referenceDate)) {
+      if (!period.getDetachmentDate().isBefore(referenceDate)) {
         total += periodPricer.presentValueWithSpread(period, discountFactors, zSpread, compoundedRateType, periodsPerYear);
       }
     }
@@ -957,6 +946,17 @@ public class DiscountingFixedCouponBondProductPricer {
       }
     }
     return pvDiff;
+  }
+
+  //-------------------------------------------------------------------------
+  // extracts the repo curve discount factors for the bond
+  static RepoCurveDiscountFactors repoCurveDf(ResolvedFixedCouponBond bond, LegalEntityDiscountingProvider provider) {
+    return provider.repoCurveDiscountFactors(bond.getSecurityId(), bond.getLegalEntityId(), bond.getCurrency());
+  }
+
+  // extracts the issuer curve discount factors for the bond
+  static IssuerCurveDiscountFactors issuerCurveDf(ResolvedFixedCouponBond bond, LegalEntityDiscountingProvider provider) {
+    return provider.issuerCurveDiscountFactors(bond.getLegalEntityId(), bond.getCurrency());
   }
 
 }

@@ -6,9 +6,9 @@
 package com.opengamma.strata.basics.value;
 
 import static com.opengamma.strata.collect.TestHelper.assertSerialization;
-import static com.opengamma.strata.collect.TestHelper.assertThrowsIllegalArg;
 import static com.opengamma.strata.collect.TestHelper.coverBeanEquals;
 import static com.opengamma.strata.collect.TestHelper.coverImmutableBean;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.testng.Assert.assertEquals;
 
 import java.math.BigDecimal;
@@ -16,11 +16,19 @@ import java.math.BigDecimal;
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
+import com.opengamma.strata.basics.currency.Currency;
+
 /**
  * Test {@link HalfUpRounding}.
  */
 @Test
 public class HalfUpRoundingTest {
+
+  public void test_of_Currency() {
+    Rounding test = Rounding.of(Currency.USD);
+    assertEquals(test.round(63.455d), 63.46d, 0d);
+    assertEquals(test.round(63.454d), 63.45d, 0d);
+  }
 
   public void test_ofDecimalPlaces() {
     HalfUpRounding test = HalfUpRounding.ofDecimalPlaces(4);
@@ -39,8 +47,8 @@ public class HalfUpRoundingTest {
   }
 
   public void test_ofDecimalPlaces_invalid() {
-    assertThrowsIllegalArg(() -> HalfUpRounding.ofDecimalPlaces(-1));
-    assertThrowsIllegalArg(() -> HalfUpRounding.ofDecimalPlaces(257));
+    assertThatIllegalArgumentException().isThrownBy(() -> HalfUpRounding.ofDecimalPlaces(-1));
+    assertThatIllegalArgumentException().isThrownBy(() -> HalfUpRounding.ofDecimalPlaces(257));
   }
 
   public void test_ofFractionalDecimalPlaces() {
@@ -52,10 +60,10 @@ public class HalfUpRoundingTest {
   }
 
   public void test_ofFractionalDecimalPlaces_invalid() {
-    assertThrowsIllegalArg(() -> HalfUpRounding.ofFractionalDecimalPlaces(-1, 0));
-    assertThrowsIllegalArg(() -> HalfUpRounding.ofFractionalDecimalPlaces(257, 0));
-    assertThrowsIllegalArg(() -> HalfUpRounding.ofFractionalDecimalPlaces(0, -1));
-    assertThrowsIllegalArg(() -> HalfUpRounding.ofFractionalDecimalPlaces(0, 257));
+    assertThatIllegalArgumentException().isThrownBy(() -> HalfUpRounding.ofFractionalDecimalPlaces(-1, 0));
+    assertThatIllegalArgumentException().isThrownBy(() -> HalfUpRounding.ofFractionalDecimalPlaces(257, 0));
+    assertThatIllegalArgumentException().isThrownBy(() -> HalfUpRounding.ofFractionalDecimalPlaces(0, -1));
+    assertThatIllegalArgumentException().isThrownBy(() -> HalfUpRounding.ofFractionalDecimalPlaces(0, 257));
   }
 
   public void test_builder() {
@@ -69,17 +77,17 @@ public class HalfUpRoundingTest {
   }
 
   public void test_builder_invalid() {
-    assertThrowsIllegalArg(() -> HalfUpRounding.meta().builder()
+    assertThatIllegalArgumentException().isThrownBy(() -> HalfUpRounding.meta().builder()
         .set(HalfUpRounding.meta().decimalPlaces(), -1)
         .build());
-    assertThrowsIllegalArg(() -> HalfUpRounding.meta().builder()
+    assertThatIllegalArgumentException().isThrownBy(() -> HalfUpRounding.meta().builder()
         .set(HalfUpRounding.meta().decimalPlaces(), 257)
         .build());
-    assertThrowsIllegalArg(() -> HalfUpRounding.meta().builder()
+    assertThatIllegalArgumentException().isThrownBy(() -> HalfUpRounding.meta().builder()
         .set(HalfUpRounding.meta().decimalPlaces(), 4)
         .set(HalfUpRounding.meta().fraction(), -1)
         .build());
-    assertThrowsIllegalArg(() -> HalfUpRounding.meta().builder()
+    assertThatIllegalArgumentException().isThrownBy(() -> HalfUpRounding.meta().builder()
         .set(HalfUpRounding.meta().decimalPlaces(), 4)
         .set(HalfUpRounding.meta().fraction(), 257)
         .build());
@@ -87,7 +95,7 @@ public class HalfUpRoundingTest {
 
   //-------------------------------------------------------------------------
   @DataProvider(name = "round")
-  Object[][] data_round() {
+  public static Object[][] data_round() {
     return new Object[][] {
         {HalfUpRounding.ofDecimalPlaces(2), 12.3449, 12.34},
         {HalfUpRounding.ofDecimalPlaces(2), 12.3450, 12.35},

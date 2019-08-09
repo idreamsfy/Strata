@@ -6,10 +6,10 @@
 package com.opengamma.strata.basics.value;
 
 import static com.opengamma.strata.collect.TestHelper.assertSerialization;
-import static com.opengamma.strata.collect.TestHelper.assertThrowsIllegalArg;
 import static com.opengamma.strata.collect.TestHelper.coverBeanEquals;
 import static com.opengamma.strata.collect.TestHelper.coverImmutableBean;
 import static com.opengamma.strata.collect.TestHelper.date;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.testng.Assert.assertEquals;
 
 import java.util.Optional;
@@ -118,25 +118,6 @@ public class ValueScheduleTest {
   }
 
   //-------------------------------------------------------------------------
-  @SuppressWarnings("deprecation")
-  public void test_resolveValues_dateBased_deprecated() {
-    ValueStep step1 = ValueStep.of(date(2014, 2, 1), ValueAdjustment.ofReplace(300d));
-    ValueStep step2 = ValueStep.of(date(2014, 3, 1), ValueAdjustment.ofReplace(400d));
-    // no steps
-    ValueSchedule test0 = ValueSchedule.of(200d, ImmutableList.of());
-    assertEquals(test0.resolveValues(PERIODS), ImmutableList.of(200d, 200d, 200d));
-    // step1
-    ValueSchedule test1a = ValueSchedule.of(200d, ImmutableList.of(step1));
-    assertEquals(test1a.resolveValues(PERIODS), ImmutableList.of(200d, 300d, 300d));
-    // step2
-    ValueSchedule test1b = ValueSchedule.of(200d, ImmutableList.of(step2));
-    assertEquals(test1b.resolveValues(PERIODS), ImmutableList.of(200d, 200d, 400d));
-    // step1 and step2
-    ValueSchedule test2 = ValueSchedule.of(200d, ImmutableList.of(step1, step2));
-    assertEquals(test2.resolveValues(PERIODS), ImmutableList.of(200d, 300d, 400d));
-  }
-
-  //-------------------------------------------------------------------------
   public void test_resolveValues_dateBased() {
     ValueStep step1 = ValueStep.of(date(2014, 2, 1), ValueAdjustment.ofReplace(300d));
     ValueStep step2 = ValueStep.of(date(2014, 3, 1), ValueAdjustment.ofReplace(400d));
@@ -171,6 +152,16 @@ public class ValueScheduleTest {
     assertEquals(test2.resolveValues(SCHEDULE), DoubleArray.of(200d, 300d, 400d));
   }
 
+  public void test_resolveValues_dateBased_ignoreExcess() {
+    ValueStep step1 = ValueStep.of(date(2014, 2, 1), ValueAdjustment.ofReplace(300d));
+    ValueStep step2 = ValueStep.of(date(2014, 2, 15), ValueAdjustment.ofReplace(300d));  // no change to value
+    ValueStep step3 = ValueStep.of(date(2014, 3, 1), ValueAdjustment.ofReplace(400d));
+    ValueStep step4 = ValueStep.of(date(2014, 3, 15), ValueAdjustment.ofDeltaAmount(0d));  // no change to value
+    ValueStep step5 = ValueStep.of(date(2014, 4, 1), ValueAdjustment.ofMultiplier(1d));
+    ValueSchedule test = ValueSchedule.of(200d, ImmutableList.of(step1, step2, step3, step4, step5));
+    assertEquals(test.resolveValues(SCHEDULE), DoubleArray.of(200d, 300d, 400d));
+  }
+
   public void test_resolveValues_indexBased() {
     ValueStep step1 = ValueStep.of(1, ValueAdjustment.ofReplace(300d));
     ValueStep step2 = ValueStep.of(2, ValueAdjustment.ofReplace(400d));
@@ -199,7 +190,7 @@ public class ValueScheduleTest {
     ValueStep step1 = ValueStep.of(1, ValueAdjustment.ofReplace(300d));
     ValueStep step2 = ValueStep.of(1, ValueAdjustment.ofReplace(400d));
     ValueSchedule test = ValueSchedule.of(200d, ImmutableList.of(step1, step2));
-    assertThrowsIllegalArg(() -> test.resolveValues(SCHEDULE));
+    assertThatIllegalArgumentException().isThrownBy(() -> test.resolveValues(SCHEDULE));
   }
 
   public void test_resolveValues_dateBased_indexZeroValid() {
@@ -211,13 +202,31 @@ public class ValueScheduleTest {
   public void test_resolveValues_indexBased_indexTooBig() {
     ValueStep step = ValueStep.of(3, ValueAdjustment.ofReplace(300d));
     ValueSchedule test = ValueSchedule.of(200d, ImmutableList.of(step));
-    assertThrowsIllegalArg(() -> test.resolveValues(SCHEDULE));
+    assertThatIllegalArgumentException().isThrownBy(() -> test.resolveValues(SCHEDULE));
   }
 
-  public void test_resolveValues_dateBased_dateInvalid() {
+  public void test_resolveValues_dateBased_invalidChangeValue() {
     ValueStep step = ValueStep.of(date(2014, 4, 1), ValueAdjustment.ofReplace(300d));
     ValueSchedule test = ValueSchedule.of(200d, ImmutableList.of(step));
-    assertThrowsIllegalArg(() -> test.resolveValues(SCHEDULE));
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> test.resolveValues(SCHEDULE))
+        .withMessageStartingWith("ValueStep date does not match a period boundary");
+  }
+
+  public void test_resolveValues_dateBased_invalidDateBefore() {
+    ValueStep step = ValueStep.of(date(2013, 12, 31), ValueAdjustment.ofReplace(300d));
+    ValueSchedule test = ValueSchedule.of(200d, ImmutableList.of(step));
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> test.resolveValues(SCHEDULE))
+        .withMessageStartingWith("ValueStep date is before the start of the schedule");
+  }
+
+  public void test_resolveValues_dateBased_invalidDateAfter() {
+    ValueStep step = ValueStep.of(date(2014, 4, 3), ValueAdjustment.ofReplace(300d));
+    ValueSchedule test = ValueSchedule.of(200d, ImmutableList.of(step));
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> test.resolveValues(SCHEDULE))
+        .withMessageStartingWith("ValueStep date is after the end of the schedule");
   }
 
   //-------------------------------------------------------------------------
@@ -241,7 +250,7 @@ public class ValueScheduleTest {
         date(2014, 2, 1), date(2014, 3, 1), Frequency.P1M, ValueAdjustment.ofDeltaAmount(100));
     ValueStep step1 = ValueStep.of(date(2014, 2, 1), ValueAdjustment.ofReplace(350d));
     ValueSchedule test = ValueSchedule.builder().initialValue(200d).steps(step1).stepSequence(seq).build();
-    assertThrowsIllegalArg(() -> test.resolveValues(SCHEDULE));
+    assertThatIllegalArgumentException().isThrownBy(() -> test.resolveValues(SCHEDULE));
   }
 
   //-------------------------------------------------------------------------

@@ -22,16 +22,35 @@ public final class ExchangeId implements Named, Serializable {
 
   /** Serialization version. */
   private static final long serialVersionUID = 1L;
-  /**
 
+  /**
    * The Market Identifier Code (MIC) identifying the exchange.
    */
   private final String name;
 
+  //-------------------------------------------------------------------------
+  /**
+   * Returns an identifier for the exchange.
+   *
+   * @param name the Market Identifier Code (MIC) identifying the exchange
+   * @return an identifier for the exchange
+   */
+  @FromString
+  public static ExchangeId of(String name) {
+    return new ExchangeId(name);
+  }
+
+  // restricted constructor
   private ExchangeId(String name) {
     this.name = ArgChecker.notBlank(name, "name");
   }
 
+  // resolve after deserialization
+  private Object readResolve() {
+    return of(name);
+  }
+
+  //-------------------------------------------------------------------------
   /**
    * Returns the Market Identifier Code (MIC) identifying the exchange.
    *
@@ -40,17 +59,6 @@ public final class ExchangeId implements Named, Serializable {
   @Override
   public String getName() {
     return name;
-  }
-
-  /**
-   * Returns an identifier for an exchange.
-   *
-   * @param name the Market Identifier Code (MIC) identifying the exchange
-   * @return an identifier for an exchange
-   */
-  @FromString
-  public static ExchangeId of(String name) {
-    return new ExchangeId(name);
   }
 
   //-------------------------------------------------------------------------

@@ -7,9 +7,11 @@ package com.opengamma.strata.product.bond;
 
 import static com.opengamma.strata.collect.TestHelper.assertJodaConvert;
 import static com.opengamma.strata.collect.TestHelper.assertSerialization;
-import static com.opengamma.strata.collect.TestHelper.assertThrows;
 import static com.opengamma.strata.collect.TestHelper.coverEnum;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.testng.Assert.assertEquals;
+
+import java.util.Locale;
 
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
@@ -21,7 +23,7 @@ import org.testng.annotations.Test;
 public class FixedCouponBondYieldConventionTest {
 
   @DataProvider(name = "name")
-  static Object[][] data_name() {
+  public static Object[][] data_name() {
     return new Object[][] {
         {FixedCouponBondYieldConvention.GB_BUMP_DMO, "GB-Bump-DMO"},
         {FixedCouponBondYieldConvention.US_STREET, "US-Street"},
@@ -40,12 +42,29 @@ public class FixedCouponBondYieldConventionTest {
     assertEquals(FixedCouponBondYieldConvention.of(name), convention);
   }
 
+  @Test(dataProvider = "name")
+  public void test_of_lookupUpperCase(FixedCouponBondYieldConvention convention, String name) {
+    assertEquals(FixedCouponBondYieldConvention.of(name.toUpperCase(Locale.ENGLISH)), convention);
+  }
+
+  @Test(dataProvider = "name")
+  public void test_of_lookupLowerCase(FixedCouponBondYieldConvention convention, String name) {
+    assertEquals(FixedCouponBondYieldConvention.of(name.toLowerCase(Locale.ENGLISH)), convention);
+  }
+
+  @Test(dataProvider = "name")
+  public void test_of_lookupStandard(FixedCouponBondYieldConvention convention, String name) {
+    assertEquals(FixedCouponBondYieldConvention.of(convention.name()), convention);
+  }
+
   public void test_of_lookup_notFound() {
-    assertThrows(() -> FixedCouponBondYieldConvention.of("Rubbish"), IllegalArgumentException.class);
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> FixedCouponBondYieldConvention.of("Rubbish"));
   }
 
   public void test_of_lookup_null() {
-    assertThrows(() -> FixedCouponBondYieldConvention.of(null), IllegalArgumentException.class);
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> FixedCouponBondYieldConvention.of(null));
   }
 
   //-------------------------------------------------------------------------

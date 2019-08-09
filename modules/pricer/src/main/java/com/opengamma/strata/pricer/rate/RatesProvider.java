@@ -45,6 +45,9 @@ public interface RatesProvider
 
   /**
    * Gets the set of Ibor indices that are available.
+   * <p>
+   * If an index is present in the result of this method, then
+   * {@link #iborIndexRates(IborIndex)} should not throw an exception.
    *
    * @return the set of Ibor indices
    */
@@ -52,6 +55,9 @@ public interface RatesProvider
 
   /**
    * Gets the set of Overnight indices that are available.
+   * <p>
+   * If an index is present in the result of this method, then
+   * {@link #overnightIndexRates(OvernightIndex)} should not throw an exception.
    *
    * @return the set of Overnight indices
    */
@@ -59,10 +65,24 @@ public interface RatesProvider
 
   /**
    * Gets the set of Price indices that are available.
+   * <p>
+   * If an index is present in the result of this method, then
+   * {@link #priceIndexValues(PriceIndex)} should not throw an exception.
    *
    * @return the set of Price indices
    */
   public abstract Set<PriceIndex> getPriceIndices();
+
+  /**
+   * Gets the set of indices that have time-series available.
+   * <p>
+   * Note that the method {@link #timeSeries(Index)} returns an empty time-series
+   * when the index is not known, thus this method is useful to determine if there
+   * actually is a time-series in the underlying data.
+   *
+   * @return the set of indices with time-series
+   */
+  public abstract Set<Index> getTimeSeriesIndices();
 
   //-------------------------------------------------------------------------
   /**
@@ -235,7 +255,7 @@ public interface RatesProvider
    * This returns time series for the index.
    * 
    * @param index  the index
-   * @return the time series
+   * @return the time series, empty if time-series not found
    */
   public abstract LocalDateDoubleTimeSeries timeSeries(Index index);
 

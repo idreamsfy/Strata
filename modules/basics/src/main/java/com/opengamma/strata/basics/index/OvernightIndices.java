@@ -11,6 +11,9 @@ import com.opengamma.strata.collect.named.ExtendedEnum;
  * Constants and implementations for standard Overnight rate indices.
  * <p>
  * Each constant returns a standard definition of the specified index.
+ * <p>
+ * If a floating rate has a constant here, then it is fully supported by Strata
+ * with example holiday calendar data.
  */
 public final class OvernightIndices {
   // constants are indirected via ENUM_LOOKUP to allow them to be replaced by config
@@ -24,33 +27,54 @@ public final class OvernightIndices {
   /**
    * The SONIA index for GBP.
    * <p>
-   * SONIA is an "Overnight" index.
+   * The Sterling Overnight Index Average (SONIA) index.
    */
   public static final OvernightIndex GBP_SONIA = OvernightIndex.of("GBP-SONIA");
   /**
+   * The SARON index for CHF.
+   * <p>
+   * The Swiss Average Overnight Rate (SARON) index.
+   */
+  public static final OvernightIndex CHF_SARON = OvernightIndex.of("CHF-SARON");
+  /**
    * The TOIS index for CHF.
    * <p>
-   * TOIS is a "Tomorrow/Next" index.
+   * The Tomorrow/Next Overnight Indexed Swaps (TOIS) index, which is a "Tomorrow/Next" index.
+   * 
+   * @deprecated Not published as of 2017-12-29
    */
+  @Deprecated
   public static final OvernightIndex CHF_TOIS = OvernightIndex.of("CHF-TOIS");
   /**
    * The EONIA index for EUR.
    * <p>
-   * EONIA is an "Overnight" index.
+   * The Euro OverNight Index Average (EONIA) index.
    */
   public static final OvernightIndex EUR_EONIA = OvernightIndex.of("EUR-EONIA");
   /**
+   * The ESTER index for EUR.
+   * <p>
+   * The Euro Short-Term Rate (ESTER) index.
+   */
+  public static final OvernightIndex EUR_ESTER = OvernightIndex.of("EUR-ESTER");
+  /**
    * The TONAR index for JPY.
    * <p>
-   * TONAR is an "Overnight" index.
+   * The Tokyo Overnight Average Rate (TONAR) index.
    */
   public static final OvernightIndex JPY_TONAR = OvernightIndex.of("JPY-TONAR");
   /**
    * The Fed Fund index for USD.
    * <p>
-   * Fed Fund is an "Overnight" index.
+   * The Federal Funds Rate index.
    */
   public static final OvernightIndex USD_FED_FUND = OvernightIndex.of("USD-FED-FUND");
+  /**
+   * The SOFR index for USD.
+   * <p>
+   * The Secured Overnight Financing Rate (SOFR) index.
+   */
+  public static final OvernightIndex USD_SOFR = OvernightIndex.of("USD-SOFR");
   /**
    * The AONIA index for AUD.
    * <p>
@@ -82,6 +106,12 @@ public final class OvernightIndices {
    */
   public static final OvernightIndex NOK_NOWA = OvernightIndex.of("NOK-NOWA");
   /**
+   * The NZIONA index for NZD.
+   * <p>
+   * The "New Zealand Overnight" index.
+   */
+  public static final OvernightIndex NZD_NZIONA = OvernightIndex.of("NZD-NZIONA");
+  /**
    * The PLONIA index for PLN.
    * <p>
    * The "Polish Overnight" index.
@@ -93,6 +123,12 @@ public final class OvernightIndices {
    * The "STIBOR T/N" index.
    */
   public static final OvernightIndex SEK_SIOR = OvernightIndex.of("SEK-SIOR");
+  /**
+   * The SABOR index for ZAR.
+   * <p>
+   * The "South African Benchmark Overnight Rate" index.
+   */
+  public static final OvernightIndex ZAR_SABOR = OvernightIndex.of("ZAR-SABOR");
 
   //-------------------------------------------------------------------------
   /**

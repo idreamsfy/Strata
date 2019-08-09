@@ -11,9 +11,9 @@ import static com.opengamma.strata.basics.currency.Currency.USD;
 import static com.opengamma.strata.basics.date.HolidayCalendarIds.GBLO;
 import static com.opengamma.strata.basics.index.FxIndices.GBP_USD_WM;
 import static com.opengamma.strata.collect.TestHelper.assertSerialization;
-import static com.opengamma.strata.collect.TestHelper.assertThrowsIllegalArg;
 import static com.opengamma.strata.collect.TestHelper.coverBeanEquals;
 import static com.opengamma.strata.collect.TestHelper.coverImmutableBean;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.testng.Assert.assertEquals;
 
 import java.util.Optional;
@@ -75,18 +75,21 @@ public class NotionalScheduleTest {
     NotionalSchedule test = NotionalSchedule.builder()
         .currency(USD)
         .amount(ValueSchedule.of(2000d))
+        .intermediateExchange(true)
+        .finalExchange(true)
         .fxReset(fxReset)
         .build();
     assertEquals(test.getCurrency(), USD);
     assertEquals(test.getAmount(), ValueSchedule.of(2000d));
     assertEquals(test.getFxReset(), Optional.of(fxReset));
-    assertEquals(test.isInitialExchange(), true);
+    assertEquals(test.isInitialExchange(), false);
     assertEquals(test.isIntermediateExchange(), true);
     assertEquals(test.isFinalExchange(), true);
   }
 
   public void test_builder_invalidCurrencyFxReset() {
-    assertThrowsIllegalArg(() -> NotionalSchedule.builder()
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> NotionalSchedule.builder()
         .currency(USD)
         .amount(ValueSchedule.of(2000d))
         .fxReset(FxResetCalculation.builder()
@@ -95,7 +98,8 @@ public class NotionalScheduleTest {
             .fixingDateOffset(DaysAdjustment.ofBusinessDays(-2, GBLO))
             .build())
         .build());
-    assertThrowsIllegalArg(() -> NotionalSchedule.builder()
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> NotionalSchedule.builder()
         .currency(EUR)
         .amount(ValueSchedule.of(2000d))
         .fxReset(FxResetCalculation.builder()
@@ -107,11 +111,16 @@ public class NotionalScheduleTest {
   }
 
   public void test_of_null() {
-    assertThrowsIllegalArg(() -> NotionalSchedule.of(null));
-    assertThrowsIllegalArg(() -> NotionalSchedule.of(null, 1000d));
-    assertThrowsIllegalArg(() -> NotionalSchedule.of(GBP, null));
-    assertThrowsIllegalArg(() -> NotionalSchedule.of(null, ValueSchedule.of(1000d)));
-    assertThrowsIllegalArg(() -> NotionalSchedule.of(null, null));
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> NotionalSchedule.of(null));
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> NotionalSchedule.of(null, 1000d));
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> NotionalSchedule.of(GBP, null));
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> NotionalSchedule.of(null, ValueSchedule.of(1000d)));
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> NotionalSchedule.of(null, null));
   }
 
   //-------------------------------------------------------------------------

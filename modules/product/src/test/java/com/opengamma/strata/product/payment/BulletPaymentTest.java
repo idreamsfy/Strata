@@ -8,16 +8,17 @@ package com.opengamma.strata.product.payment;
 import static com.opengamma.strata.basics.currency.Currency.GBP;
 import static com.opengamma.strata.basics.currency.Currency.USD;
 import static com.opengamma.strata.collect.TestHelper.assertSerialization;
-import static com.opengamma.strata.collect.TestHelper.assertThrowsIllegalArg;
 import static com.opengamma.strata.collect.TestHelper.coverBeanEquals;
 import static com.opengamma.strata.collect.TestHelper.coverImmutableBean;
 import static com.opengamma.strata.collect.TestHelper.date;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.testng.Assert.assertEquals;
 
 import java.time.LocalDate;
 
 import org.testng.annotations.Test;
 
+import com.google.common.collect.ImmutableSet;
 import com.opengamma.strata.basics.ReferenceData;
 import com.opengamma.strata.basics.currency.CurrencyAmount;
 import com.opengamma.strata.basics.currency.Payment;
@@ -48,10 +49,14 @@ public class BulletPaymentTest {
     assertEquals(test.getValue(), GBP_P1000);
     assertEquals(test.getDate(), AdjustableDate.of(DATE_2015_06_30));
     assertEquals(test.getCurrency(), GBP);
+    assertEquals(test.isCrossCurrency(), false);
+    assertEquals(test.allPaymentCurrencies(), ImmutableSet.of(GBP));
+    assertEquals(test.allCurrencies(), ImmutableSet.of(GBP));
   }
 
   public void test_builder_notNegative() {
-    assertThrowsIllegalArg(() -> BulletPayment.builder()
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> BulletPayment.builder()
         .payReceive(PayReceive.PAY)
         .value(GBP_M1000)
         .date(AdjustableDate.of(DATE_2015_06_30))

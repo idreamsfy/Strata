@@ -15,6 +15,7 @@ import static com.opengamma.strata.basics.date.HolidayCalendarIds.SAT_SUN;
 import static com.opengamma.strata.basics.schedule.Frequency.P3M;
 import static com.opengamma.strata.basics.schedule.Frequency.P6M;
 import static com.opengamma.strata.basics.schedule.StubConvention.SHORT_INITIAL;
+import static com.opengamma.strata.basics.schedule.StubConvention.SMART_INITIAL;
 import static com.opengamma.strata.collect.TestHelper.assertSerialization;
 import static com.opengamma.strata.collect.TestHelper.coverBeanEquals;
 import static com.opengamma.strata.collect.TestHelper.coverImmutableBean;
@@ -31,6 +32,7 @@ import java.util.List;
 import org.testng.annotations.Test;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.opengamma.strata.basics.ReferenceData;
 import com.opengamma.strata.basics.StandardId;
 import com.opengamma.strata.basics.date.BusinessDayAdjustment;
@@ -92,6 +94,9 @@ public class CdsIndexTest {
     assertEquals(test.getProtectionStart(), ProtectionStartOfDay.NONE);
     assertEquals(test.getSettlementDateOffset(), SETTLE_DAY_ADJ);
     assertEquals(test.getStepinDateOffset(), STEPIN_DAY_ADJ);
+    assertEquals(test.isCrossCurrency(), false);
+    assertEquals(test.allPaymentCurrencies(), ImmutableSet.of(JPY));
+    assertEquals(test.allCurrencies(), ImmutableSet.of(JPY));
   }
 
   public void test_of() {
@@ -104,7 +109,7 @@ public class CdsIndexTest {
         .endDateBusinessDayAdjustment(BusinessDayAdjustment.NONE)
         .frequency(P3M)
         .rollConvention(RollConventions.NONE)
-        .stubConvention(SHORT_INITIAL)
+        .stubConvention(SMART_INITIAL)
         .build();
     assertEquals(PRODUCT.getPaymentSchedule(), expected);
     assertEquals(PRODUCT.getBuySell(), BUY);

@@ -8,8 +8,9 @@ package com.opengamma.strata.product.common;
 import org.joda.convert.FromString;
 import org.joda.convert.ToString;
 
-import com.google.common.base.CaseFormat;
-import com.opengamma.strata.collect.ArgChecker;
+import com.opengamma.strata.basics.currency.CurrencyAmount;
+import com.opengamma.strata.collect.named.EnumNames;
+import com.opengamma.strata.collect.named.NamedEnum;
 
 /**
  * Flag indicating whether a financial instrument is "pay" or "receive".
@@ -18,7 +19,7 @@ import com.opengamma.strata.collect.ArgChecker;
  * For example, a swap typically has two legs, a pay leg, where payments are made
  * to the counterparty, and a receive leg, where payments are received.
  */
-public enum PayReceive {
+public enum PayReceive implements NamedEnum {
 
   /**
    * Pay.
@@ -29,18 +30,23 @@ public enum PayReceive {
    */
   RECEIVE;
 
+  // helper for name conversions
+  private static final EnumNames<PayReceive> NAMES = EnumNames.of(PayReceive.class);
+
   //-------------------------------------------------------------------------
   /**
-   * Obtains an instance from the specified unique name.
+   * Obtains an instance from the specified name.
+   * <p>
+   * Parsing handles the mixed case form produced by {@link #toString()} and
+   * the upper and lower case variants of the enum constant name.
    * 
-   * @param uniqueName  the unique name
+   * @param name  the name to parse
    * @return the type
    * @throws IllegalArgumentException if the name is not known
    */
   @FromString
-  public static PayReceive of(String uniqueName) {
-    ArgChecker.notNull(uniqueName, "uniqueName");
-    return valueOf(CaseFormat.UPPER_CAMEL.to(CaseFormat.UPPER_UNDERSCORE, uniqueName));
+  public static PayReceive of(String name) {
+    return NAMES.parse(name);
   }
 
   /**
@@ -71,16 +77,35 @@ public enum PayReceive {
   /**
    * Normalizes the specified notional amount using this pay/receive rule.
    * <p>
-   * This returns a negative signed amount if this is 'Receive', and a positive
-   * signed amount if this is 'Pay'. This effectively normalizes the input notional
-   * to the pay/receive sign conventions of this library.
+   * This returns a negative signed amount if this is 'Pay', and a positive
+   * signed amount if this is 'Receive'. This effectively normalizes the input
+   * notional to the pay/receive sign conventions of this library.
+   * The negative form of zero will never be returned.
    * 
    * @param amount  the amount to adjust
    * @return the adjusted amount
    */
   public double normalize(double amount) {
     double normalized = Math.abs(amount);
+    if (normalized == 0) {
+      return 0;
+    }
     return isPay() ? -normalized : normalized;
+  }
+
+  /**
+   * Normalizes the specified amount using this pay/receive rule.
+   * <p>
+   * This returns a negative signed amount if this is 'Pay', and a positive
+   * signed amount if this is 'Receive'. This effectively normalizes the input
+   * notional to the pay/receive sign conventions of this library.
+   * The negative form of zero will never be returned.
+   * 
+   * @param amount  the amount to adjust
+   * @return the adjusted amount
+   */
+  public CurrencyAmount normalize(CurrencyAmount amount) {
+    return isPay() ? amount.negative() : amount.positive();
   }
 
   //-------------------------------------------------------------------------
@@ -104,14 +129,24 @@ public enum PayReceive {
 
   //-------------------------------------------------------------------------
   /**
-   * Returns the formatted unique name of the type.
+   * Supplies the opposite of this value.
+   *
+   * @return the opposite value
+   */
+  public PayReceive opposite() {
+    return isPay() ? RECEIVE : PAY;
+  }
+
+  //-------------------------------------------------------------------------
+  /**
+   * Returns the formatted name of the type.
    * 
    * @return the formatted string representing the type
    */
   @ToString
   @Override
   public String toString() {
-    return CaseFormat.UPPER_UNDERSCORE.to(CaseFormat.UPPER_CAMEL, name());
+    return NAMES.format(this);
   }
 
 }

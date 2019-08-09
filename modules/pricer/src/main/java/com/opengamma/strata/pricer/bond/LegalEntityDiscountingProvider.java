@@ -8,7 +8,6 @@ package com.opengamma.strata.pricer.bond;
 import java.time.LocalDate;
 import java.util.Optional;
 
-import com.opengamma.strata.basics.StandardId;
 import com.opengamma.strata.basics.currency.Currency;
 import com.opengamma.strata.data.MarketDataId;
 import com.opengamma.strata.data.MarketDataName;
@@ -17,6 +16,7 @@ import com.opengamma.strata.market.curve.CurveName;
 import com.opengamma.strata.market.param.CurrencyParameterSensitivities;
 import com.opengamma.strata.market.sensitivity.PointSensitivities;
 import com.opengamma.strata.pricer.rate.RatesProvider;
+import com.opengamma.strata.product.LegalEntityId;
 import com.opengamma.strata.product.SecurityId;
 
 /**
@@ -58,7 +58,23 @@ public interface LegalEntityDiscountingProvider {
    */
   public abstract RepoCurveDiscountFactors repoCurveDiscountFactors(
       SecurityId securityId,
-      StandardId issuerId,
+      LegalEntityId issuerId,
+      Currency currency);
+
+  /**
+   * Gets the discount factors from a repo curve based on the issuer ID and currency.
+   * <p>
+   * This searches for a curve associated with the issuer ID and currency.
+   * <p>
+   * If the valuation date is on or after the specified date, the discount factor is 1.
+   * 
+   * @param issuerId  the standard ID of legal entity to get the discount factors for
+   * @param currency  the currency to get the discount factors for
+   * @return the discount factors
+   * @throws IllegalArgumentException if the discount factors are not available
+   */
+  public abstract RepoCurveDiscountFactors repoCurveDiscountFactors(
+      LegalEntityId issuerId,
       Currency currency);
 
   /**
@@ -73,7 +89,7 @@ public interface LegalEntityDiscountingProvider {
    * @return the discount factors
    * @throws IllegalArgumentException if the discount factors are not available
    */
-  public abstract IssuerCurveDiscountFactors issuerCurveDiscountFactors(StandardId issuerId, Currency currency);
+  public abstract IssuerCurveDiscountFactors issuerCurveDiscountFactors(LegalEntityId issuerId, Currency currency);
 
   //-------------------------------------------------------------------------
   /**

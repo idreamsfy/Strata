@@ -12,15 +12,16 @@ import static com.opengamma.strata.basics.date.DayCounts.ACT_360;
 import static com.opengamma.strata.basics.date.DayCounts.ACT_365F;
 import static com.opengamma.strata.basics.date.HolidayCalendarIds.GBLO;
 import static com.opengamma.strata.collect.TestHelper.assertSerialization;
-import static com.opengamma.strata.collect.TestHelper.assertThrowsIllegalArg;
 import static com.opengamma.strata.collect.TestHelper.coverBeanEquals;
 import static com.opengamma.strata.collect.TestHelper.coverImmutableBean;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.testng.Assert.assertEquals;
 
 import java.time.LocalDate;
 
 import org.testng.annotations.Test;
 
+import com.google.common.collect.ImmutableSet;
 import com.opengamma.strata.basics.ReferenceData;
 import com.opengamma.strata.basics.date.BusinessDayAdjustment;
 import com.opengamma.strata.product.common.BuySell;
@@ -60,10 +61,14 @@ public class TermDepositTest {
     assertEquals(test.getNotional(), NOTIONAL);
     assertEquals(test.getRate(), RATE);
     assertEquals(test.getCurrency(), GBP);
+    assertEquals(test.isCrossCurrency(), false);
+    assertEquals(test.allPaymentCurrencies(), ImmutableSet.of(GBP));
+    assertEquals(test.allCurrencies(), ImmutableSet.of(GBP));
   }
 
   public void test_builder_wrongDates() {
-    assertThrowsIllegalArg(() -> TermDeposit.builder()
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> TermDeposit.builder()
         .buySell(SELL)
         .startDate(START_DATE)
         .endDate(LocalDate.of(2014, 10, 19))

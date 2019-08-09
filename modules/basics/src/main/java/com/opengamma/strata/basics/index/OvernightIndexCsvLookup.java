@@ -30,7 +30,7 @@ import com.opengamma.strata.collect.named.NamedLookup;
 final class OvernightIndexCsvLookup
     implements NamedLookup<OvernightIndex> {
 
-  // http://www.opengamma.com/sites/default/files/interest-rate-instruments-and-market-conventions.pdf
+  // https://developers.opengamma.com/quantitative-research/Interest-Rate-Instruments-and-Market-Conventions.pdf
 
   /**
    * The logger.
@@ -49,6 +49,7 @@ final class OvernightIndexCsvLookup
   private static final String FIXING_CALENDAR_FIELD = "Fixing Calendar";
   private static final String PUBLICATION_DAYS_FIELD = "Publication Offset Days";
   private static final String EFFECTIVE_DAYS_FIELD = "Effective Offset Days";
+  private static final String FIXED_LEG_DAY_COUNT = "Fixed Leg Day Count";
 
   /**
    * The cache by name.
@@ -70,13 +71,14 @@ final class OvernightIndexCsvLookup
   private static ImmutableMap<String, OvernightIndex> loadFromCsv() {
     List<ResourceLocator> resources = ResourceConfig.orderedResources("OvernightIndexData.csv");
     Map<String, OvernightIndex> map = new HashMap<>();
+    // files are ordered lowest priority to highest, thus Map::put is used
     for (ResourceLocator resource : resources) {
       try {
         CsvFile csv = CsvFile.of(resource.getCharSource(), true);
         for (CsvRow row : csv.rows()) {
           OvernightIndex parsed = parseOvernightIndex(row);
           map.put(parsed.getName(), parsed);
-          map.putIfAbsent(parsed.getName().toUpperCase(Locale.ENGLISH), parsed);
+          map.put(parsed.getName().toUpperCase(Locale.ENGLISH), parsed);
         }
       } catch (RuntimeException ex) {
         log.log(Level.SEVERE, "Error processing resource as Overnight Index CSV file: " + resource, ex);
@@ -87,13 +89,14 @@ final class OvernightIndexCsvLookup
   }
 
   private static OvernightIndex parseOvernightIndex(CsvRow row) {
-    String name = row.getField(NAME_FIELD);
-    Currency currency = Currency.parse(row.getField(CURRENCY_FIELD));
-    boolean active = Boolean.parseBoolean(row.getField(ACTIVE_FIELD));
-    DayCount dayCount = DayCount.of(row.getField(DAY_COUNT_FIELD));
-    HolidayCalendarId fixingCal = HolidayCalendarId.of(row.getField(FIXING_CALENDAR_FIELD));
-    int publicationDays = Integer.parseInt(row.getField(PUBLICATION_DAYS_FIELD));
-    int effectiveDays = Integer.parseInt(row.getField(EFFECTIVE_DAYS_FIELD));
+    String name = row.getValue(NAME_FIELD);
+    Currency currency = Currency.parse(row.getValue(CURRENCY_FIELD));
+    boolean active = Boolean.parseBoolean(row.getValue(ACTIVE_FIELD));
+    DayCount dayCount = DayCount.of(row.getValue(DAY_COUNT_FIELD));
+    HolidayCalendarId fixingCal = HolidayCalendarId.of(row.getValue(FIXING_CALENDAR_FIELD));
+    int publicationDays = Integer.parseInt(row.getValue(PUBLICATION_DAYS_FIELD));
+    int effectiveDays = Integer.parseInt(row.getValue(EFFECTIVE_DAYS_FIELD));
+    DayCount fixedLegDayCount = DayCount.of(row.getValue(FIXED_LEG_DAY_COUNT));
     // build result
     return ImmutableOvernightIndex.builder()
         .name(name)
@@ -103,6 +106,7 @@ final class OvernightIndexCsvLookup
         .fixingCalendar(fixingCal)
         .publicationDateOffset(publicationDays)
         .effectiveDateOffset(effectiveDays)
+        .defaultFixedLegDayCount(fixedLegDayCount)
         .build();
   }
 

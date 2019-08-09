@@ -17,9 +17,11 @@ import org.testng.annotations.Test;
 import com.google.common.collect.ImmutableSet;
 import com.opengamma.strata.basics.ReferenceData;
 import com.opengamma.strata.basics.currency.Currency;
+import com.opengamma.strata.product.PositionInfo;
 import com.opengamma.strata.product.SecurityId;
 import com.opengamma.strata.product.SecurityInfo;
 import com.opengamma.strata.product.SecurityPriceInfo;
+import com.opengamma.strata.product.TradeInfo;
 import com.opengamma.strata.product.common.PutCall;
 
 /**
@@ -37,6 +39,15 @@ public class EtdOptionSecurityTest {
     assertEquals(test.getCurrency(), Currency.GBP);
     assertEquals(test.getUnderlyingIds(), ImmutableSet.of());
     assertEquals(test.createProduct(REF_DATA), test);
+    assertEquals(
+        test.createTrade(TradeInfo.empty(), 1, 2, ReferenceData.empty()),
+        EtdOptionTrade.of(TradeInfo.empty(), test, 1, 2));
+    assertEquals(
+        test.createPosition(PositionInfo.empty(), 1, ReferenceData.empty()),
+        EtdOptionPosition.ofNet(PositionInfo.empty(), test, 1));
+    assertEquals(
+        test.createPosition(PositionInfo.empty(), 1, 2, ReferenceData.empty()),
+        EtdOptionPosition.ofLongShort(PositionInfo.empty(), test, 1, 2));
   }
 
   //-------------------------------------------------------------------------
@@ -47,6 +58,12 @@ public class EtdOptionSecurityTest {
 
   public void test_serialization() {
     assertSerialization(sut());
+  }
+
+  //-------------------------------------------------------------------------
+  public void test_summaryDescription() {
+    assertEquals(sut().summaryDescription(), "Jun17 P2");
+    assertEquals(sut2().summaryDescription(), "Sep17W2 V4 C3");
   }
 
   //-------------------------------------------------------------------------
@@ -66,8 +83,10 @@ public class EtdOptionSecurityTest {
         .contractSpecId(EtdContractSpecId.of("test", "234"))
         .expiry(YearMonth.of(2017, 9))
         .variant(EtdVariant.ofWeekly(2))
+        .version(4)
         .putCall(PutCall.CALL)
         .strikePrice(3)
+        .underlyingExpiryMonth(YearMonth.of(2017, 12))
         .build();
   }
 

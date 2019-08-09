@@ -67,7 +67,7 @@ public class CurveSensitivityUtils {
    * Computes the row corresponding to a trade for the Jacobian matrix.
    * 
    * @param curveOrder  the curve order
-   * @param sensitivities  the sensitivities 
+   * @param parameterSensitivities  the sensitivities 
    * @param ccy  the currency common to all sensitivities
    * @return the row
    */
@@ -241,7 +241,7 @@ public class CurveSensitivityUtils {
       int indexSensitivityDate = 0;
       while (sensitivityDate.isAfter(targetDates.get(indexSensitivityDate))) {
         indexSensitivityDate++;
-      } // 'indexSensitivityDate' contains the index of the node after the sensitivity date 
+      } // 'indexSensitivityDate' contains the index of the node after the sensitivity date
       long intervalLength =
           targetDates.get(indexSensitivityDate).toEpochDay() - targetDates.get(indexSensitivityDate - 1).toEpochDay();
       double weight =

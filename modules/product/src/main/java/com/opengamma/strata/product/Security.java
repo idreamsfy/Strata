@@ -68,6 +68,15 @@ public interface Security {
 
   //-------------------------------------------------------------------------
   /**
+   * Returns an instance with the specified info.
+   * 
+   * @param info  the new info
+   * @return the instance with the specified info
+   */
+  public abstract Security withInfo(SecurityInfo info);
+
+  //-------------------------------------------------------------------------
+  /**
    * Creates the product associated with this security.
    * <p>
    * The product of a security is distinct from the security.
@@ -92,10 +101,44 @@ public interface Security {
    * @param refData  the reference data used to find underlying securities
    * @return the trade
    */
-  public abstract Trade createTrade(
+  public abstract SecurityQuantityTrade createTrade(
       TradeInfo tradeInfo,
       double quantity,
       double tradePrice,
+      ReferenceData refData);
+
+  /**
+   * Creates a position based on this security from a net quantity.
+   * <p>
+   * This creates a position of a suitable type for this security.
+   * 
+   * @param positionInfo  the position information
+   * @param quantity  the number of contracts in the position
+   * @param refData  the reference data used to find underlying securities
+   * @return the position
+   */
+  public abstract Position createPosition(
+      PositionInfo positionInfo,
+      double quantity,
+      ReferenceData refData);
+
+  /**
+   * Creates a position based on this security from a long and short quantity.
+   * <p>
+   * This creates a position of a suitable type for this security.
+   * <p>
+   * The long quantity and short quantity must be zero or positive, not negative.
+   * 
+   * @param positionInfo  the position information
+   * @param longQuantity  the long quantity in the position
+   * @param shortQuantity  the short quantity in the position
+   * @param refData  the reference data used to find underlying securities
+   * @return the position
+   */
+  public abstract Position createPosition(
+      PositionInfo positionInfo,
+      double longQuantity,
+      double shortQuantity,
       ReferenceData refData);
 
 }

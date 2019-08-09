@@ -6,9 +6,9 @@
 package com.opengamma.strata.product;
 
 import static com.opengamma.strata.collect.TestHelper.assertSerialization;
-import static com.opengamma.strata.collect.TestHelper.assertThrowsIllegalArg;
 import static com.opengamma.strata.collect.TestHelper.coverBeanEquals;
 import static com.opengamma.strata.collect.TestHelper.coverImmutableBean;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.testng.Assert.assertEquals;
 
 import java.util.Optional;
@@ -16,6 +16,7 @@ import java.util.Optional;
 import org.testng.annotations.Test;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.opengamma.strata.basics.StandardId;
 
 /**
@@ -32,20 +33,23 @@ public class PositionInfoTest {
         .id(ID)
         .build();
     assertEquals(test.getId(), Optional.of(ID));
+    assertEquals(test.getAttributeTypes(), ImmutableSet.of());
     assertEquals(test.getAttributes(), ImmutableMap.of());
-    assertThrowsIllegalArg(() -> test.getAttribute(PositionAttributeType.DESCRIPTION));
-    assertEquals(test.findAttribute(PositionAttributeType.DESCRIPTION), Optional.empty());
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> test.getAttribute(AttributeType.DESCRIPTION));
+    assertEquals(test.findAttribute(AttributeType.DESCRIPTION), Optional.empty());
   }
 
-  public void test_builder_withAttribute() {
+  public void test_builder_withers() {
     PositionInfo test = PositionInfo.builder()
-        .id(ID)
         .build()
-        .withAttribute(PositionAttributeType.DESCRIPTION, "A");
+        .withId(ID)
+        .withAttribute(AttributeType.DESCRIPTION, "A");
     assertEquals(test.getId(), Optional.of(ID));
-    assertEquals(test.getAttributes(), ImmutableMap.of(PositionAttributeType.DESCRIPTION, "A"));
-    assertEquals(test.getAttribute(PositionAttributeType.DESCRIPTION), "A");
-    assertEquals(test.findAttribute(PositionAttributeType.DESCRIPTION), Optional.of("A"));
+    assertEquals(test.getAttributeTypes(), ImmutableSet.of(AttributeType.DESCRIPTION));
+    assertEquals(test.getAttributes(), ImmutableMap.of(AttributeType.DESCRIPTION, "A"));
+    assertEquals(test.getAttribute(AttributeType.DESCRIPTION), "A");
+    assertEquals(test.findAttribute(AttributeType.DESCRIPTION), Optional.of("A"));
   }
 
   public void test_toBuilder() {
@@ -63,7 +67,7 @@ public class PositionInfoTest {
   public void coverage() {
     PositionInfo test = PositionInfo.builder()
         .id(ID)
-        .addAttribute(PositionAttributeType.DESCRIPTION, "A")
+        .addAttribute(AttributeType.DESCRIPTION, "A")
         .build();
     coverImmutableBean(test);
     PositionInfo test2 = PositionInfo.builder()
@@ -75,7 +79,7 @@ public class PositionInfoTest {
   public void test_serialization() {
     PositionInfo test = PositionInfo.builder()
         .id(ID)
-        .addAttribute(PositionAttributeType.DESCRIPTION, "A")
+        .addAttribute(AttributeType.DESCRIPTION, "A")
         .build();
     assertSerialization(test);
   }

@@ -152,6 +152,7 @@ public class RateCalculationSwapLegTest {
     test.collectIndices(builder);
     assertEquals(builder.build(), ImmutableSet.of(GBP_LIBOR_3M));
     assertEquals(test.allIndices(), ImmutableSet.of(GBP_LIBOR_3M));
+    assertEquals(test.allCurrencies(), ImmutableSet.of(GBP));
   }
 
   public void test_collectIndices_fxReset() {
@@ -170,6 +171,7 @@ public class RateCalculationSwapLegTest {
         .notionalSchedule(NotionalSchedule.builder()
             .currency(GBP)
             .amount(ValueSchedule.of(1000d))
+            .finalExchange(true)
             .fxReset(FxResetCalculation.builder()
                 .referenceCurrency(EUR)
                 .index(EUR_GBP_ECB)
@@ -186,6 +188,7 @@ public class RateCalculationSwapLegTest {
     test.collectIndices(builder);
     assertEquals(builder.build(), ImmutableSet.of(GBP_LIBOR_3M, EUR_GBP_ECB));
     assertEquals(test.allIndices(), ImmutableSet.of(GBP_LIBOR_3M, EUR_GBP_ECB));
+    assertEquals(test.allCurrencies(), ImmutableSet.of(GBP, EUR));
   }
 
   //-------------------------------------------------------------------------
@@ -504,6 +507,9 @@ public class RateCalculationSwapLegTest {
                 .index(EUR_GBP_ECB)
                 .fixingDateOffset(MINUS_TWO_DAYS)
                 .build())
+            .initialExchange(true)
+            .intermediateExchange(true)
+            .finalExchange(true)
             .build())
         .calculation(FixedRateCalculation.builder()
             .dayCount(ACT_365F)

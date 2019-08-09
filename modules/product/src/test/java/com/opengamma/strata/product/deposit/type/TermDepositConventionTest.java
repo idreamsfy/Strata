@@ -13,10 +13,10 @@ import static com.opengamma.strata.basics.date.DayCounts.ACT_365F;
 import static com.opengamma.strata.basics.date.HolidayCalendarIds.EUTA;
 import static com.opengamma.strata.basics.date.HolidayCalendarIds.GBLO;
 import static com.opengamma.strata.collect.TestHelper.assertSerialization;
-import static com.opengamma.strata.collect.TestHelper.assertThrowsIllegalArg;
 import static com.opengamma.strata.collect.TestHelper.coverBeanEquals;
 import static com.opengamma.strata.collect.TestHelper.coverImmutableBean;
 import static com.opengamma.strata.collect.TestHelper.coverPrivateConstructor;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.testng.Assert.assertEquals;
 
 import java.time.LocalDate;
@@ -106,7 +106,7 @@ public class TermDepositConventionTest {
 
   //-------------------------------------------------------------------------
   @DataProvider(name = "name")
-  static Object[][] data_name() {
+  public static Object[][] data_name() {
     return new Object[][] {
         {TermDepositConventions.USD_DEPOSIT_T2, "USD-Deposit-T2"},
         {TermDepositConventions.EUR_DEPOSIT_T2, "EUR-Deposit-T2"},
@@ -137,16 +137,18 @@ public class TermDepositConventionTest {
   }
 
   public void test_of_lookup_notFound() {
-    assertThrowsIllegalArg(() -> TermDepositConvention.of("Rubbish"));
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> TermDepositConvention.of("Rubbish"));
   }
 
   public void test_of_lookup_null() {
-    assertThrowsIllegalArg(() -> TermDepositConvention.of((String) null));
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> TermDepositConvention.of((String) null));
   }
 
   //-------------------------------------------------------------------------
   @DataProvider(name = "spotAndConv")
-  static Object[][] data_spotAndConv() {
+  public static Object[][] data_spotAndConv() {
     return new Object[][] {
         {TermDepositConventions.GBP_DEPOSIT_T0, 0, BusinessDayConventions.MODIFIED_FOLLOWING},
         {TermDepositConventions.GBP_SHORT_DEPOSIT_T0, 0, BusinessDayConventions.FOLLOWING},

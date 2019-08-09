@@ -14,20 +14,25 @@ import static com.opengamma.strata.basics.date.BusinessDayConventions.NO_ADJUST;
 import static com.opengamma.strata.basics.date.BusinessDayConventions.PRECEDING;
 import static com.opengamma.strata.collect.TestHelper.assertJodaConvert;
 import static com.opengamma.strata.collect.TestHelper.assertSerialization;
-import static com.opengamma.strata.collect.TestHelper.assertThrowsIllegalArg;
 import static com.opengamma.strata.collect.TestHelper.coverEnum;
 import static com.opengamma.strata.collect.TestHelper.coverPrivateConstructor;
 import static java.time.DayOfWeek.SATURDAY;
 import static java.time.DayOfWeek.SUNDAY;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.testng.Assert.assertEquals;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.time.LocalDate;
+import java.util.Locale;
+import java.util.Optional;
 
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.opengamma.strata.collect.named.ExtendedEnum;
 
 /**
  * Test {@link BusinessDayConvention}.
@@ -58,7 +63,7 @@ public class BusinessDayConventionTest {
 
   //-------------------------------------------------------------------------
   @DataProvider(name = "convention")
-  static Object[][] data_convention() {
+  public static Object[][] data_convention() {
     return new Object[][] {
         {NO_ADJUST, FRI_2014_07_11, FRI_2014_07_11},
         {NO_ADJUST, SAT_2014_07_12, SAT_2014_07_12},
@@ -168,7 +173,7 @@ public class BusinessDayConventionTest {
 
   //-------------------------------------------------------------------------
   @DataProvider(name = "name")
-  static Object[][] data_name() {
+  public static Object[][] data_name() {
     return new Object[][] {
         {NO_ADJUST, "NoAdjust"},
         {FOLLOWING, "Following"},
@@ -196,17 +201,82 @@ public class BusinessDayConventionTest {
   }
 
   @Test(dataProvider = "name")
+  public void test_lenientLookup_standardNames(BusinessDayConvention convention, String name) {
+    assertEquals(BusinessDayConvention.extendedEnum().findLenient(name.toLowerCase(Locale.ENGLISH)).get(), convention);
+  }
+
+  @Test(dataProvider = "name")
   public void test_extendedEnum(BusinessDayConvention convention, String name) {
     ImmutableMap<String, BusinessDayConvention> map = BusinessDayConvention.extendedEnum().lookupAll();
     assertEquals(map.get(name), convention);
   }
 
   public void test_of_lookup_notFound() {
-    assertThrowsIllegalArg(() -> BusinessDayConvention.of("Rubbish"));
+    assertThatIllegalArgumentException().isThrownBy(() -> BusinessDayConvention.of("Rubbish"));
   }
 
   public void test_of_lookup_null() {
-    assertThrowsIllegalArg(() -> BusinessDayConvention.of(null));
+    assertThatIllegalArgumentException().isThrownBy(() -> BusinessDayConvention.of(null));
+  }
+
+  //-------------------------------------------------------------------------
+  @DataProvider(name = "lenient")
+  public static Object[][] data_lenient() {
+    return new Object[][] {
+        {"FOLLOWING", FOLLOWING},
+        {"MODIFIED_FOLLOWING", MODIFIED_FOLLOWING},
+        {"MODIFIED_FOLLOWING_BI_MONTHLY", MODIFIED_FOLLOWING_BI_MONTHLY},
+        {"PRECEDING", PRECEDING},
+        {"MODIFIED_PRECEDING", MODIFIED_PRECEDING},
+
+        {"F", FOLLOWING},
+        {"M", MODIFIED_FOLLOWING},
+        {"MF", MODIFIED_FOLLOWING},
+        {"P", PRECEDING},
+        {"MP", MODIFIED_PRECEDING},
+
+        {"Follow", FOLLOWING},
+        {"None", NO_ADJUST},
+        {"Modified", MODIFIED_FOLLOWING},
+        {"Mod", MODIFIED_FOLLOWING},
+
+        {"Modified Following", MODIFIED_FOLLOWING},
+        {"ModifiedFollowing", MODIFIED_FOLLOWING},
+        {"Modified Follow", MODIFIED_FOLLOWING},
+        {"ModifiedFollow", MODIFIED_FOLLOWING},
+        {"Mod Following", MODIFIED_FOLLOWING},
+        {"ModFollowing", MODIFIED_FOLLOWING},
+        {"Mod Follow", MODIFIED_FOLLOWING},
+        {"ModFollow", MODIFIED_FOLLOWING},
+
+        {"Modified Preceding", MODIFIED_PRECEDING},
+        {"ModifiedPreceding", MODIFIED_PRECEDING},
+        {"Mod Preceding", MODIFIED_PRECEDING},
+        {"ModPreceding", MODIFIED_PRECEDING},
+
+        {"ModFollowingBiMonthly", MODIFIED_FOLLOWING_BI_MONTHLY},
+    };
+  }
+
+  @Test(dataProvider = "lenient")
+  public void test_lenientLookup_specialNames(String name, BusinessDayConvention convention) {
+    assertEquals(BusinessDayConvention.extendedEnum().findLenient(name.toLowerCase(Locale.ENGLISH)), Optional.of(convention));
+  }
+
+  public void test_lenientLookup_constants() throws IllegalAccessException {
+    Field[] fields = BusinessDayConventions.class.getDeclaredFields();
+    for (Field field : fields) {
+      if (Modifier.isPublic(field.getModifiers()) &&
+          Modifier.isStatic(field.getModifiers()) &&
+          Modifier.isFinal(field.getModifiers())) {
+
+        String name = field.getName();
+        Object value = field.get(null);
+        ExtendedEnum<BusinessDayConvention> ext = BusinessDayConvention.extendedEnum();
+        assertEquals(ext.findLenient(name), Optional.of(value));
+        assertEquals(ext.findLenient(name.toLowerCase(Locale.ENGLISH)), Optional.of(value));
+      }
+    }
   }
 
   //-------------------------------------------------------------------------

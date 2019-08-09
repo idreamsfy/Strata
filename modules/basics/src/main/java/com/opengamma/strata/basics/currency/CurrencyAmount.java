@@ -7,14 +7,12 @@ package com.opengamma.strata.basics.currency;
 
 import java.io.Serializable;
 import java.math.BigDecimal;
-import java.util.List;
 import java.util.function.DoubleUnaryOperator;
 
 import org.joda.beans.JodaBeanUtils;
 import org.joda.convert.FromString;
 import org.joda.convert.ToString;
 
-import com.google.common.base.Splitter;
 import com.google.common.collect.ComparisonChain;
 import com.google.common.math.DoubleMath;
 import com.opengamma.strata.collect.ArgChecker;
@@ -76,10 +74,13 @@ public final class CurrencyAmount
 
   /**
    * Obtains an instance of {@code CurrencyAmount} for the specified currency and amount.
+   * <p>
+   * If the negative form of zero is passed in, it will be converted to positive zero.
    *
    * @param currency  the currency the amount is in
    * @param amount  the amount of the currency to represent
    * @return the currency amount
+   * @throws IllegalArgumentException if the amount is {@code NaN}
    */
   public static CurrencyAmount of(Currency currency, double amount) {
     return new CurrencyAmount(currency, amount);
@@ -91,11 +92,13 @@ public final class CurrencyAmount
    * <p>
    * A currency is uniquely identified by ISO-4217 three letter code.
    * This method creates the currency if it is not known.
+   * <p>
+   * If the negative form of zero is passed in, it will be converted to positive zero.
    *
    * @param currencyCode  the three letter currency code, ASCII and upper case
    * @param amount  the amount of the currency to represent
    * @return the currency amount
-   * @throws IllegalArgumentException if the currency code is invalid
+   * @throws IllegalArgumentException if the currency code is invalid, or if the amount is {@code NaN}
    */
   public static CurrencyAmount of(String currencyCode, double amount) {
     return of(Currency.of(currencyCode), amount);
@@ -113,14 +116,20 @@ public final class CurrencyAmount
    */
   @FromString
   public static CurrencyAmount parse(String amountStr) {
-    ArgChecker.notNull(amountStr, "amountStr");
-    List<String> split = Splitter.on(' ').splitToList(amountStr);
-    if (split.size() != 2) {
+    // this method has had some performance optimizations applied
+    if (amountStr == null || amountStr.length() <= 4 || amountStr.charAt(3) != ' ') {
       throw new IllegalArgumentException("Unable to parse amount, invalid format: " + amountStr);
     }
+
+    String currencyCode = amountStr.substring(0, 3);
+    String doubleString = amountStr.substring(4);
+    if (doubleString.indexOf(' ') != -1) {
+      throw new IllegalArgumentException("Unable to parse amount, invalid format: " + amountStr);
+    }
+
     try {
-      Currency cur = Currency.parse(split.get(0));
-      double amount = Double.parseDouble(split.get(1));
+      Currency cur = Currency.parse(currencyCode);
+      double amount = Double.parseDouble(doubleString);
       return new CurrencyAmount(cur, amount);
     } catch (RuntimeException ex) {
       throw new IllegalArgumentException("Unable to parse amount: " + amountStr, ex);
@@ -136,7 +145,7 @@ public final class CurrencyAmount
    */
   private CurrencyAmount(Currency currency, double amount) {
     this.currency = ArgChecker.notNull(currency, "currency");
-    this.amount = amount;
+    this.amount = ArgChecker.notNaN(amount + 0d, "amount");  // this weird addition removes negative zero
   }
 
   //-------------------------------------------------------------------------
@@ -264,6 +273,38 @@ public final class CurrencyAmount
 
   //-------------------------------------------------------------------------
   /**
+   * Checks if the amount is zero.
+   * 
+   * @return true if zero
+   */
+  public boolean isZero() {
+    return amount == 0;
+  }
+
+  /**
+   * Checks if the amount is positive.
+   * <p>
+   * Zero and negative amounts return false.
+   * 
+   * @return true if positive
+   */
+  public boolean isPositive() {
+    return amount > 0;
+  }
+
+  /**
+   * Checks if the amount is negative.
+   * <p>
+   * Zero and positive amounts return false.
+   * 
+   * @return true if negative
+   */
+  public boolean isNegative() {
+    return amount < 0;
+  }
+
+  //-------------------------------------------------------------------------
+  /**
    * Returns a copy of this {@code CurrencyAmount} with the amount negated.
    * <p>
    * This takes this amount and negates it. If the amount is 0.0 or -0.0 the negated amount is 0.0.
@@ -304,7 +345,6 @@ public final class CurrencyAmount
   }
 
   //-------------------------------------------------------------------------
-
   /**
    * Converts the current instance of {@link CurrencyAmount} to the equivalent {@link Money} instance.
    * This will result into loss of precision in the amount, since {@link Money} is storing the amount

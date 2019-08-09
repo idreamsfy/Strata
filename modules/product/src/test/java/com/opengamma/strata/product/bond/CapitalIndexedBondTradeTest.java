@@ -8,11 +8,11 @@ package com.opengamma.strata.product.bond;
 import static com.opengamma.strata.basics.currency.Currency.USD;
 import static com.opengamma.strata.basics.date.HolidayCalendarIds.USNY;
 import static com.opengamma.strata.collect.TestHelper.assertSerialization;
-import static com.opengamma.strata.collect.TestHelper.assertThrows;
-import static com.opengamma.strata.collect.TestHelper.assertThrowsIllegalArg;
 import static com.opengamma.strata.collect.TestHelper.coverBeanEquals;
 import static com.opengamma.strata.collect.TestHelper.coverImmutableBean;
 import static com.opengamma.strata.collect.TestHelper.date;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
+import static org.assertj.core.api.Assertions.assertThatIllegalStateException;
 import static org.testng.Assert.assertEquals;
 
 import java.time.LocalDate;
@@ -20,9 +20,13 @@ import java.time.LocalDate;
 import org.testng.annotations.Test;
 
 import com.opengamma.strata.basics.ReferenceData;
+import com.opengamma.strata.basics.currency.Currency;
 import com.opengamma.strata.basics.currency.Payment;
 import com.opengamma.strata.basics.date.BusinessDayAdjustment;
 import com.opengamma.strata.basics.date.BusinessDayConventions;
+import com.opengamma.strata.product.PortfolioItemSummary;
+import com.opengamma.strata.product.PortfolioItemType;
+import com.opengamma.strata.product.ProductType;
 import com.opengamma.strata.product.TradeInfo;
 
 /**
@@ -56,6 +60,9 @@ public class CapitalIndexedBondTradeTest {
     assertEquals(test.getProduct(), PRODUCT);
     assertEquals(test.getQuantity(), QUANTITY);
     assertEquals(test.getPrice(), PRICE);
+    assertEquals(test.withInfo(TRADE_INFO).getInfo(), TRADE_INFO);
+    assertEquals(test.withQuantity(129).getQuantity(), 129d, 0d);
+    assertEquals(test.withPrice(129).getPrice(), 129d, 0d);
   }
 
   //-------------------------------------------------------------------------
@@ -83,14 +90,26 @@ public class CapitalIndexedBondTradeTest {
       .build();
 
   //-------------------------------------------------------------------------
+  public void test_summarize() {
+    CapitalIndexedBondTrade trade = sut();
+    PortfolioItemSummary expected = PortfolioItemSummary.builder()
+        .id(TRADE_INFO.getId().orElse(null))
+        .portfolioItemType(PortfolioItemType.TRADE)
+        .productType(ProductType.BOND)
+        .currencies(Currency.USD)
+        .description("Bond x 10")
+        .build();
+    assertEquals(trade.summarize(), expected);
+  }
+
+  //-------------------------------------------------------------------------
   public void test_resolve() {
     ResolvedCapitalIndexedBondTrade test = sut().resolve(REF_DATA);
     ResolvedCapitalIndexedBondTrade expected = ResolvedCapitalIndexedBondTrade.builder()
         .info(TRADE_INFO)
         .product(PRODUCT.resolve(REF_DATA))
         .quantity(QUANTITY)
-        .price(PRICE)
-        .settlement(SETTLEMENT)
+        .settlement(ResolvedCapitalIndexedBondSettlement.of(SETTLEMENT_DATE, PRICE, SETTLEMENT))
         .build();
     assertEquals(test, expected);
   }
@@ -101,15 +120,15 @@ public class CapitalIndexedBondTradeTest {
         .info(TRADE_INFO)
         .product(PRODUCT1.resolve(REF_DATA))
         .quantity(QUANTITY)
-        .price(PRICE)
-        .settlement(SETTLEMENT1)
+        .settlement(ResolvedCapitalIndexedBondSettlement.of(SETTLEMENT_DATE, PRICE, SETTLEMENT1))
         .build();
     assertEquals(test, expected);
   }
 
   public void test_resolve_invalid() {
     CapitalIndexedBondTrade test = sut().toBuilder().info(TRADE_INFO_EARLY).build();
-    assertThrowsIllegalArg(() -> test.resolve(REF_DATA));
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> test.resolve(REF_DATA));
   }
 
   public void test_resolve_noTradeOrSettlementDate() {
@@ -119,7 +138,35 @@ public class CapitalIndexedBondTradeTest {
         .quantity(QUANTITY)
         .price(PRICE)
         .build();
-    assertThrows(() -> test.resolve(REF_DATA), IllegalStateException.class);
+    assertThatIllegalStateException()
+        .isThrownBy(() -> test.resolve(REF_DATA));
+  }
+
+  //-------------------------------------------------------------------------
+  public void test_withQuantity() {
+    CapitalIndexedBondTrade base = sut();
+    double quantity = 3456d;
+    CapitalIndexedBondTrade computed = base.withQuantity(quantity);
+    CapitalIndexedBondTrade expected = CapitalIndexedBondTrade.builder()
+        .info(TRADE_INFO)
+        .product(PRODUCT)
+        .quantity(quantity)
+        .price(PRICE)
+        .build();
+    assertEquals(computed, expected);
+  }
+
+  public void test_withPrice() {
+    CapitalIndexedBondTrade base = sut();
+    double price = 0.95;
+    CapitalIndexedBondTrade computed = base.withPrice(price);
+    CapitalIndexedBondTrade expected = CapitalIndexedBondTrade.builder()
+        .info(TRADE_INFO)
+        .product(PRODUCT)
+        .quantity(QUANTITY)
+        .price(price)
+        .build();
+    assertEquals(computed, expected);
   }
 
   //-------------------------------------------------------------------------
