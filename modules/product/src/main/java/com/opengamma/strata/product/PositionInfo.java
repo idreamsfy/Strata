@@ -105,13 +105,11 @@ public final class PositionInfo
   }
 
   @Override
-  @SuppressWarnings("unchecked")
   public <T> Optional<T> findAttribute(AttributeType<T> type) {
     return Optional.ofNullable(type.fromStoredForm(attributes.get(type)));
   }
 
   @Override
-  @SuppressWarnings("unchecked")
   public <T> PositionInfo withAttribute(AttributeType<T> type, T value) {
     // ImmutableMap.Builder would not provide Map.put semantics
     Map<AttributeType<?>, Object> updatedAttributes = new HashMap<>(attributes);
@@ -121,6 +119,37 @@ public final class PositionInfo
       updatedAttributes.put(type, type.toStoredForm(value));
     }
     return new PositionInfo(id, updatedAttributes);
+  }
+
+  @Override
+  public PositionInfo withAttributes(Attributes other) {
+    PositionInfoBuilder builder = toBuilder();
+    for (AttributeType<?> attrType : other.getAttributeTypes()) {
+      builder.addAttribute(attrType.captureWildcard(), other.getAttribute(attrType));
+    }
+    return builder.build();
+  }
+
+  @Override
+  public PositionInfo combinedWith(PortfolioItemInfo other) {
+    PositionInfoBuilder builder = toBuilder();
+    other.getId().filter(ignored -> this.id == null).ifPresent(builder::id);
+    for (AttributeType<?> attrType : other.getAttributeTypes()) {
+      if (!attributes.keySet().contains(attrType)) {
+        builder.addAttribute(attrType.captureWildcard(), other.getAttribute(attrType));
+      }
+    }
+    return builder.build();
+  }
+
+  @Override
+  public PositionInfo overrideWith(PortfolioItemInfo other) {
+    PositionInfoBuilder builder = toBuilder();
+    other.getId().ifPresent(builder::id);
+    for (AttributeType<?> attrType : other.getAttributeTypes()) {
+      builder.addAttribute(attrType.captureWildcard(), other.getAttribute(attrType));
+    }
+    return builder.build();
   }
 
   /**

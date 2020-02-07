@@ -5,10 +5,13 @@
  */
 package com.opengamma.strata.collect.io;
 
+import static com.opengamma.strata.collect.Guavate.toImmutableList;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.Reader;
 import java.io.UncheckedIOException;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -470,24 +473,36 @@ public final class CsvFile {
   }
 
   /**
-   * Checks if the header is known.
+   * Checks if the header is present in the file.
    * <p>
    * Matching is case insensitive.
    * 
    * @param header  the column header to match
-   * @return true if the header is known
+   * @return true if the header is present
    */
   public boolean containsHeader(String header) {
     return searchHeaders.containsKey(header.toLowerCase(Locale.ENGLISH));
   }
 
   /**
-   * Checks if the header pattern is known.
+   * Checks if the headers are present in the file.
+   * <p>
+   * Matching is case insensitive.
+   * 
+   * @param headers  the column headers to match
+   * @return true if all the headers are present
+   */
+  public boolean containsHeaders(Collection<String> headers) {
+    return headers.stream().allMatch(this::containsHeader);
+  }
+
+  /**
+   * Checks if the header pattern is present in the file.
    * <p>
    * Matching is case insensitive.
    * 
    * @param headerPattern  the header pattern to match
-   * @return true if the header is known
+   * @return true if the header is present
    */
   public boolean containsHeader(Pattern headerPattern) {
     for (int i = 0; i < headers.size(); i++) {
@@ -496,6 +511,16 @@ public final class CsvFile {
       }
     }
     return false;
+  }
+
+  /**
+   * Returns an instance with the specified headers.
+   *
+   * @param headers  the new headers
+   * @return the instance with the specified headers
+   */
+  public CsvFile withHeaders(List<String> headers) {
+    return of(headers, rows.stream().map(CsvRow::fields).collect(toImmutableList()));
   }
 
   //-------------------------------------------------------------------------

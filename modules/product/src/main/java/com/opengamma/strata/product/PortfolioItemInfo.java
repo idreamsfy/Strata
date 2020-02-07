@@ -5,11 +5,14 @@
  */
 package com.opengamma.strata.product;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.opengamma.strata.basics.StandardId;
+import com.opengamma.strata.collect.ArgChecker;
 
 /**
  * Additional information about a portfolio item.
@@ -49,6 +52,40 @@ public interface PortfolioItemInfo extends Attributes {
     return new ItemInfo(null, ImmutableMap.of(type, type.toStoredForm(value)));
   }
 
+  /**
+   * Returns a builder used to create an instance of the bean.
+   * 
+   * @return the builder
+   */
+  public static PortfolioItemInfoBuilder<PortfolioItemInfo> builder() {
+    return new PortfolioItemInfoBuilder<PortfolioItemInfo>() {
+      private StandardId id;
+      private final Map<AttributeType<?>, Object> attributes = new HashMap<>();
+
+      @Override
+      public PortfolioItemInfoBuilder<PortfolioItemInfo> id(StandardId id) {
+        this.id = id;
+        return this;
+      }
+
+      @Override
+      public <V> PortfolioItemInfoBuilder<PortfolioItemInfo> addAttribute(
+          AttributeType<V> attributeType,
+          V attributeValue) {
+
+        ArgChecker.notNull(attributeType, "attributeType");
+        ArgChecker.notNull(attributeValue, "attributeValue");
+        attributes.put(attributeType, attributeType.toStoredForm(attributeValue));
+        return this;
+      }
+
+      @Override
+      public PortfolioItemInfo build() {
+        return new ItemInfo(id, attributes);
+      }
+    };
+  }
+
   //-------------------------------------------------------------------------
   /**
    * Gets the primary identifier for the portfolio item, optional.
@@ -76,14 +113,57 @@ public interface PortfolioItemInfo extends Attributes {
    */
   public abstract PortfolioItemInfo withId(StandardId identifier);
 
-  /**
-   * Gets the attribute types that the info contains.
-   * 
-   * @return the attribute types
-   */
+  @Override
   public abstract ImmutableSet<AttributeType<?>> getAttributeTypes();
 
   @Override
   public abstract <T> PortfolioItemInfo withAttribute(AttributeType<T> type, T value);
+
+  @Override
+  public default PortfolioItemInfo withAttributes(Attributes other) {
+    return (PortfolioItemInfo) Attributes.super.withAttributes(other);
+  }
+
+  /**
+   * Combines this info with another.
+   * <p>
+   * If there is a conflict, data from this instance takes precedence.
+   * If the other instance is not of the same type, data may be lost.
+   * 
+   * @param other  the other instance
+   * @return the combined instance
+   */
+  public default PortfolioItemInfo combinedWith(PortfolioItemInfo other) {
+    PortfolioItemInfo combinedInfo = this;
+    if (!combinedInfo.getId().isPresent() && other.getId().isPresent()) {
+      combinedInfo = combinedInfo.withId(other.getId().get());
+    }
+    for (AttributeType<?> attrType : other.getAttributeTypes()) {
+      if (!combinedInfo.getAttributeTypes().contains(attrType)) {
+        combinedInfo = combinedInfo.withAttribute(attrType.captureWildcard(), other.getAttribute(attrType));
+      }
+    }
+    return combinedInfo;
+  }
+
+  /**
+   * Overrides attributes of this info with another.
+   * <p>
+   * If there is a conflict, data from the other instance takes precedence.
+   * If the other instance is not of the same type, data may be lost.
+   * 
+   * @param other  the other instance
+   * @return the combined instance
+   */
+  public default PortfolioItemInfo overrideWith(PortfolioItemInfo other) {
+    PortfolioItemInfo combinedInfo = this;
+    if (other.getId().isPresent()) {
+      combinedInfo = combinedInfo.withId(other.getId().get());
+    }
+    for (AttributeType<?> attrType : other.getAttributeTypes()) {
+      combinedInfo = combinedInfo.withAttribute(attrType.captureWildcard(), other.getAttribute(attrType));
+    }
+    return combinedInfo;
+  }
 
 }

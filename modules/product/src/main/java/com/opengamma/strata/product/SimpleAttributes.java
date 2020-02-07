@@ -20,18 +20,22 @@ import org.joda.beans.gen.PropertyDefinition;
 import org.joda.beans.impl.light.LightMetaBean;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 
 /**
  * A simple implementation of attributes.
+ * <p>
+ * Additional attributes can be associated with a model object.
+ * This is the simplest possible implementation.
  */
-@BeanDefinition(style = "light", constructorScope = "package")
-final class SimpleAttributes
+@BeanDefinition(style = "light")
+public final class SimpleAttributes
     implements Attributes, ImmutableBean, Serializable {
 
   /**
    * An empty instance.
    */
-  static final Attributes EMPTY = new SimpleAttributes(ImmutableMap.of());
+  private static final SimpleAttributes EMPTY = new SimpleAttributes(ImmutableMap.of());
 
   /**
    * The attributes.
@@ -42,8 +46,56 @@ final class SimpleAttributes
   private final ImmutableMap<AttributeType<?>, Object> attributes;
 
   //-------------------------------------------------------------------------
+  /**
+   * Obtains an empty instance.
+   * <p>
+   * The {@link #withAttribute(AttributeType, Object)} method can be used on
+   * the instance to add attributes.
+   * 
+   * @return the empty instance
+   */
+  public static SimpleAttributes empty() {
+    return EMPTY;
+  }
+
+  /**
+   * Obtains an instance with a single attribute.
+   * <p>
+   * The {@link #withAttribute(AttributeType, Object)} method can be used on
+   * the instance to add more attributes.
+   * 
+   * @param <T>  the type of the attribute value
+   * @param type  the type providing meaning to the value
+   * @param value  the value
+   * @return the instance
+   */
+  public static <T> SimpleAttributes of(AttributeType<T> type, T value) {
+    return new SimpleAttributes(ImmutableMap.of(type, type.toStoredForm(value)));
+  }
+
+  /**
+   * Obtains an instance from another instance, copying the attributes.
+   * <p>
+   * This can be used to ensure that an instance of {@link Attributes} contains
+   * no state apart from attributes.
+   * 
+   * @param other  the attributes to copy from
+   * @return the instance
+   */
+  public static SimpleAttributes from(Attributes other) {
+    if (other instanceof SimpleAttributes) {
+      return (SimpleAttributes) other;
+    }
+    return empty().withAttributes(other);
+  }
+
+  //-------------------------------------------------------------------------
   @Override
-  @SuppressWarnings("unchecked")
+  public ImmutableSet<AttributeType<?>> getAttributeTypes() {
+    return attributes.keySet();
+  }
+
+  @Override
   public <T> Optional<T> findAttribute(AttributeType<T> type) {
     return Optional.ofNullable(type.fromStoredForm(attributes.get(type)));
   }
@@ -56,6 +108,16 @@ final class SimpleAttributes
       updatedAttributes.remove(type);
     } else {
       updatedAttributes.put(type, type.toStoredForm(value));
+    }
+    return new SimpleAttributes(updatedAttributes);
+  }
+
+  @Override
+  public SimpleAttributes withAttributes(Attributes other) {
+    // ImmutableMap.Builder would not provide Map.put semantics
+    Map<AttributeType<?>, Object> updatedAttributes = new HashMap<>(attributes);
+    for (AttributeType<?> type : other.getAttributeTypes()) {
+      updatedAttributes.put(type, type.captureWildcard().toStoredForm(other.getAttribute(type)));
     }
     return new SimpleAttributes(updatedAttributes);
   }
@@ -89,11 +151,7 @@ final class SimpleAttributes
    */
   private static final long serialVersionUID = 1L;
 
-  /**
-   * Creates an instance.
-   * @param attributes  the value of the property, not null
-   */
-  SimpleAttributes(
+  private SimpleAttributes(
       Map<AttributeType<?>, Object> attributes) {
     JodaBeanUtils.notNull(attributes, "attributes");
     this.attributes = ImmutableMap.copyOf(attributes);

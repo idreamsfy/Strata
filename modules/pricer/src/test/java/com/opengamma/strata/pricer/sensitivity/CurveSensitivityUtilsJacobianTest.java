@@ -10,7 +10,8 @@ import static com.opengamma.strata.basics.date.DayCounts.ACT_365F;
 import static com.opengamma.strata.basics.index.IborIndices.EUR_EURIBOR_6M;
 import static com.opengamma.strata.product.swap.type.FixedIborSwapConventions.EUR_FIXED_1Y_EURIBOR_6M;
 import static com.opengamma.strata.product.swap.type.FixedOvernightSwapConventions.EUR_FIXED_1Y_EONIA_OIS;
-import static org.testng.Assert.assertEquals;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.data.Offset.offset;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -19,7 +20,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Test;
 
 import com.google.common.collect.ImmutableList;
 import com.opengamma.strata.basics.ReferenceData;
@@ -32,7 +33,6 @@ import com.opengamma.strata.data.ImmutableMarketData;
 import com.opengamma.strata.loader.csv.QuotesCsvLoader;
 import com.opengamma.strata.loader.csv.RatesCalibrationCsvLoader;
 import com.opengamma.strata.market.ValueType;
-import com.opengamma.strata.market.curve.RatesCurveGroupDefinition;
 import com.opengamma.strata.market.curve.CurveGroupName;
 import com.opengamma.strata.market.curve.CurveInfoType;
 import com.opengamma.strata.market.curve.CurveName;
@@ -40,6 +40,7 @@ import com.opengamma.strata.market.curve.CurveParameterSize;
 import com.opengamma.strata.market.curve.DefaultCurveMetadata;
 import com.opengamma.strata.market.curve.InterpolatedNodalCurve;
 import com.opengamma.strata.market.curve.JacobianCalibrationMatrix;
+import com.opengamma.strata.market.curve.RatesCurveGroupDefinition;
 import com.opengamma.strata.market.curve.interpolator.CurveExtrapolators;
 import com.opengamma.strata.market.curve.interpolator.CurveInterpolators;
 import com.opengamma.strata.market.observable.QuoteId;
@@ -60,7 +61,6 @@ import com.opengamma.strata.product.swap.ResolvedSwapTrade;
 /**
  * Tests {@link CurveSensitivityUtils}.
  */
-@Test
 public class CurveSensitivityUtilsJacobianTest {
 
   private static final ReferenceData REF_DATA = ReferenceData.standard();
@@ -96,21 +96,20 @@ public class CurveSensitivityUtilsJacobianTest {
   public static final DiscountingIborFixingDepositProductPricer PRICER_IBORFIX_PRODUCT =
       DiscountingIborFixingDepositProductPricer.DEFAULT;
 
-
-  public static final DoubleArray TIME_EUR = 
-      DoubleArray.of(1.0d/365.0d, 1.0d/12d, 0.25, 0.50, 1.00, 2.00, 3.00, 4.00, 5.00, 7.00, 10.0, 15.0, 20.0, 30.0);
+  public static final DoubleArray TIME_EUR =
+      DoubleArray.of(1.0d / 365.0d, 1.0d / 12d, 0.25, 0.50, 1.00, 2.00, 3.00, 4.00, 5.00, 7.00, 10.0, 15.0, 20.0, 30.0);
   public static final ImmutableRatesProvider MULTICURVE_EUR_SINGLE_INPUT;
   static {
     Tenor[] tenors = new Tenor[] {Tenor.TENOR_1D, Tenor.TENOR_1M, Tenor.TENOR_3M, Tenor.TENOR_6M,
         Tenor.TENOR_1Y, Tenor.TENOR_2Y, Tenor.TENOR_3Y, Tenor.TENOR_4Y, Tenor.TENOR_5Y, 
         Tenor.TENOR_7Y, Tenor.TENOR_10Y, Tenor.TENOR_15Y, Tenor.TENOR_20Y, Tenor.TENOR_30Y};
     List<TenorParameterMetadata> metadataList = new ArrayList<>();
-    for(int looptenor=0; looptenor< tenors.length; looptenor++) {
+    for (int looptenor = 0; looptenor < tenors.length; looptenor++) {
       metadataList.add(TenorParameterMetadata.of(tenors[looptenor]));
     }
-    DoubleArray rate_eur = 
+    DoubleArray rateEur =
         DoubleArray.of(0.0160, 0.0165, 0.0155, 0.0155, 0.0155, 0.0150, 0.0150, 0.0160, 0.0165, 0.0155, 0.0155, 0.0155, 0.0150, 0.0140);
-    InterpolatedNodalCurve curve_single_eur = InterpolatedNodalCurve.builder()
+    InterpolatedNodalCurve curveSingleEur = InterpolatedNodalCurve.builder()
         .metadata(DefaultCurveMetadata.builder()
             .curveName(EUR_SINGLE_NAME)
             .parameterMetadata(metadataList)
@@ -118,14 +117,14 @@ public class CurveSensitivityUtilsJacobianTest {
             .xValueType(ValueType.YEAR_FRACTION)
             .yValueType(ValueType.ZERO_RATE).build())
         .xValues(TIME_EUR)
-        .yValues(rate_eur)
+        .yValues(rateEur)
         .extrapolatorLeft(CurveExtrapolators.FLAT)
         .extrapolatorRight(CurveExtrapolators.FLAT)
         .interpolator(CurveInterpolators.LINEAR)
         .build();
     MULTICURVE_EUR_SINGLE_INPUT = ImmutableRatesProvider.builder(VALUATION_DATE)
-        .discountCurve(EUR, curve_single_eur)
-        .iborIndexCurve(EUR_EURIBOR_6M, curve_single_eur)
+        .discountCurve(EUR, curveSingleEur)
+        .iborIndexCurve(EUR_EURIBOR_6M, curveSingleEur)
         .build();
   }
   public static final List<CurveParameterSize> LIST_CURVE_NAMES_1 = new ArrayList<>();
@@ -144,6 +143,7 @@ public class CurveSensitivityUtilsJacobianTest {
    * Calibrate a single curve to 4 points. Use the resulting calibrated curves as starting point of the computation 
    * of a Jacobian. Compare the direct Jacobian and the one reconstructed from trades.
    */
+  @Test
   public void direct_one_curve() {
     /* Create trades */
     List<ResolvedTrade> trades = new ArrayList<>();
@@ -167,13 +167,13 @@ public class CurveSensitivityUtilsJacobianTest {
         MULTICURVE_EUR_SINGLE_CALIBRATED.findData(EUR_SINGLE_NAME).get().getMetadata().findInfo(CurveInfoType.JACOBIAN).get()
             .getJacobianMatrix();
     /* Comparison */
-    assertEquals(jiComputed.rowCount() , jiExpected.rowCount());
-    assertEquals(jiComputed.columnCount() , jiExpected.columnCount());
-    for(int i=0; i<jiComputed.rowCount(); i++) {
-      for(int j=0; j<jiComputed.columnCount(); j++) {
-        assertEquals(jiComputed.get(i, j), jiExpected.get(i, j), TOLERANCE_JAC);
+    assertThat(jiComputed.rowCount()).isEqualTo(jiExpected.rowCount());
+    assertThat(jiComputed.columnCount()).isEqualTo(jiExpected.columnCount());
+    for (int i = 0; i < jiComputed.rowCount(); i++) {
+      for (int j = 0; j < jiComputed.columnCount(); j++) {
+        assertThat(jiComputed.get(i, j)).isCloseTo(jiExpected.get(i, j), offset(TOLERANCE_JAC));
       }
-    }    
+    }
   }
 
   /**
@@ -181,6 +181,7 @@ public class CurveSensitivityUtilsJacobianTest {
    * number of points and the Jacobian utility. Compare the direct Jacobian obtained by calibrating a curve
    * based on the trades with market quotes computed from the zero-coupon curve.
    */
+  @Test
   public void with_rebucketing_one_curve() {
     /* Create trades */
     List<ResolvedTrade> trades = new ArrayList<>();
@@ -214,11 +215,11 @@ public class CurveSensitivityUtilsJacobianTest {
         CurveSensitivityUtils.jacobianFromMarketQuoteSensitivities(LIST_CURVE_NAMES_1, trades, sensitivityFunction);
     DoubleMatrix jiExpected = multicurveCmp
         .findData(EUR_SINGLE_NAME).get().getMetadata().findInfo(CurveInfoType.JACOBIAN).get().getJacobianMatrix();
-    assertEquals(jiComputed.rowCount(), jiExpected.rowCount());
-    assertEquals(jiComputed.columnCount(), jiExpected.columnCount());
+    assertThat(jiComputed.rowCount()).isEqualTo(jiExpected.rowCount());
+    assertThat(jiComputed.columnCount()).isEqualTo(jiExpected.columnCount());
     for (int i = 0; i < jiComputed.rowCount(); i++) {
       for (int j = 0; j < jiComputed.columnCount(); j++) {
-        assertEquals(jiComputed.get(i, j), jiExpected.get(i, j), TOLERANCE_JAC_APPROX); 
+        assertThat(jiComputed.get(i, j)).isCloseTo(jiExpected.get(i, j), offset(TOLERANCE_JAC_APPROX));
         // The comparison is not perfect due to the incoherences introduced by the re-bucketing
       }
     }
@@ -241,14 +242,16 @@ public class CurveSensitivityUtilsJacobianTest {
   
 
   private static final Tenor[] TENORS_STD_2_OIS = new Tenor[] {
-    Tenor.TENOR_1M, Tenor.TENOR_3M, Tenor.TENOR_6M, Tenor.TENOR_1Y, Tenor.TENOR_2Y, Tenor.TENOR_5Y, Tenor.TENOR_10Y, Tenor.TENOR_30Y};
+      Tenor.TENOR_1M, Tenor.TENOR_3M, Tenor.TENOR_6M, Tenor.TENOR_1Y, Tenor.TENOR_2Y, Tenor.TENOR_5Y, Tenor.TENOR_10Y,
+      Tenor.TENOR_30Y};
   private static final Tenor[] TENORS_STD_2_IRS = new Tenor[] {
-    Tenor.TENOR_1Y, Tenor.TENOR_2Y, Tenor.TENOR_5Y, Tenor.TENOR_10Y, Tenor.TENOR_30Y};
+      Tenor.TENOR_1Y, Tenor.TENOR_2Y, Tenor.TENOR_5Y, Tenor.TENOR_10Y, Tenor.TENOR_30Y};
   
   /**
    * Calibrate a single curve to 4 points. Use the resulting calibrated curves as starting point of the computation 
    * of a Jacobian. Compare the direct Jacobian and the one reconstructed from trades.
    */
+  @Test
   public void direct_two_curves() {
     JacobianCalibrationMatrix jiObject = 
         MULTICURVE_EUR_2_CALIBRATED.findData(EUR_DSCON_OIS).get().getMetadata().findInfo(CurveInfoType.JACOBIAN).get();
@@ -307,19 +310,19 @@ public class CurveSensitivityUtilsJacobianTest {
         MULTICURVE_EUR_2_CALIBRATED.findData(EUR_EURIBOR6M_IRS).get()
             .getMetadata().getInfo(CurveInfoType.JACOBIAN).getJacobianMatrix();
     /* Comparison */
-    assertEquals(jiComputed.rowCount(), jiExpectedDsc.rowCount() + jiExpectedE3.rowCount());
-    assertEquals(jiComputed.columnCount(), jiExpectedDsc.columnCount());
-    assertEquals(jiComputed.columnCount(), jiExpectedE3.columnCount());
+    assertThat(jiComputed.rowCount()).isEqualTo(jiExpectedDsc.rowCount() + jiExpectedE3.rowCount());
+    assertThat(jiComputed.columnCount()).isEqualTo(jiExpectedDsc.columnCount());
+    assertThat(jiComputed.columnCount()).isEqualTo(jiExpectedE3.columnCount());
     int shiftDsc = order.get(0).getName().equals(EUR_DSCON_OIS) ? 0 : jiExpectedE3.rowCount();
     for (int i = 0; i < jiExpectedDsc.rowCount(); i++) {
       for (int j = 0; j < jiExpectedDsc.columnCount(); j++) {
-        assertEquals(jiComputed.get(i + shiftDsc, j), jiExpectedDsc.get(i, j), TOLERANCE_JAC);
+        assertThat(jiComputed.get(i + shiftDsc, j)).isCloseTo(jiExpectedDsc.get(i, j), offset(TOLERANCE_JAC));
       }
     }
     int shiftE3 = order.get(0).getName().equals(EUR_DSCON_OIS) ? jiExpectedDsc.rowCount() : 0;
     for (int i = 0; i < jiExpectedE3.rowCount(); i++) {
       for (int j = 0; j < jiExpectedDsc.columnCount(); j++) {
-        assertEquals(jiComputed.get(i + shiftE3, j), jiExpectedE3.get(i, j), TOLERANCE_JAC);
+        assertThat(jiComputed.get(i + shiftE3, j)).isCloseTo(jiExpectedE3.get(i, j), offset(TOLERANCE_JAC));
       }
     }
   }

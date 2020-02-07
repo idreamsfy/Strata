@@ -82,13 +82,11 @@ final class ItemInfo
   }
 
   @Override
-  @SuppressWarnings("unchecked")
   public <T> Optional<T> findAttribute(AttributeType<T> type) {
     return Optional.ofNullable(type.fromStoredForm(attributes.get(type)));
   }
 
   @Override
-  @SuppressWarnings("unchecked")
   public <T> ItemInfo withAttribute(AttributeType<T> type, T value) {
     // ImmutableMap.Builder would not provide Map.put semantics
     Map<AttributeType<?>, Object> updatedAttributes = new HashMap<>(attributes);
@@ -96,6 +94,16 @@ final class ItemInfo
       updatedAttributes.remove(type);
     } else {
       updatedAttributes.put(type, type.toStoredForm(value));
+    }
+    return new ItemInfo(id, updatedAttributes);
+  }
+
+  @Override
+  public ItemInfo withAttributes(Attributes other) {
+    // ImmutableMap.Builder would not provide Map.put semantics
+    Map<AttributeType<?>, Object> updatedAttributes = new HashMap<>(attributes);
+    for (AttributeType<?> type : other.getAttributeTypes()) {
+      updatedAttributes.put(type, type.captureWildcard().toStoredForm(other.getAttribute(type)));
     }
     return new ItemInfo(id, updatedAttributes);
   }

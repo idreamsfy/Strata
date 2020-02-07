@@ -15,12 +15,12 @@ import static com.opengamma.strata.basics.schedule.Frequency.P3M;
 import static com.opengamma.strata.basics.schedule.Frequency.P6M;
 import static com.opengamma.strata.product.common.PayReceive.PAY;
 import static com.opengamma.strata.product.common.PayReceive.RECEIVE;
-import static org.testng.Assert.assertEquals;
-import static org.testng.Assert.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.data.Offset.offset;
 
 import java.time.LocalDate;
 
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Test;
 
 import com.opengamma.strata.basics.ReferenceData;
 import com.opengamma.strata.basics.StandardId;
@@ -60,7 +60,6 @@ import com.opengamma.strata.product.swap.SwapLeg;
 /**
  * Test {@link DiscountingDsfTradePricer}.
  */
-@Test
 public class DiscountingDsfTradePricerTest {
 
   private static final ReferenceData REF_DATA = ReferenceData.standard();
@@ -162,51 +161,56 @@ public class DiscountingDsfTradePricerTest {
   private static final RatesFiniteDifferenceSensitivityCalculator FD_CAL =
       new RatesFiniteDifferenceSensitivityCalculator(EPS);
 
+  @Test
   public void test_price() {
     double computed = TRADE_PRICER.price(FUTURE_TRADE, PROVIDER);
     double expected = PRODUCT_PRICER.price(FUTURE, PROVIDER);
-    assertEquals(computed, expected, TOL);
+    assertThat(computed).isCloseTo(expected, offset(TOL));
   }
 
+  @Test
   public void test_presentValue() {
     CurrencyAmount computed = TRADE_PRICER.presentValue(FUTURE_TRADE, PROVIDER, LASTMARG_PRICE);
     double expected = QUANTITY * NOTIONAL * (PRODUCT_PRICER.price(FUTURE, PROVIDER) - TRADE_PRICE);
-    assertEquals(computed.getCurrency(), USD);
-    assertEquals(computed.getAmount(), expected, QUANTITY * NOTIONAL * TOL);
+    assertThat(computed.getCurrency()).isEqualTo(USD);
+    assertThat(computed.getAmount()).isCloseTo(expected, offset(QUANTITY * NOTIONAL * TOL));
   }
 
+  @Test
   public void test_presentValueSensitivity() {
     PointSensitivities point = TRADE_PRICER.presentValueSensitivity(FUTURE_TRADE, PROVIDER);
     CurrencyParameterSensitivities computed = PROVIDER.parameterSensitivity(point);
     CurrencyParameterSensitivities expected = FD_CAL.sensitivity(
         PROVIDER, (p) -> TRADE_PRICER.presentValue(FUTURE_TRADE, (p), LASTMARG_PRICE));
-    assertTrue(computed.equalWithTolerance(expected, NOTIONAL * QUANTITY * EPS * 10d));
+    assertThat(computed.equalWithTolerance(expected, NOTIONAL * QUANTITY * EPS * 10d)).isTrue();
   }
 
+  @Test
   public void test_currencyExposure() {
     CurrencyAmount pv = TRADE_PRICER.presentValue(FUTURE_TRADE, PROVIDER, LASTMARG_PRICE);
     PointSensitivities point = TRADE_PRICER.presentValueSensitivity(FUTURE_TRADE, PROVIDER);
     MultiCurrencyAmount expected = PROVIDER.currencyExposure(point).plus(pv);
     MultiCurrencyAmount computed = TRADE_PRICER.currencyExposure(FUTURE_TRADE, PROVIDER, LASTMARG_PRICE);
-    assertEquals(computed, expected);
+    assertThat(computed).isEqualTo(expected);
   }
 
   //-------------------------------------------------------------------------
   // regression to 2.x
+  @Test
   public void regression() {
     CurrencyAmount pv = TRADE_PRICER.presentValue(FUTURE_TRADE, PROVIDER, TRADE_PRICE);
-    assertEquals(pv.getAmount(), 4022633.290539182, NOTIONAL * QUANTITY * TOL);
+    assertThat(pv.getAmount()).isCloseTo(4022633.290539182, offset(NOTIONAL * QUANTITY * TOL));
     DoubleArray dscExp = DoubleArray.of(
         347963.1427498563, 240275.26230191416, 123908.37739051704,
         -1302968.1341957184, -8402797.591029292, -9024590.733895564);
-    DoubleArray fwdExp =DoubleArray.of(
+    DoubleArray fwdExp = DoubleArray.of(
         1.5288758221797276E7, 1.2510651813905597E7, -1535786.53682933,
         -9496881.09854053, -3.583343769759877E7, -1.1342379328462188E9);
     PointSensitivities point = TRADE_PRICER.presentValueSensitivity(FUTURE_TRADE, PROVIDER);
     CurrencyParameterSensitivities sensi = PROVIDER.parameterSensitivity(point);
     double tolerance = NOTIONAL * QUANTITY * EPS;
-    assertTrue(sensi.getSensitivity(USD_DSC_NAME, USD).getSensitivity().equalWithTolerance(dscExp, tolerance));
-    assertTrue(sensi.getSensitivity(USD_FWD3_NAME, USD).getSensitivity().equalWithTolerance(fwdExp, tolerance));
+    assertThat(sensi.getSensitivity(USD_DSC_NAME, USD).getSensitivity().equalWithTolerance(dscExp, tolerance)).isTrue();
+    assertThat(sensi.getSensitivity(USD_FWD3_NAME, USD).getSensitivity().equalWithTolerance(fwdExp, tolerance)).isTrue();
   }
 
 }

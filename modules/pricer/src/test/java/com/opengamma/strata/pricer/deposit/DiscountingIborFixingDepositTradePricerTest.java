@@ -10,12 +10,12 @@ import static com.opengamma.strata.basics.date.BusinessDayConventions.MODIFIED_F
 import static com.opengamma.strata.basics.date.DayCounts.ACT_ACT_ISDA;
 import static com.opengamma.strata.basics.date.HolidayCalendarIds.EUTA;
 import static com.opengamma.strata.basics.index.IborIndices.EUR_EURIBOR_6M;
-import static org.testng.Assert.assertEquals;
-import static org.testng.Assert.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.data.Offset.offset;
 
 import java.time.LocalDate;
 
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Test;
 
 import com.opengamma.strata.basics.ReferenceData;
 import com.opengamma.strata.basics.currency.CurrencyAmount;
@@ -37,7 +37,6 @@ import com.opengamma.strata.product.deposit.ResolvedIborFixingDepositTrade;
 /**
  * Tests {@link DiscountingIborFixingDepositTradePricer}.
  */
-@Test
 public class DiscountingIborFixingDepositTradePricerTest {
 
   private static final ReferenceData REF_DATA = ReferenceData.standard();
@@ -65,14 +64,14 @@ public class DiscountingIborFixingDepositTradePricerTest {
   private static final ImmutableRatesProvider IMM_PROV;
   static {
     CurveInterpolator interp = CurveInterpolators.DOUBLE_QUADRATIC;
-    DoubleArray time_eur = DoubleArray.of(0.0, 0.1, 0.25, 0.5, 0.75, 1.0, 2.0);
-    DoubleArray rate_eur = DoubleArray.of(0.0160, 0.0165, 0.0155, 0.0155, 0.0155, 0.0150, 0.014);
+    DoubleArray timeEur = DoubleArray.of(0.0, 0.1, 0.25, 0.5, 0.75, 1.0, 2.0);
+    DoubleArray rateEur = DoubleArray.of(0.0160, 0.0165, 0.0155, 0.0155, 0.0155, 0.0150, 0.014);
     InterpolatedNodalCurve dscCurve =
-        InterpolatedNodalCurve.of(Curves.zeroRates("EUR-Discount", ACT_ACT_ISDA), time_eur, rate_eur, interp);
-    DoubleArray time_index = DoubleArray.of(0.0, 0.25, 0.5, 1.0);
-    DoubleArray rate_index = DoubleArray.of(0.0180, 0.0180, 0.0175, 0.0165);
+        InterpolatedNodalCurve.of(Curves.zeroRates("EUR-Discount", ACT_ACT_ISDA), timeEur, rateEur, interp);
+    DoubleArray timeIndex = DoubleArray.of(0.0, 0.25, 0.5, 1.0);
+    DoubleArray rateIndex = DoubleArray.of(0.0180, 0.0180, 0.0175, 0.0165);
     InterpolatedNodalCurve indexCurve =
-        InterpolatedNodalCurve.of(Curves.zeroRates("EUR-EURIBOR6M", ACT_ACT_ISDA), time_index, rate_index, interp);
+        InterpolatedNodalCurve.of(Curves.zeroRates("EUR-EURIBOR6M", ACT_ACT_ISDA), timeIndex, rateIndex, interp);
     IMM_PROV = ImmutableRatesProvider.builder(VAL_DATE)
         .discountCurve(EUR, dscCurve)
         .iborIndexCurve(EUR_EURIBOR_6M, indexCurve)
@@ -84,55 +83,58 @@ public class DiscountingIborFixingDepositTradePricerTest {
   private static final DiscountingIborFixingDepositTradePricer PRICER_TRADE =
       DiscountingIborFixingDepositTradePricer.DEFAULT;
 
-
   private static final double TOLERANCE_PV = 1E-2;
   private static final double TOLERANCE_PV_DELTA = 1E-2;
   private static final double TOLERANCE_RATE = 1E-8;
   
   //-------------------------------------------------------------------------
+  @Test
   public void test_presentValue() {
     CurrencyAmount pvTrade = PRICER_TRADE.presentValue(RDEPOSIT_TRADE, IMM_PROV);
     CurrencyAmount pvProduct = PRICER_PRODUCT.presentValue(RDEPOSIT_PRODUCT, IMM_PROV);
-    assertEquals(pvTrade.getCurrency(), pvProduct.getCurrency());
-    assertEquals(pvTrade.getAmount(), pvProduct.getAmount(), TOLERANCE_PV);
+    assertThat(pvTrade.getCurrency()).isEqualTo(pvProduct.getCurrency());
+    assertThat(pvTrade.getAmount()).isCloseTo(pvProduct.getAmount(), offset(TOLERANCE_PV));
   }
 
   //-------------------------------------------------------------------------
+  @Test
   public void test_presentValueSensitivity() {
     PointSensitivities ptsTrade = PRICER_TRADE.presentValueSensitivity(RDEPOSIT_TRADE, IMM_PROV);
     PointSensitivities ptsProduct = PRICER_PRODUCT.presentValueSensitivity(RDEPOSIT_PRODUCT, IMM_PROV);
-    assertTrue(ptsTrade.equalWithTolerance(ptsProduct, TOLERANCE_PV_DELTA));
+    assertThat(ptsTrade.equalWithTolerance(ptsProduct, TOLERANCE_PV_DELTA)).isTrue();
   }
 
-
   //-------------------------------------------------------------------------
+  @Test
   public void test_parRate() {
     double psTrade = PRICER_TRADE.parRate(RDEPOSIT_TRADE, IMM_PROV);
     double psProduct = PRICER_PRODUCT.parRate(RDEPOSIT_PRODUCT, IMM_PROV);
-    assertEquals(psTrade, psProduct, TOLERANCE_RATE);
-
+    assertThat(psTrade).isCloseTo(psProduct, offset(TOLERANCE_RATE));
   }
 
   //-------------------------------------------------------------------------
+  @Test
   public void test_parRateSensitivity() {
     PointSensitivities ptsTrade = PRICER_TRADE.parRateSensitivity(RDEPOSIT_TRADE, IMM_PROV);
     PointSensitivities ptsProduct = PRICER_PRODUCT.parRateSensitivity(RDEPOSIT_PRODUCT, IMM_PROV);
-    assertTrue(ptsTrade.equalWithTolerance(ptsProduct, TOLERANCE_PV_DELTA));
+    assertThat(ptsTrade.equalWithTolerance(ptsProduct, TOLERANCE_PV_DELTA)).isTrue();
   }
 
   //-------------------------------------------------------------------------
+  @Test
   public void test_parSpread() {
     double psTrade = PRICER_TRADE.parSpread(RDEPOSIT_TRADE, IMM_PROV);
     double psProduct = PRICER_PRODUCT.parSpread(RDEPOSIT_PRODUCT, IMM_PROV);
-    assertEquals(psTrade, psProduct, TOLERANCE_RATE);
+    assertThat(psTrade).isCloseTo(psProduct, offset(TOLERANCE_RATE));
     
   }
 
   //-------------------------------------------------------------------------
+  @Test
   public void test_parSpreadSensitivity() {
     PointSensitivities ptsTrade = PRICER_TRADE.parSpreadSensitivity(RDEPOSIT_TRADE, IMM_PROV);
     PointSensitivities ptsProduct = PRICER_PRODUCT.parSpreadSensitivity(RDEPOSIT_PRODUCT, IMM_PROV);
-    assertTrue(ptsTrade.equalWithTolerance(ptsProduct, TOLERANCE_PV_DELTA));    
+    assertThat(ptsTrade.equalWithTolerance(ptsProduct, TOLERANCE_PV_DELTA)).isTrue();
   }
 
 }

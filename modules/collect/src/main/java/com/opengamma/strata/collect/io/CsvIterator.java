@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.io.Reader;
 import java.io.UncheckedIOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
 import java.util.NoSuchElementException;
@@ -43,10 +44,10 @@ import com.opengamma.strata.collect.Unchecked;
  *    // use the CsvIterator
  *  }
  * </pre>
- * One way to use the iterable is with the for-each loop, using a lambda to adapt {@code Iterator} to {@code Iterable}:
+ * One way to use the iterable is with the for-each loop, using {@link #asIterable()}:
  * <pre>
  *  try (CsvIterator csvIterator = CsvIterator.of(source, true)) {
- *    for (CsvRow row : () -&gt; csvIterator) {
+ *    for (CsvRow row : csvIterator.asIterable()) {
  *      // process the row
  *    }
  *  }
@@ -227,24 +228,36 @@ public final class CsvIterator implements AutoCloseable, PeekingIterator<CsvRow>
   }
 
   /**
-   * Checks if the header is known.
+   * Checks if the header is present in the file.
    * <p>
    * Matching is case insensitive.
    * 
    * @param header  the column header to match
-   * @return true if the header is known
+   * @return true if the header is present
    */
   public boolean containsHeader(String header) {
     return searchHeaders.containsKey(header.toLowerCase(Locale.ENGLISH));
   }
 
   /**
-   * Checks if the header pattern is known.
+   * Checks if the headers are present in the file.
+   * <p>
+   * Matching is case insensitive.
+   * 
+   * @param headers  the column headers to match
+   * @return true if all the headers are present
+   */
+  public boolean containsHeaders(Collection<String> headers) {
+    return headers.stream().allMatch(this::containsHeader);
+  }
+
+  /**
+   * Checks if the header pattern is present in the file.
    * <p>
    * Matching is case insensitive.
    * 
    * @param headerPattern  the header pattern to match
-   * @return true if the header is known
+   * @return true if the header is present
    */
   public boolean containsHeader(Pattern headerPattern) {
     for (int i = 0; i < headers.size(); i++) {
@@ -253,6 +266,25 @@ public final class CsvIterator implements AutoCloseable, PeekingIterator<CsvRow>
       }
     }
     return false;
+  }
+
+  /**
+   * Returns an {@code Iterable} that wraps this iterator.
+   * <p>
+   * Unlike most {@code Iterable} implementations, the method {@link Iterable#iterator()}
+   * can only be called once. This is intended for use with the for-each loop.
+   * <pre>
+   *  try (CsvIterator csvIterator = CsvIterator.of(source, true)) {
+   *    for (CsvRow row : csvIterator.asIterable()) {
+   *      // process the row
+   *    }
+   *  }
+   * </pre>
+   * 
+   * @return this iterator as an {@code Iterable}
+   */
+  public Iterable<CsvRow> asIterable() {
+    return () -> this;
   }
 
   /**

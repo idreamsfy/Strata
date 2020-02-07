@@ -5,6 +5,10 @@
  */
 package com.opengamma.strata.basics.currency;
 
+import java.util.function.Supplier;
+
+import com.opengamma.strata.collect.Messages;
+
 /**
  * A provider of FX rates.
  * <p>
@@ -17,6 +21,53 @@ package com.opengamma.strata.basics.currency;
  */
 public interface FxRateProvider {
 
+  /**
+   * Returns an {@code FxRateProvider} that delays fetching its underlying provider
+   * until actually necessary.
+   * <p>
+   * This is typically useful where you <em>may</em> need a {@code MarketDataFxRateProvider}
+   * but want to delay loading market data to construct the provider until you are sure you actually do need it.
+   *
+   * @param target  the supplier of the underlying provider
+   * @return the provider
+   */
+  public static FxRateProvider lazy(Supplier<FxRateProvider> target) {
+    return new LazyFxRateProvider(target);
+  }
+
+  /**
+   * Returns a provider that always throws an exception.
+   * <p>
+   * The provider will always throw an exception, even if the two currencies are the same.
+   * 
+   * @return the provider
+   */
+  public static FxRateProvider noConversion() {
+    return (Currency baseCurrency, Currency counterCurrency) -> {
+      throw new IllegalArgumentException(Messages.format(
+          "FX rate conversion is not supported, requested for {}/{}", baseCurrency, counterCurrency));
+    };
+  }
+
+  /**
+   * Returns a provider that provides minimal behavior.
+   * <p>
+   * This provider returns a rate or 1 when the two currencies are the same.
+   * When the two currencies differ an exception will be thrown.
+   * 
+   * @return the provider
+   */
+  public static FxRateProvider minimal() {
+    return (Currency baseCurrency, Currency counterCurrency) -> {
+      if (baseCurrency.equals(counterCurrency)) {
+        return 1;
+      }
+      throw new IllegalArgumentException(Messages.format(
+          "FX rate conversion is not supported for {}/{}", baseCurrency, counterCurrency));
+    };
+  }
+
+  //-------------------------------------------------------------------------
   /**
    * Converts an amount in a currency to an amount in a different currency using this rate.
    * <p>

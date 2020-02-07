@@ -9,16 +9,17 @@ import static com.opengamma.strata.collect.TestHelper.assertSerialization;
 import static com.opengamma.strata.collect.TestHelper.coverBeanEquals;
 import static com.opengamma.strata.collect.TestHelper.coverImmutableBean;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.testng.Assert.assertEquals;
-import static org.testng.Assert.assertThrows;
 
 import java.time.YearMonth;
 
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Test;
 
 import com.opengamma.strata.basics.currency.Currency;
 import com.opengamma.strata.product.AttributeType;
+import com.opengamma.strata.product.Attributes;
 import com.opengamma.strata.product.SecurityId;
 import com.opengamma.strata.product.SecurityPriceInfo;
 import com.opengamma.strata.product.common.ExchangeIds;
@@ -27,22 +28,35 @@ import com.opengamma.strata.product.common.PutCall;
 /**
  * Test {@link EtdContractSpec}.
  */
-@Test
 public class EtdContractSpecTest {
 
   private static final EtdContractSpec FUTURE_CONTRACT = sut();
   private static final EtdContractSpec OPTION_CONTRACT = sut2();
 
   //-------------------------------------------------------------------------
+  @Test
   public void test_attributes() {
-    assertEquals(sut2().getAttribute(AttributeType.NAME), "NAME");
-    assertEquals(sut2().findAttribute(AttributeType.NAME).get(), "NAME");
-    assertThrows(IllegalArgumentException.class, () -> sut2().getAttribute(AttributeType.of("Foo")));
+    assertThat(sut2().getAttributeTypes()).containsOnly(AttributeType.NAME);
+    assertThat(sut2().getAttribute(AttributeType.NAME)).isEqualTo("NAME");
+    assertThat(sut2().findAttribute(AttributeType.NAME)).hasValue("NAME");
+    assertThatIllegalArgumentException().isThrownBy(() -> sut2().getAttribute(AttributeType.of("Foo")));
     EtdContractSpec updated = sut2().withAttribute(AttributeType.NAME, "FOO");
-    assertEquals(updated.getAttribute(AttributeType.NAME), "FOO");
+    assertThat(updated.getAttribute(AttributeType.NAME)).isEqualTo("FOO");
+  }
+
+  @Test
+  public void test_attributes_with_bulk() {
+    Attributes override = Attributes.of(AttributeType.DESCRIPTION, "B").withAttribute(AttributeType.NAME, "C");
+    EtdContractSpec test = sut()
+        .withAttribute(AttributeType.DESCRIPTION, "A")
+        .withAttributes(override);
+    assertThat(test.getAttributeTypes()).containsOnly(AttributeType.DESCRIPTION, AttributeType.NAME);
+    assertThat(test.getAttribute(AttributeType.DESCRIPTION)).isEqualTo("B");
+    assertThat(test.getAttribute(AttributeType.NAME)).isEqualTo("C");
   }
 
   //-------------------------------------------------------------------------
+  @Test
   public void createFutureAutoId() {
     EtdFutureSecurity security = FUTURE_CONTRACT.createFuture(YearMonth.of(2015, 6), EtdVariant.MONTHLY);
 
@@ -53,13 +67,15 @@ public class EtdContractSpecTest {
     assertThat(security.getInfo().getPriceInfo()).isEqualTo(FUTURE_CONTRACT.getPriceInfo());
   }
 
+  @Test
   public void createFutureFromOptionContractSpec() {
-    assertThatThrownBy(() -> OPTION_CONTRACT.createFuture(YearMonth.of(2015, 6), EtdVariant.MONTHLY))
-        .isInstanceOf(IllegalStateException.class)
-        .hasMessage("Cannot create an EtdFutureSecurity from a contract specification of type 'Option'");
+    assertThatExceptionOfType(IllegalStateException.class)
+        .isThrownBy(() -> OPTION_CONTRACT.createFuture(YearMonth.of(2015, 6), EtdVariant.MONTHLY))
+        .withMessage("Cannot create an EtdFutureSecurity from a contract specification of type 'Option'");
   }
 
   //-------------------------------------------------------------------------
+  @Test
   public void createOptionAutoId() {
     EtdOptionSecurity security = OPTION_CONTRACT.createOption(YearMonth.of(2015, 6), EtdVariant.MONTHLY, 0, PutCall.CALL, 123.45);
 
@@ -73,6 +89,7 @@ public class EtdContractSpecTest {
     assertThat(security.getInfo().getPriceInfo()).isEqualTo(OPTION_CONTRACT.getPriceInfo());
   }
 
+  @Test
   public void createOptionFromFutureContractSpec() {
     assertThatThrownBy(
         () -> FUTURE_CONTRACT.createOption(YearMonth.of(2015, 6), EtdVariant.MONTHLY, 0, PutCall.CALL, 123.45))
@@ -81,6 +98,7 @@ public class EtdContractSpecTest {
   }
 
   //-------------------------------------------------------------------------
+  @Test
   public void createOptionWithUnderlyingAutoId() {
     EtdOptionSecurity security = OPTION_CONTRACT.createOption(
         YearMonth.of(2015, 6), EtdVariant.MONTHLY, 0, PutCall.CALL, 123.45, YearMonth.of(2015, 9));
@@ -95,20 +113,23 @@ public class EtdContractSpecTest {
     assertThat(security.getInfo().getPriceInfo()).isEqualTo(OPTION_CONTRACT.getPriceInfo());
   }
 
+  @Test
   public void createOptionWithUnderlyingFromFutureContractSpec() {
     assertThatThrownBy(
         () -> FUTURE_CONTRACT.createOption(
             YearMonth.of(2015, 6), EtdVariant.MONTHLY, 0, PutCall.CALL, 123.45, YearMonth.of(2015, 9)))
-            .isInstanceOf(IllegalStateException.class)
-            .hasMessage("Cannot create an EtdOptionSecurity from a contract specification of type 'Future'");
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("Cannot create an EtdOptionSecurity from a contract specification of type 'Future'");
   }
 
   //-------------------------------------------------------------------------
+  @Test
   public void coverage() {
     coverImmutableBean(sut());
     coverBeanEquals(sut(), sut2());
   }
 
+  @Test
   public void test_serialization() {
     assertSerialization(sut());
   }

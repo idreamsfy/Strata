@@ -10,9 +10,10 @@ import static com.opengamma.strata.collect.TestHelper.assertSerialization;
 import static com.opengamma.strata.collect.TestHelper.coverBeanEquals;
 import static com.opengamma.strata.collect.TestHelper.coverImmutableBean;
 import static com.opengamma.strata.collect.TestHelper.date;
-import static org.testng.Assert.assertEquals;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.data.Offset.offset;
 
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Test;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
@@ -23,7 +24,6 @@ import com.opengamma.strata.basics.index.Index;
 /**
  * Test.
  */
-@Test
 public class IborAveragedRateComputationTest {
 
   private static final ReferenceData REF_DATA = ReferenceData.standard();
@@ -32,26 +32,29 @@ public class IborAveragedRateComputationTest {
   private static final IborIndexObservation GBP_LIBOR_3M_OBS2 =
       IborIndexObservation.of(GBP_LIBOR_3M, date(2014, 7, 30), REF_DATA);
 
-  ImmutableList<IborAveragedFixing> FIXINGS = ImmutableList.of(
+  private static final ImmutableList<IborAveragedFixing> FIXINGS = ImmutableList.of(
       IborAveragedFixing.of(GBP_LIBOR_3M_OBS1),
       IborAveragedFixing.of(GBP_LIBOR_3M_OBS2));
 
   //-------------------------------------------------------------------------
+  @Test
   public void test_of_List() {
     IborAveragedRateComputation test = IborAveragedRateComputation.of(FIXINGS);
-    assertEquals(test.getFixings(), FIXINGS);
-    assertEquals(test.getTotalWeight(), 2d, 0d);
+    assertThat(test.getFixings()).isEqualTo(FIXINGS);
+    assertThat(test.getTotalWeight()).isCloseTo(2d, offset(0d));
   }
 
   //-------------------------------------------------------------------------
+  @Test
   public void test_collectIndices() {
     IborAveragedRateComputation test = IborAveragedRateComputation.of(FIXINGS);
     ImmutableSet.Builder<Index> builder = ImmutableSet.builder();
     test.collectIndices(builder);
-    assertEquals(builder.build(), ImmutableSet.of(GBP_LIBOR_3M));
+    assertThat(builder.build()).containsOnly(GBP_LIBOR_3M);
   }
 
   //-------------------------------------------------------------------------
+  @Test
   public void coverage() {
     IborAveragedRateComputation test = IborAveragedRateComputation.of(FIXINGS);
     coverImmutableBean(test);
@@ -59,6 +62,7 @@ public class IborAveragedRateComputationTest {
     coverBeanEquals(test, test2);
   }
 
+  @Test
   public void test_serialization() {
     IborAveragedRateComputation test = IborAveragedRateComputation.of(FIXINGS);
     assertSerialization(test);

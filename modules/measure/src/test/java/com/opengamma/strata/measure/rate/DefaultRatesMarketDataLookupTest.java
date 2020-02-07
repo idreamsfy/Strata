@@ -9,7 +9,7 @@ import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException
 
 import java.util.Map;
 
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Test;
 
 import com.google.common.collect.ImmutableMap;
 import com.opengamma.strata.basics.currency.Currency;
@@ -21,12 +21,12 @@ import com.opengamma.strata.market.curve.CurveGroupName;
 import com.opengamma.strata.market.curve.CurveId;
 import com.opengamma.strata.market.curve.CurveName;
 
-@Test
 public class DefaultRatesMarketDataLookupTest {
 
   /**
    * Validates the observable source in the curve IDs match the observable source passed in.
    */
+  @Test
   public void validateObservableSourceDiscountCurves() {
     ObservableSource observableSource = ObservableSource.of("source");
     CurveId curveId = CurveId.of(CurveGroupName.of("group"), CurveName.of("curves"), observableSource);
@@ -35,14 +35,15 @@ public class DefaultRatesMarketDataLookupTest {
     DefaultRatesMarketDataLookup.of(curveMap, ImmutableMap.of(), observableSource, FxRateLookup.ofRates());
     // This should blow up because the source in the IDs doesn't match the source passed to the method
     assertThatIllegalArgumentException()
-        .isThrownBy(() ->
-            DefaultRatesMarketDataLookup.of(curveMap, ImmutableMap.of(), ObservableSource.NONE, FxRateLookup.ofRates()))
+        .isThrownBy(
+            () -> DefaultRatesMarketDataLookup.of(curveMap, ImmutableMap.of(), ObservableSource.NONE, FxRateLookup.ofRates()))
         .withMessageContaining("must match the observable source in all curve IDs");
   }
 
   /**
    * Validates the observable source in the curve IDs match the observable source passed in.
    */
+  @Test
   public void validateObservableSourceForwardCurves() {
     ObservableSource observableSource = ObservableSource.of("source");
     CurveId curveId = CurveId.of(CurveGroupName.of("group"), CurveName.of("curves"), observableSource);
@@ -51,8 +52,8 @@ public class DefaultRatesMarketDataLookupTest {
     DefaultRatesMarketDataLookup.of(ImmutableMap.of(), curveMap, observableSource, FxRateLookup.ofRates());
     // This should blow up because the source in the IDs doesn't match the source passed to the method
     assertThatIllegalArgumentException()
-        .isThrownBy(() ->
-            DefaultRatesMarketDataLookup.of(ImmutableMap.of(), curveMap, ObservableSource.NONE, FxRateLookup.ofRates()))
+        .isThrownBy(
+            () -> DefaultRatesMarketDataLookup.of(ImmutableMap.of(), curveMap, ObservableSource.NONE, FxRateLookup.ofRates()))
         .withMessageContaining("must match the observable source in all curve IDs");
   }
 }

@@ -5,10 +5,11 @@
  */
 package com.opengamma.strata.math.impl.interpolation;
 
-import static org.testng.Assert.assertEquals;
-import static org.testng.Assert.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
+import static org.assertj.core.data.Offset.offset;
 
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Test;
 
 import com.opengamma.strata.collect.array.DoubleArray;
 import com.opengamma.strata.collect.array.DoubleMatrix;
@@ -19,7 +20,6 @@ import com.opengamma.strata.collect.array.DoubleMatrix;
  * delta_i = (yValues[i+1] - yValues[i])/h_i
  * d_i = dF(x)/dx |x=xValues[i] where F(x) is the piecewise interpolation function
  */
-@Test
 public class PiecewiseCubicHermiteSplineInterpolatorTest {
 
   private static final double EPS = 1e-14;
@@ -28,247 +28,249 @@ public class PiecewiseCubicHermiteSplineInterpolatorTest {
   /**
    * Test for the case with boundary value d_0 = 0
    */
-  public void BvCase1Test() {
-    final double[] xValues = new double[] {1., 2., 3., 4. };
-    final double[] yValues = new double[] {1., 2., 10., 11. };
+  @Test
+  public void bvCase1Test() {
+    final double[] xValues = new double[] {1., 2., 3., 4.};
+    final double[] yValues = new double[] {1., 2., 10., 11.};
 
     final int nIntervalsExp = 3;
     final int orderExp = 4;
     final int dimExp = 1;
-    final double[][] coefsMatExp = new double[][] { {-2. / 9., 11. / 9., 0., 1. }, {-112. / 9., 56. / 3., 16. / 9., 2. }, {-2. / 9., -80. / 144., 16. / 9., 10. } };
+    final double[][] coefsMatExp = new double[][] {
+        {-2. / 9., 11. / 9., 0., 1.}, {-112. / 9., 56. / 3., 16. / 9., 2.}, {-2. / 9., -80. / 144., 16. / 9., 10.}};
 
     PiecewisePolynomialInterpolator interp = new PiecewiseCubicHermiteSplineInterpolator();
 
     PiecewisePolynomialResult result = interp.interpolate(xValues, yValues);
 
-    assertEquals(result.getDimensions(), dimExp);
-    assertEquals(result.getNumberOfIntervals(), nIntervalsExp);
-    assertEquals(result.getDimensions(), dimExp);
+    assertThat(result.getDimensions()).isEqualTo(dimExp);
+    assertThat(result.getNumberOfIntervals()).isEqualTo(nIntervalsExp);
+    assertThat(result.getDimensions()).isEqualTo(dimExp);
 
     for (int i = 0; i < nIntervalsExp; ++i) {
       for (int j = 0; j < orderExp; ++j) {
         final double ref = coefsMatExp[i][j] == 0. ? 1. : Math.abs(coefsMatExp[i][j]);
-        assertEquals(result.getCoefMatrix().get(i, j), coefsMatExp[i][j], ref * EPS);
+        assertThat(result.getCoefMatrix().get(i, j)).isCloseTo(coefsMatExp[i][j], offset(ref * EPS));
       }
     }
 
     for (int j = 0; j < nIntervalsExp + 1; ++j) {
-      assertEquals(result.getKnots().get(j), xValues[j]);
+      assertThat(result.getKnots().get(j)).isEqualTo(xValues[j]);
     }
   }
 
   /**
    * Test for the case with boundary value d_0 = 3 * delta_0
    */
-  public void BvCase2Test() {
-    final double[] xValues = new double[] {1., 2., 3., 4. };
-    final double[] yValues = new double[] {9., 10., 1., 3. };
+  @Test
+  public void bvCase2Test() {
+    final double[] xValues = new double[] {1., 2., 3., 4.};
+    final double[] yValues = new double[] {9., 10., 1., 3.};
 
     final int nIntervalsExp = 3;
     final int orderExp = 4;
     final int dimExp = 1;
-    final double[][] coefsMatExp = new double[][] { {1., -3., 3., 9. }, {18., -27., 0., 10. }, {2., 0., 0., 1. } };
+    final double[][] coefsMatExp = new double[][] {{1., -3., 3., 9.}, {18., -27., 0., 10.}, {2., 0., 0., 1.}};
 
     PiecewiseCubicHermiteSplineInterpolator interp = new PiecewiseCubicHermiteSplineInterpolator();
 
     PiecewisePolynomialResult result = interp.interpolate(xValues, yValues);
 
-    assertEquals(result.getDimensions(), dimExp);
-    assertEquals(result.getNumberOfIntervals(), nIntervalsExp);
-    assertEquals(result.getDimensions(), dimExp);
+    assertThat(result.getDimensions()).isEqualTo(dimExp);
+    assertThat(result.getNumberOfIntervals()).isEqualTo(nIntervalsExp);
+    assertThat(result.getDimensions()).isEqualTo(dimExp);
 
     for (int i = 0; i < nIntervalsExp; ++i) {
       for (int j = 0; j < orderExp; ++j) {
         final double ref = coefsMatExp[i][j] == 0. ? 1. : Math.abs(coefsMatExp[i][j]);
-        assertEquals(result.getCoefMatrix().get(i, j), coefsMatExp[i][j], ref * EPS);
+        assertThat(result.getCoefMatrix().get(i, j)).isCloseTo(coefsMatExp[i][j], offset(ref * EPS));
       }
     }
 
     for (int j = 0; j < nIntervalsExp + 1; ++j) {
-      assertEquals(result.getKnots().get(j), xValues[j]);
+      assertThat(result.getKnots().get(j)).isEqualTo(xValues[j]);
     }
   }
 
   /**
    * Test for the case with boundary value d_0 = ((2 * h_0 + h_1) * delta_0 - h_0 * delta_1)/(h_0 + h_1)
    */
-  public void BvCase3Test() {
-    final double[] xValues = new double[] {1., 2., 3., 4. };
-    final double[] yValues = new double[] {2., 3., 2., 3. };
+  @Test
+  public void bvCase3Test() {
+    final double[] xValues = new double[] {1., 2., 3., 4.};
+    final double[] yValues = new double[] {2., 3., 2., 3.};
 
     final int nIntervalsExp = 3;
     final int orderExp = 4;
     final int dimExp = 1;
-    final double[][] coefsMatExp = new double[][] { {0., -1., 2., 2. }, {2., -3., 0., 3. }, {0., 1., 0., 2. } };
+    final double[][] coefsMatExp = new double[][] {{0., -1., 2., 2.}, {2., -3., 0., 3.}, {0., 1., 0., 2.}};
 
     PiecewiseCubicHermiteSplineInterpolator interp = new PiecewiseCubicHermiteSplineInterpolator();
 
     PiecewisePolynomialResult result = interp.interpolate(xValues, yValues);
 
-    assertEquals(result.getDimensions(), dimExp);
-    assertEquals(result.getNumberOfIntervals(), nIntervalsExp);
-    assertEquals(result.getDimensions(), dimExp);
+    assertThat(result.getDimensions()).isEqualTo(dimExp);
+    assertThat(result.getNumberOfIntervals()).isEqualTo(nIntervalsExp);
+    assertThat(result.getDimensions()).isEqualTo(dimExp);
 
     for (int i = 0; i < nIntervalsExp; ++i) {
       for (int j = 0; j < orderExp; ++j) {
         final double ref = coefsMatExp[i][j] == 0. ? 1. : Math.abs(coefsMatExp[i][j]);
-        assertEquals(result.getCoefMatrix().get(i, j), coefsMatExp[i][j], ref * EPS);
+        assertThat(result.getCoefMatrix().get(i, j)).isCloseTo(coefsMatExp[i][j], offset(ref * EPS));
       }
     }
 
     for (int j = 0; j < nIntervalsExp + 1; ++j) {
-      assertEquals(result.getKnots().get(j), xValues[j]);
+      assertThat(result.getKnots().get(j)).isEqualTo(xValues[j]);
     }
   }
 
   /**
    * Test for the case with boundary value d_0 = ((2 * h_0 + h_1) * delta_0 - h_0 * delta_1)/(h_0 + h_1) corresponding to the other branch
    */
-  public void BvCase3AnotherTest() {
-    final double[] xValues = new double[] {1., 2., 3., 4. };
-    final double[] yValues = new double[] {2., 3., 2., 1. };
+  @Test
+  public void bvCase3AnotherTest() {
+    final double[] xValues = new double[] {1., 2., 3., 4.};
+    final double[] yValues = new double[] {2., 3., 2., 1.};
 
     final int nIntervalsExp = 3;
     final int orderExp = 4;
     final int dimExp = 1;
-    final double[][] coefsMatExp = new double[][] { {0., -1., 2., 2. }, {1., -2., 0., 3. }, {0., 0., -1., 2. } };
+    final double[][] coefsMatExp = new double[][] {{0., -1., 2., 2.}, {1., -2., 0., 3.}, {0., 0., -1., 2.}};
 
     PiecewiseCubicHermiteSplineInterpolator interp = new PiecewiseCubicHermiteSplineInterpolator();
 
     PiecewisePolynomialResult result = interp.interpolate(xValues, yValues);
 
-    assertEquals(result.getDimensions(), dimExp);
-    assertEquals(result.getNumberOfIntervals(), nIntervalsExp);
-    assertEquals(result.getDimensions(), dimExp);
+    assertThat(result.getDimensions()).isEqualTo(dimExp);
+    assertThat(result.getNumberOfIntervals()).isEqualTo(nIntervalsExp);
+    assertThat(result.getDimensions()).isEqualTo(dimExp);
 
     for (int i = 0; i < nIntervalsExp; ++i) {
       for (int j = 0; j < orderExp; ++j) {
         final double ref = coefsMatExp[i][j] == 0. ? 1. : Math.abs(coefsMatExp[i][j]);
-        assertEquals(result.getCoefMatrix().get(i, j), coefsMatExp[i][j], ref * EPS);
+        assertThat(result.getCoefMatrix().get(i, j)).isCloseTo(coefsMatExp[i][j], offset(ref * EPS));
       }
     }
 
     for (int j = 0; j < nIntervalsExp + 1; ++j) {
-      assertEquals(result.getKnots().get(j), xValues[j]);
+      assertThat(result.getKnots().get(j)).isEqualTo(xValues[j]);
     }
   }
 
   /**
    * d_i =0 if delta_i = 0 or delta_{i-1} = 0
    */
-  public void CoincideYvaluesTest() {
-    final double[] xValues = new double[] {1., 2., 3., 4. };
-    final double[] yValues = new double[] {1., 2., 2., 3. };
+  @Test
+  public void coincideYvaluesTest() {
+    final double[] xValues = new double[] {1., 2., 3., 4.};
+    final double[] yValues = new double[] {1., 2., 2., 3.};
 
     final int nIntervalsExp = 3;
     final int orderExp = 4;
     final int dimExp = 1;
-    final double[][] coefsMatExp = new double[][] { {-1. / 2., 0., 1.5, 1. }, {0., 0., 0., 2. }, {-0.5, 1.5, 0., 2. } };
+    final double[][] coefsMatExp = new double[][] {{-1. / 2., 0., 1.5, 1.}, {0., 0., 0., 2.}, {-0.5, 1.5, 0., 2.}};
 
     PiecewiseCubicHermiteSplineInterpolator interp = new PiecewiseCubicHermiteSplineInterpolator();
 
     PiecewisePolynomialResult result = interp.interpolate(xValues, yValues);
 
-    assertEquals(result.getDimensions(), dimExp);
-    assertEquals(result.getNumberOfIntervals(), nIntervalsExp);
-    assertEquals(result.getDimensions(), dimExp);
+    assertThat(result.getDimensions()).isEqualTo(dimExp);
+    assertThat(result.getNumberOfIntervals()).isEqualTo(nIntervalsExp);
+    assertThat(result.getDimensions()).isEqualTo(dimExp);
 
     for (int i = 0; i < nIntervalsExp; ++i) {
       for (int j = 0; j < orderExp; ++j) {
         final double ref = coefsMatExp[i][j] == 0. ? 1. : Math.abs(coefsMatExp[i][j]);
-        assertEquals(result.getCoefMatrix().get(i, j), coefsMatExp[i][j], ref * EPS);
+        assertThat(result.getCoefMatrix().get(i, j)).isCloseTo(coefsMatExp[i][j], offset(ref * EPS));
       }
     }
 
     for (int j = 0; j < nIntervalsExp + 1; ++j) {
-      assertEquals(result.getKnots().get(j), xValues[j]);
+      assertThat(result.getKnots().get(j)).isEqualTo(xValues[j]);
     }
   }
 
   /**
    * Intervals have different length
    */
+  @Test
   public void diffIntervalsTest() {
-    final double[] xValues = new double[] {1., 2., 5., 8. };
-    final double[] yValues = new double[] {2., 3., 2., 1. };
+    final double[] xValues = new double[] {1., 2., 5., 8.};
+    final double[] yValues = new double[] {2., 3., 2., 1.};
 
     final int nIntervalsExp = 3;
     final int orderExp = 4;
     final int dimExp = 1;
-    final double[][] coefsMatExp = new double[][] { {-2. / 3., 1. / 3., 4. / 3., 2. }, {1. / 27., -2. / 9., 0., 3. }, {0., 0., -1. / 3., 2. } };
+    final double[][] coefsMatExp = new double[][] {
+        {-2. / 3., 1. / 3., 4. / 3., 2.}, {1. / 27., -2. / 9., 0., 3.}, {0., 0., -1. / 3., 2.}};
 
     PiecewiseCubicHermiteSplineInterpolator interp = new PiecewiseCubicHermiteSplineInterpolator();
 
     PiecewisePolynomialResult result = interp.interpolate(xValues, yValues);
 
-    assertEquals(result.getDimensions(), dimExp);
-    assertEquals(result.getNumberOfIntervals(), nIntervalsExp);
-    assertEquals(result.getDimensions(), dimExp);
+    assertThat(result.getDimensions()).isEqualTo(dimExp);
+    assertThat(result.getNumberOfIntervals()).isEqualTo(nIntervalsExp);
+    assertThat(result.getDimensions()).isEqualTo(dimExp);
 
     for (int i = 0; i < nIntervalsExp; ++i) {
       for (int j = 0; j < orderExp; ++j) {
         final double ref = coefsMatExp[i][j] == 0. ? 1. : Math.abs(coefsMatExp[i][j]);
-        assertEquals(result.getCoefMatrix().get(i, j), coefsMatExp[i][j], ref * EPS);
+        assertThat(result.getCoefMatrix().get(i, j)).isCloseTo(coefsMatExp[i][j], offset(ref * EPS));
       }
     }
 
     for (int j = 0; j < nIntervalsExp + 1; ++j) {
-      assertEquals(result.getKnots().get(j), xValues[j]);
+      assertThat(result.getKnots().get(j)).isEqualTo(xValues[j]);
     }
   }
 
   /**
    * Linear interpolation for 2 data points
    */
-  public void LinearTest() {
-    final double[] xValues = new double[] {1., 2. };
-    final double[] yValues = new double[] {1., 4. };
+  @Test
+  public void linearTest() {
+    final double[] xValues = new double[] {1., 2.};
+    final double[] yValues = new double[] {1., 4.};
 
     final int nIntervalsExp = 1;
     final int orderExp = 4;
     final int dimExp = 1;
-    final double[][] coefsMatExp = new double[][] {{0., 0., 3., 1. } };
+    final double[][] coefsMatExp = new double[][] {{0., 0., 3., 1.}};
 
     PiecewiseCubicHermiteSplineInterpolator interp = new PiecewiseCubicHermiteSplineInterpolator();
 
     PiecewisePolynomialResult result = interp.interpolate(xValues, yValues);
 
-    assertEquals(result.getDimensions(), dimExp);
-    assertEquals(result.getNumberOfIntervals(), nIntervalsExp);
-    assertEquals(result.getDimensions(), dimExp);
+    assertThat(result.getDimensions()).isEqualTo(dimExp);
+    assertThat(result.getNumberOfIntervals()).isEqualTo(nIntervalsExp);
+    assertThat(result.getDimensions()).isEqualTo(dimExp);
 
     for (int i = 0; i < nIntervalsExp; ++i) {
       for (int j = 0; j < orderExp; ++j) {
         final double ref = result.getCoefMatrix().get(i, j) == 0. ? 1. : Math.abs(result.getCoefMatrix().get(i, j));
-        assertEquals(result.getCoefMatrix().get(i, j), coefsMatExp[i][j], ref * EPS);
+        assertThat(result.getCoefMatrix().get(i, j)).isCloseTo(coefsMatExp[i][j], offset(ref * EPS));
       }
     }
 
     for (int j = 0; j < nIntervalsExp + 1; ++j) {
-      assertEquals(result.getKnots().get(j), xValues[j]);
+      assertThat(result.getKnots().get(j)).isEqualTo(xValues[j]);
     }
   }
 
   //(enabled=false)
+  @Test
   public void monotonicTest() {
-    final boolean print = false; //turn to false before pushing 
-    if (print) {
-
-    }
-
     PiecewiseCubicHermiteSplineInterpolator interpolator = new PiecewiseCubicHermiteSplineInterpolator();
 
-    final double[] xValues = new double[] {0., 0.3, 0.6, 1.5, 2.7, 3.4, 4.8, 5.9 };
-    final double[] yValues = new double[] {1.0, 1.2, 1.5, 2.0, 2.1, 3.0, 3.1, 3.3 };
+    final double[] xValues = new double[] {0., 0.3, 0.6, 1.5, 2.7, 3.4, 4.8, 5.9};
+    final double[] yValues = new double[] {1.0, 1.2, 1.5, 2.0, 2.1, 3.0, 3.1, 3.3};
     final int nPts = 300;
     double old = yValues[0] * xValues[0];
     for (int i = 0; i < nPts; ++i) {
       final double key = 0.0 + i * 5.9 / (nPts - 1);
       final double value = interpolator.interpolate(xValues, yValues, key);
-      if (print) {
-
-      }
-      assertTrue(value >= old);
+      assertThat(value >= old).isTrue();
       old = value;
     }
   }
@@ -276,354 +278,389 @@ public class PiecewiseCubicHermiteSplineInterpolatorTest {
   /**
    * 
    */
-  @Test(expectedExceptions = IllegalArgumentException.class)
-  public void NullXvaluesTest() {
-    double[] xValues = new double[4];
-    double[] yValues = new double[] {1., 2., 3., 4. };
-
-    xValues = null;
+  @Test
+  public void nullXvaluesTest() {
+    double[] xValues = null;
+    double[] yValues = new double[] {1., 2., 3., 4.};
 
     PiecewiseCubicHermiteSplineInterpolator interp = new PiecewiseCubicHermiteSplineInterpolator();
 
-    interp.interpolate(xValues, yValues);
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> interp.interpolate(xValues, yValues));
   }
 
   /**
    * 
    */
-  @Test(expectedExceptions = IllegalArgumentException.class)
-  public void NullYvaluesTest() {
-    double[] xValues = new double[] {1., 2., 3., 4. };
-    double[] yValues = new double[4];
-
-    yValues = null;
+  @Test
+  public void nullYvaluesTest() {
+    double[] xValues = new double[] {1., 2., 3., 4.};
+    double[] yValues = null;
 
     PiecewiseCubicHermiteSplineInterpolator interp = new PiecewiseCubicHermiteSplineInterpolator();
 
-    interp.interpolate(xValues, yValues);
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> interp.interpolate(xValues, yValues));
   }
 
   /**
    * 
    */
-  @Test(expectedExceptions = IllegalArgumentException.class)
+  @Test
   public void wrongDatalengthTest() {
-    double[] xValues = new double[] {1., 2., 3. };
-    double[] yValues = new double[] {1., 2., 3., 4. };
+    double[] xValues = new double[] {1., 2., 3.};
+    double[] yValues = new double[] {1., 2., 3., 4.};
 
     PiecewiseCubicHermiteSplineInterpolator interp = new PiecewiseCubicHermiteSplineInterpolator();
 
-    interp.interpolate(xValues, yValues);
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> interp.interpolate(xValues, yValues));
   }
 
   /**
    * 
    */
-  @Test(expectedExceptions = IllegalArgumentException.class)
+  @Test
   public void shortDataLengthTest() {
-    double[] xValues = new double[] {1. };
-    double[] yValues = new double[] {4. };
+    double[] xValues = new double[] {1.};
+    double[] yValues = new double[] {4.};
 
     PiecewiseCubicHermiteSplineInterpolator interp = new PiecewiseCubicHermiteSplineInterpolator();
 
-    interp.interpolate(xValues, yValues);
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> interp.interpolate(xValues, yValues));
   }
 
   /**
    * 
    */
-  @Test(expectedExceptions = IllegalArgumentException.class)
-  public void NaNxValuesTest() {
-    double[] xValues = new double[] {1., 2., Double.NaN, 4. };
-    double[] yValues = new double[] {1., 2., 3., 4. };
+  @Test
+  public void naNxValuesTest() {
+    double[] xValues = new double[] {1., 2., Double.NaN, 4.};
+    double[] yValues = new double[] {1., 2., 3., 4.};
 
     PiecewiseCubicHermiteSplineInterpolator interp = new PiecewiseCubicHermiteSplineInterpolator();
 
-    interp.interpolate(xValues, yValues);
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> interp.interpolate(xValues, yValues));
   }
 
   /**
    * 
    */
-  @Test(expectedExceptions = IllegalArgumentException.class)
-  public void NaNyValuesTest() {
-    double[] xValues = new double[] {1., 2., 3., 4. };
-    double[] yValues = new double[] {1., 2., Double.NaN, 4. };
+  @Test
+  public void naNyValuesTest() {
+    double[] xValues = new double[] {1., 2., 3., 4.};
+    double[] yValues = new double[] {1., 2., Double.NaN, 4.};
 
     PiecewiseCubicHermiteSplineInterpolator interp = new PiecewiseCubicHermiteSplineInterpolator();
 
-    interp.interpolate(xValues, yValues);
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> interp.interpolate(xValues, yValues));
   }
 
   /**
    * 
    */
-  @Test(expectedExceptions = IllegalArgumentException.class)
-  public void InfxValuesTest() {
-    double[] xValues = new double[] {1., 2., 3., INF };
-    double[] yValues = new double[] {1., 2., 3., 4. };
+  @Test
+  public void infxValuesTest() {
+    double[] xValues = new double[] {1., 2., 3., INF};
+    double[] yValues = new double[] {1., 2., 3., 4.};
 
     PiecewiseCubicHermiteSplineInterpolator interp = new PiecewiseCubicHermiteSplineInterpolator();
 
-    interp.interpolate(xValues, yValues);
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> interp.interpolate(xValues, yValues));
   }
 
   /**
    * 
    */
-  @Test(expectedExceptions = IllegalArgumentException.class)
-  public void InfyValuesTest() {
-    double[] xValues = new double[] {1., 2., 3., 4. };
-    double[] yValues = new double[] {1., 2., 3., INF };
+  @Test
+  public void infyValuesTest() {
+    double[] xValues = new double[] {1., 2., 3., 4.};
+    double[] yValues = new double[] {1., 2., 3., INF};
 
     PiecewiseCubicHermiteSplineInterpolator interp = new PiecewiseCubicHermiteSplineInterpolator();
 
-    interp.interpolate(xValues, yValues);
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> interp.interpolate(xValues, yValues));
   }
 
   /**
    * 
    */
-  @Test(expectedExceptions = IllegalArgumentException.class)
+  @Test
   public void coincideXvaluesTest() {
-    double[] xValues = new double[] {1., 2., 3., 3. };
-    double[] yValues = new double[] {1., 2., 3., 4. };
+    double[] xValues = new double[] {1., 2., 3., 3.};
+    double[] yValues = new double[] {1., 2., 3., 4.};
 
     PiecewiseCubicHermiteSplineInterpolator interp = new PiecewiseCubicHermiteSplineInterpolator();
 
-    interp.interpolate(xValues, yValues);
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> interp.interpolate(xValues, yValues));
   }
 
   /**
    *  Tests for multi-dimensions with all of the endpoint conditions
    */
-  public void AllBvsMultiTest() {
-    final double[] xValues = new double[] {1., 2., 3., 4. };
-    final double[][] yValues = new double[][] { {1., 2., 10., 11. }, {9., 10., 1., 3. }, {2., 3., 2., 3. }, {1., 2., 2., 3. }, {2., 3., 2., 1. } };
+  @Test
+  public void allBvsMultiTest() {
+    final double[] xValues = new double[] {1., 2., 3., 4.};
+    final double[][] yValues =
+        new double[][] {{1., 2., 10., 11.}, {9., 10., 1., 3.}, {2., 3., 2., 3.}, {1., 2., 2., 3.}, {2., 3., 2., 1.}};
 
     final int nIntervalsExp = 3;
     final int orderExp = 4;
     final int dimExp = 5;
-    final double[][] coefsMatExp = new double[][] { {-2. / 9., 11. / 9., 0., 1. }, {1., -3., 3., 9. }, {0., -1., 2., 2. }, {-1. / 2., 0., 1.5, 1. }, {0., -1., 2., 2. },
-      {-112. / 9., 56. / 3., 16. / 9., 2. }, {18., -27., 0., 10. }, {2., -3., 0., 3. }, {0., 0., 0., 2. }, {1., -2., 0., 3. },
-      {-2. / 9., -80. / 144., 16. / 9., 10. }, {2., 0., 0., 1. }, {0., 1., 0., 2. }, {-0.5, 1.5, 0., 2. }, {0., 0., -1., 2. } };
+    final double[][] coefsMatExp = new double[][] {
+        {-2. / 9., 11. / 9., 0., 1.},
+        {1., -3., 3., 9.},
+        {0., -1., 2., 2.},
+        {-1. / 2., 0., 1.5, 1.},
+        {0., -1., 2., 2.},
+        {-112. / 9., 56. / 3., 16. / 9., 2.},
+        {18., -27., 0., 10.},
+        {2., -3., 0., 3.},
+        {0., 0., 0., 2.},
+        {1., -2., 0., 3.},
+        {-2. / 9., -80. / 144., 16. / 9., 10.},
+        {2., 0., 0., 1.},
+        {0., 1., 0., 2.},
+        {-0.5, 1.5, 0., 2.},
+        {0., 0., -1., 2.}};
 
     PiecewisePolynomialInterpolator interp = new PiecewiseCubicHermiteSplineInterpolator();
 
     PiecewisePolynomialResult result = interp.interpolate(xValues, yValues);
 
-    assertEquals(result.getDimensions(), dimExp);
-    assertEquals(result.getNumberOfIntervals(), nIntervalsExp);
-    assertEquals(result.getDimensions(), dimExp);
+    assertThat(result.getDimensions()).isEqualTo(dimExp);
+    assertThat(result.getNumberOfIntervals()).isEqualTo(nIntervalsExp);
+    assertThat(result.getDimensions()).isEqualTo(dimExp);
 
     for (int i = 0; i < nIntervalsExp * dimExp; ++i) {
       for (int j = 0; j < orderExp; ++j) {
         final double ref = coefsMatExp[i][j] == 0. ? 1. : Math.abs(coefsMatExp[i][j]);
-        assertEquals(result.getCoefMatrix().get(i, j), coefsMatExp[i][j], ref * EPS);
+        assertThat(result.getCoefMatrix().get(i, j)).isCloseTo(coefsMatExp[i][j], offset(ref * EPS));
       }
     }
 
     for (int j = 0; j < nIntervalsExp + 1; ++j) {
-      assertEquals(result.getKnots().get(j), xValues[j]);
+      assertThat(result.getKnots().get(j)).isEqualTo(xValues[j]);
     }
   }
 
   /**
    * Linear interpolation for 2 data points
    */
-  public void LinearMultiTest() {
-    final double[] xValues = new double[] {1., 2. };
-    final double[][] yValues = new double[][] { {1., 4. }, {1., 1. / 3. } };
+  @Test
+  public void linearMultiTest() {
+    final double[] xValues = new double[] {1., 2.};
+    final double[][] yValues = new double[][] {{1., 4.}, {1., 1. / 3.}};
 
     final int nIntervalsExp = 1;
     final int orderExp = 4;
     final int dimExp = 2;
-    final double[][] coefsMatExp = new double[][] { {0., 0., 3., 1. }, {0., 0., -2. / 3., 1. } };
+    final double[][] coefsMatExp = new double[][] {{0., 0., 3., 1.}, {0., 0., -2. / 3., 1.}};
 
     PiecewiseCubicHermiteSplineInterpolator interp = new PiecewiseCubicHermiteSplineInterpolator();
 
     PiecewisePolynomialResult result = interp.interpolate(xValues, yValues);
 
-    assertEquals(result.getDimensions(), dimExp);
-    assertEquals(result.getNumberOfIntervals(), nIntervalsExp);
-    assertEquals(result.getDimensions(), dimExp);
+    assertThat(result.getDimensions()).isEqualTo(dimExp);
+    assertThat(result.getNumberOfIntervals()).isEqualTo(nIntervalsExp);
+    assertThat(result.getDimensions()).isEqualTo(dimExp);
 
     for (int i = 0; i < nIntervalsExp * dimExp; ++i) {
       for (int j = 0; j < orderExp; ++j) {
         final double ref = coefsMatExp[i][j] == 0. ? 1. : Math.abs(coefsMatExp[i][j]);
-        assertEquals(result.getCoefMatrix().get(i, j), coefsMatExp[i][j], ref * EPS);
+        assertThat(result.getCoefMatrix().get(i, j)).isCloseTo(coefsMatExp[i][j], offset(ref * EPS));
       }
     }
 
     for (int j = 0; j < nIntervalsExp + 1; ++j) {
-      assertEquals(result.getKnots().get(j), xValues[j]);
+      assertThat(result.getKnots().get(j)).isEqualTo(xValues[j]);
     }
   }
 
   /**
    * Intervals have different length
    */
+  @Test
   public void diffIntervalsMultiTest() {
-    final double[] xValues = new double[] {1., 2., 5., 8. };
-    final double[][] yValues = new double[][] { {2., 3., 2., 1. }, {-1., 3., 6., 7. } };
+    final double[] xValues = new double[] {1., 2., 5., 8.};
+    final double[][] yValues = new double[][] {{2., 3., 2., 1.}, {-1., 3., 6., 7.}};
 
     final int nIntervalsExp = 3;
     final int orderExp = 4;
     final int dimExp = 2;
-    final double[][] coefsMatExp = new double[][] { {-2. / 3., 1. / 3., 4. / 3., 2. }, {-53. / 36, 13. / 18., 19. / 4., -1. }, {1. / 27., -2. / 9., 0., 3. }, {5. / 162., -19. / 54., 16. / 9., 3. },
-      {0., 0., -1. / 3., 2. }, {-1. / 54., 0., 1. / 2., 6. } };
+    final double[][] coefsMatExp = new double[][] {
+        {-2. / 3., 1. / 3., 4. / 3., 2.},
+        {-53. / 36, 13. / 18., 19. / 4., -1.},
+        {1. / 27., -2. / 9., 0., 3.},
+        {5. / 162., -19. / 54., 16. / 9., 3.},
+        {0., 0., -1. / 3., 2.},
+        {-1. / 54., 0., 1. / 2., 6.}};
 
     PiecewiseCubicHermiteSplineInterpolator interp = new PiecewiseCubicHermiteSplineInterpolator();
 
     PiecewisePolynomialResult result = interp.interpolate(xValues, yValues);
 
-    assertEquals(result.getDimensions(), dimExp);
-    assertEquals(result.getNumberOfIntervals(), nIntervalsExp);
-    assertEquals(result.getDimensions(), dimExp);
+    assertThat(result.getDimensions()).isEqualTo(dimExp);
+    assertThat(result.getNumberOfIntervals()).isEqualTo(nIntervalsExp);
+    assertThat(result.getDimensions()).isEqualTo(dimExp);
 
     for (int i = 0; i < nIntervalsExp * dimExp; ++i) {
       for (int j = 0; j < orderExp; ++j) {
         final double ref = coefsMatExp[i][j] == 0. ? 1. : Math.abs(coefsMatExp[i][j]);
-        assertEquals(result.getCoefMatrix().get(i, j), coefsMatExp[i][j], ref * EPS);
+        assertThat(result.getCoefMatrix().get(i, j)).isCloseTo(coefsMatExp[i][j], offset(ref * EPS));
       }
     }
 
     for (int j = 0; j < nIntervalsExp + 1; ++j) {
-      assertEquals(result.getKnots().get(j), xValues[j]);
+      assertThat(result.getKnots().get(j)).isEqualTo(xValues[j]);
     }
   }
 
   /**
    * 
    */
-  @Test(expectedExceptions = IllegalArgumentException.class)
-  public void NullXvaluesMultiTest() {
-    double[] xValues = new double[4];
-    double[][] yValues = new double[][] { {1., 2., 3., 4. }, {1., 5., 3., 4. } };
-
-    xValues = null;
+  @Test
+  public void nullXvaluesMultiTest() {
+    double[] xValues = null;
+    double[][] yValues = new double[][] {{1., 2., 3., 4.}, {1., 5., 3., 4.}};
 
     PiecewiseCubicHermiteSplineInterpolator interp = new PiecewiseCubicHermiteSplineInterpolator();
 
-    interp.interpolate(xValues, yValues);
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> interp.interpolate(xValues, yValues));
   }
 
   /**
    * 
    */
-  @Test(expectedExceptions = IllegalArgumentException.class)
-  public void NullYvaluesMultiTest() {
-    double[] xValues = new double[] {1., 2., 3., 4. };
-    double[][] yValues = new double[2][4];
-
-    yValues = null;
+  @Test
+  public void nullYvaluesMultiTest() {
+    double[] xValues = new double[] {1., 2., 3., 4.};
+    double[][] yValues = null;
 
     PiecewiseCubicHermiteSplineInterpolator interp = new PiecewiseCubicHermiteSplineInterpolator();
 
-    interp.interpolate(xValues, yValues);
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> interp.interpolate(xValues, yValues));
   }
 
   /**
    * 
    */
-  @Test(expectedExceptions = IllegalArgumentException.class)
+  @Test
   public void wrongDatalengthMultiTest() {
-    double[] xValues = new double[] {1., 2., 3. };
-    double[][] yValues = new double[][] { {1., 2., 3., 4. }, {2., 2., 3., 4. } };
+    double[] xValues = new double[] {1., 2., 3.};
+    double[][] yValues = new double[][] {{1., 2., 3., 4.}, {2., 2., 3., 4.}};
 
     PiecewiseCubicHermiteSplineInterpolator interp = new PiecewiseCubicHermiteSplineInterpolator();
 
-    interp.interpolate(xValues, yValues);
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> interp.interpolate(xValues, yValues));
   }
 
   /**
    * 
    */
-  @Test(expectedExceptions = IllegalArgumentException.class)
+  @Test
   public void shortDataLengthMultiTest() {
-    double[] xValues = new double[] {1. };
-    double[][] yValues = new double[][] { {4. }, {1. } };
+    double[] xValues = new double[] {1.};
+    double[][] yValues = new double[][] {{4.}, {1.}};
 
     PiecewiseCubicHermiteSplineInterpolator interp = new PiecewiseCubicHermiteSplineInterpolator();
 
-    interp.interpolate(xValues, yValues);
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> interp.interpolate(xValues, yValues));
   }
 
   /**
    * 
    */
-  @Test(expectedExceptions = IllegalArgumentException.class)
-  public void NaNxValuesMultiTest() {
-    double[] xValues = new double[] {1., 2., Double.NaN, 4. };
-    double[][] yValues = new double[][] { {1., 2., 3., 4. }, {2., 2., 3., 4. } };
+  @Test
+  public void naNxValuesMultiTest() {
+    double[] xValues = new double[] {1., 2., Double.NaN, 4.};
+    double[][] yValues = new double[][] {{1., 2., 3., 4.}, {2., 2., 3., 4.}};
 
     PiecewiseCubicHermiteSplineInterpolator interp = new PiecewiseCubicHermiteSplineInterpolator();
 
-    interp.interpolate(xValues, yValues);
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> interp.interpolate(xValues, yValues));
   }
 
   /**
    * 
    */
-  @Test(expectedExceptions = IllegalArgumentException.class)
-  public void NaNyValuesMultiTest() {
-    double[] xValues = new double[] {1., 2., 3., 4. };
-    double[][] yValues = new double[][] { {1., 2., 3., 4. }, {1., 2., Double.NaN, 4. } };
+  @Test
+  public void naNyValuesMultiTest() {
+    double[] xValues = new double[] {1., 2., 3., 4.};
+    double[][] yValues = new double[][] {{1., 2., 3., 4.}, {1., 2., Double.NaN, 4.}};
 
     PiecewiseCubicHermiteSplineInterpolator interp = new PiecewiseCubicHermiteSplineInterpolator();
 
-    interp.interpolate(xValues, yValues);
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> interp.interpolate(xValues, yValues));
   }
 
   /**
    * 
    */
-  @Test(expectedExceptions = IllegalArgumentException.class)
-  public void InfxValuesMultiTest() {
-    double[] xValues = new double[] {1., 2., 3., INF };
-    double[][] yValues = new double[][] { {1., 2., 3., 4. }, {2., 2., 3., 4. } };
+  @Test
+  public void infxValuesMultiTest() {
+    double[] xValues = new double[] {1., 2., 3., INF};
+    double[][] yValues = new double[][] {{1., 2., 3., 4.}, {2., 2., 3., 4.}};
 
     PiecewiseCubicHermiteSplineInterpolator interp = new PiecewiseCubicHermiteSplineInterpolator();
 
-    interp.interpolate(xValues, yValues);
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> interp.interpolate(xValues, yValues));
   }
 
   /**
    * 
    */
-  @Test(expectedExceptions = IllegalArgumentException.class)
-  public void InfyValuesMultiTest() {
-    double[] xValues = new double[] {1., 2., 3., 4. };
-    double[][] yValues = new double[][] { {1., 2., 3., 4. }, {1., 2., 3., INF } };
+  @Test
+  public void infyValuesMultiTest() {
+    double[] xValues = new double[] {1., 2., 3., 4.};
+    double[][] yValues = new double[][] {{1., 2., 3., 4.}, {1., 2., 3., INF}};
 
     PiecewiseCubicHermiteSplineInterpolator interp = new PiecewiseCubicHermiteSplineInterpolator();
 
-    interp.interpolate(xValues, yValues);
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> interp.interpolate(xValues, yValues));
   }
 
   /**
    * 
    */
-  @Test(expectedExceptions = IllegalArgumentException.class)
+  @Test
   public void coincideXvaluesMultiTest() {
-    double[] xValues = new double[] {1., 2., 3., 3. };
-    double[][] yValues = new double[][] { {1., 2., 3., 4. }, {2., 2., 3., 4. } };
+    double[] xValues = new double[] {1., 2., 3., 3.};
+    double[][] yValues = new double[][] {{1., 2., 3., 4.}, {2., 2., 3., 4.}};
 
     PiecewiseCubicHermiteSplineInterpolator interp = new PiecewiseCubicHermiteSplineInterpolator();
 
-    interp.interpolate(xValues, yValues);
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> interp.interpolate(xValues, yValues));
   }
 
   /**
    * Derive value of the underlying cubic spline function at the value of xKey
    */
-  public void InterpolantsTest() {
-    final double[] xValues = new double[] {1., 2., 3., 4. };
-    final double[][] yValues = new double[][] { {2., 3., 2., 1. }, {1., 2., 10., 11. } };
-    final double[][] xKey = new double[][] { {-1., 0.5, 1.5 }, {2.5, 3.5, 4.5 } };
+  @Test
+  public void interpolantsTest() {
+    final double[] xValues = new double[] {1., 2., 3., 4.};
+    final double[][] yValues = new double[][] {{2., 3., 2., 1.}, {1., 2., 10., 11.}};
+    final double[][] xKey = new double[][] {{-1., 0.5, 1.5}, {2.5, 3.5, 4.5}};
 
-    final double[][][] resultValuesExpected = new double[][][] { { {-6., 21. / 8. }, {23. / 3., 6. } }, { {3. / 4., 3. / 2. }, {4. / 3., 193. / 18. } },
-      { {11. / 4., 1. / 2. }, {23. / 18., 32. / 3. } } };
+    final double[][][] resultValuesExpected =
+        new double[][][] {
+            {{-6., 21. / 8.}, {23. / 3., 6.}}, {{3. / 4., 3. / 2.}, {4. / 3., 193. / 18.}},
+            {{11. / 4., 1. / 2.}, {23. / 18., 32. / 3.}}};
 
     final int yDim = yValues.length;
     final int keyLength = xKey[0].length;
@@ -634,26 +671,26 @@ public class PiecewiseCubicHermiteSplineInterpolatorTest {
     double value = interp.interpolate(xValues, yValues[0], xKey[0][0]);
     {
       final double ref = resultValuesExpected[0][0][0] == 0. ? 1. : Math.abs(resultValuesExpected[0][0][0]);
-      assertEquals(value, resultValuesExpected[0][0][0], ref * EPS);
+      assertThat(value).isCloseTo(resultValuesExpected[0][0][0], offset(ref * EPS));
     }
 
     DoubleArray valuesVec1 = interp.interpolate(xValues, yValues, xKey[0][0]);
     for (int i = 0; i < yDim; ++i) {
       final double ref = resultValuesExpected[0][i][0] == 0. ? 1. : Math.abs(resultValuesExpected[0][i][0]);
-      assertEquals(valuesVec1.get(i), resultValuesExpected[0][i][0], ref * EPS);
+      assertThat(valuesVec1.get(i)).isCloseTo(resultValuesExpected[0][i][0], offset(ref * EPS));
     }
 
     DoubleArray valuesVec2 = interp.interpolate(xValues, yValues[0], xKey[0]);
     for (int k = 0; k < keyLength; ++k) {
       final double ref = resultValuesExpected[k][0][0] == 0. ? 1. : Math.abs(resultValuesExpected[k][0][0]);
-      assertEquals(valuesVec2.get(k), resultValuesExpected[k][0][0], ref * EPS);
+      assertThat(valuesVec2.get(k)).isCloseTo(resultValuesExpected[k][0][0], offset(ref * EPS));
     }
 
     DoubleMatrix valuesMat1 = interp.interpolate(xValues, yValues[0], xKey);
     for (int j = 0; j < keyDim; ++j) {
       for (int k = 0; k < keyLength; ++k) {
         final double ref = resultValuesExpected[k][0][j] == 0. ? 1. : Math.abs(resultValuesExpected[k][0][j]);
-        assertEquals(valuesMat1.get(j, k), resultValuesExpected[k][0][j], ref * EPS);
+        assertThat(valuesMat1.get(j, k)).isCloseTo(resultValuesExpected[k][0][j], offset(ref * EPS));
       }
     }
 
@@ -661,7 +698,7 @@ public class PiecewiseCubicHermiteSplineInterpolatorTest {
     for (int i = 0; i < yDim; ++i) {
       for (int k = 0; k < keyLength; ++k) {
         final double ref = resultValuesExpected[k][i][0] == 0. ? 1. : Math.abs(resultValuesExpected[k][i][0]);
-        assertEquals(valuesMat2.get(i, k), resultValuesExpected[k][i][0], ref * EPS);
+        assertThat(valuesMat2.get(i, k)).isCloseTo(resultValuesExpected[k][i][0], offset(ref * EPS));
       }
     }
 
@@ -670,7 +707,7 @@ public class PiecewiseCubicHermiteSplineInterpolatorTest {
       for (int j = 0; j < keyDim; ++j) {
         for (int k = 0; k < keyLength; ++k) {
           final double ref = resultValuesExpected[k][i][j] == 0. ? 1. : Math.abs(resultValuesExpected[k][i][j]);
-          assertEquals(valuesMat3[k].get(i, j), resultValuesExpected[k][i][j], ref * EPS);
+          assertThat(valuesMat3[k].get(i, j)).isCloseTo(resultValuesExpected[k][i][j], offset(ref * EPS));
         }
       }
     }
@@ -679,135 +716,136 @@ public class PiecewiseCubicHermiteSplineInterpolatorTest {
   /**
    * 
    */
-  @Test(expectedExceptions = IllegalArgumentException.class)
-  public void NullKeyTest() {
-    double[] xValues = new double[] {1., 2., 3. };
-    double[] yValues = new double[] {1., 3., 4. };
-    double[] xKey = new double[3];
-
-    xKey = null;
+  @Test
+  public void nullKeyTest() {
+    double[] xValues = new double[] {1., 2., 3.};
+    double[] yValues = new double[] {1., 3., 4.};
+    double[] xKey = null;
 
     PiecewiseCubicHermiteSplineInterpolator interp = new PiecewiseCubicHermiteSplineInterpolator();
 
-    interp.interpolate(xValues, yValues, xKey);
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> interp.interpolate(xValues, yValues, xKey));
 
   }
 
   /**
    * 
    */
-  @Test(expectedExceptions = IllegalArgumentException.class)
-  public void NullKeyMultiTest() {
-    double[] xValues = new double[] {1., 2., 3. };
-    double[][] yValues = new double[][] { {1., 3., 4. }, {2., 3., 1. } };
-    double[] xKey = new double[3];
-
-    xKey = null;
+  @Test
+  public void nullKeyMultiTest() {
+    double[] xValues = new double[] {1., 2., 3.};
+    double[][] yValues = new double[][] {{1., 3., 4.}, {2., 3., 1.}};
+    double[] xKey = null;
 
     PiecewiseCubicHermiteSplineInterpolator interp = new PiecewiseCubicHermiteSplineInterpolator();
 
-    interp.interpolate(xValues, yValues, xKey);
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> interp.interpolate(xValues, yValues, xKey));
 
   }
 
   /**
    * 
    */
-  @Test(expectedExceptions = IllegalArgumentException.class)
-  public void NullKeyMatrixTest() {
-    double[] xValues = new double[] {1., 2., 3. };
-    double[] yValues = new double[] {1., 3., 4. };
-    double[][] xKey = new double[3][3];
-
-    xKey = null;
+  @Test
+  public void nullKeyMatrixTest() {
+    double[] xValues = new double[] {1., 2., 3.};
+    double[] yValues = new double[] {1., 3., 4.};
+    double[][] xKey = null;
 
     PiecewiseCubicHermiteSplineInterpolator interp = new PiecewiseCubicHermiteSplineInterpolator();
 
-    interp.interpolate(xValues, yValues, xKey);
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> interp.interpolate(xValues, yValues, xKey));
 
   }
 
   /**
    * 
    */
-  @Test(expectedExceptions = IllegalArgumentException.class)
-  public void NullKeyMatrixMultiTest() {
-    double[] xValues = new double[] {1., 2., 3. };
-    double[][] yValues = new double[][] { {1., 3., 4. }, {2., 3., 1. } };
-    double[][] xKey = new double[3][4];
-
-    xKey = null;
+  @Test
+  public void nullKeyMatrixMultiTest() {
+    double[] xValues = new double[] {1., 2., 3.};
+    double[][] yValues = new double[][] {{1., 3., 4.}, {2., 3., 1.}};
+    double[][] xKey = null;
 
     PiecewiseCubicHermiteSplineInterpolator interp = new PiecewiseCubicHermiteSplineInterpolator();
 
-    interp.interpolate(xValues, yValues, xKey);
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> interp.interpolate(xValues, yValues, xKey));
 
   }
 
   /**
    * 
    */
-  @Test(expectedExceptions = IllegalArgumentException.class)
-  public void InfiniteOutputTest() {
-    double[] xValues = new double[] {1.e-308, 2.e-308 };
-    double[] yValues = new double[] {1., 1.e308 };
+  @Test
+  public void infiniteOutputTest() {
+    double[] xValues = new double[] {1.e-308, 2.e-308};
+    double[] yValues = new double[] {1., 1.e308};
 
     PiecewiseCubicHermiteSplineInterpolator interp = new PiecewiseCubicHermiteSplineInterpolator();
 
-    interp.interpolate(xValues, yValues);
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> interp.interpolate(xValues, yValues));
 
   }
 
   /**
    * 
    */
-  @Test(expectedExceptions = IllegalArgumentException.class)
-  public void InfiniteOutputMultiTest() {
-    double[] xValues = new double[] {1.e-308, 2.e-308 };
-    double[][] yValues = new double[][] { {1., 1.e308 }, {2., 1. } };
+  @Test
+  public void infiniteOutputMultiTest() {
+    double[] xValues = new double[] {1.e-308, 2.e-308};
+    double[][] yValues = new double[][] {{1., 1.e308}, {2., 1.}};
 
     PiecewiseCubicHermiteSplineInterpolator interp = new PiecewiseCubicHermiteSplineInterpolator();
 
-    interp.interpolate(xValues, yValues);
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> interp.interpolate(xValues, yValues));
   }
 
   /**
    * 
    */
-  @Test(expectedExceptions = IllegalArgumentException.class)
-  public void NanOutputTest() {
-    double[] xValues = new double[] {1., 2.e-308, 3.e-308, 4. };
-    double[] yValues = new double[] {1., 2., 1.e308, 3. };
+  @Test
+  public void nanOutputTest() {
+    double[] xValues = new double[] {1., 2.e-308, 3.e-308, 4.};
+    double[] yValues = new double[] {1., 2., 1.e308, 3.};
 
     PiecewiseCubicHermiteSplineInterpolator interp = new PiecewiseCubicHermiteSplineInterpolator();
 
-    interp.interpolate(xValues, yValues);
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> interp.interpolate(xValues, yValues));
   }
 
   /**
    * 
    */
-  @Test(expectedExceptions = IllegalArgumentException.class)
-  public void NanOutputMultiTest() {
-    double[] xValues = new double[] {1., 2.e-308, 3.e-308, 4. };
-    double[][] yValues = new double[][] { {1., 2., 3., 4. }, {2., 2., 3., 4. } };
+  @Test
+  public void nanOutputMultiTest() {
+    double[] xValues = new double[] {1., 2.e-308, 3.e-308, 4.};
+    double[][] yValues = new double[][] {{1., 2., 3., 4.}, {2., 2., 3., 4.}};
 
     PiecewiseCubicHermiteSplineInterpolator interp = new PiecewiseCubicHermiteSplineInterpolator();
 
-    interp.interpolate(xValues, yValues);
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> interp.interpolate(xValues, yValues));
   }
 
   /**
    * 
    */
-  @Test(expectedExceptions = IllegalArgumentException.class)
-  public void LargeInterpolantsTest() {
-    final double[] xValues = new double[] {1., 2., 3., 4. };
-    final double[][] yValues = new double[][] { {2., 10., 2., 5. }, {1., 2., 10., 11. } };
+  @Test
+  public void largeInterpolantsTest() {
+    final double[] xValues = new double[] {1., 2., 3., 4.};
+    final double[][] yValues = new double[][] {{2., 10., 2., 5.}, {1., 2., 10., 11.}};
 
     PiecewiseCubicHermiteSplineInterpolator interp = new PiecewiseCubicHermiteSplineInterpolator();
 
-    interp.interpolate(xValues, yValues[0], 1.e308);
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> interp.interpolate(xValues, yValues[0], 1.e308));
   }
 
 }

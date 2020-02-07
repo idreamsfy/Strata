@@ -107,24 +107,16 @@ commands:
             - ~/.m2/repository
 
 #----------------------------------------------------------------------------
-# gather the TestSuite.xml files into a single folder and upload them
+# gather the test result xml files into a single folder and upload them
   store_maven_tests:
     description: "Storing Maven test results"
     steps:
       - run:
           name: Gathering test results
           command: |
-            mkdir -vp ~/test-results/junit/
-            folder_index=1
-            find . -type f -regex ".*/target/surefire-reports/.*Suite.xml" -print0 | while IFS= read -r -d '' path
-            do
-              base=$(basename --suffix=".xml"  "$path")
-              old_name="$base.xml"
-              new_name="$base$folder_index.xml"
-              cp -v "$path" ~/test-results/junit/"$old_name"
-              mv -v ~/test-results/junit/"$old_name" ~/test-results/junit/"$new_name"
-              folder_index=$(( $folder_index +1 ))
-            done
+            mkdir -p ~/test-results/junit/
+            find . -type f -regex ".*/target/surefire-reports/.*xml" -exec cp {} ~/test-results/junit/ \;
+            zip -rq ~/test-results.zip pom.xml ~/test-results
           when: always
       - store_test_results:
           name: "Uploading test results"
@@ -132,7 +124,7 @@ commands:
           when: always
       - store_artifacts:
           name: "Storing test artifacts"
-          path: ~/test-results/junit
+          path: ~/test-results.zip
           destination: test-results
           when: always
 
@@ -168,9 +160,13 @@ commands:
           name: Setup GPG
           working_directory: ~/repo/.circleci
           command: |
+            gpg --version
             echo $SIGNING_PASSWORD | gpg --batch --passphrase-fd 0 -o codesigning.asc -d codesigning.asc.gpg
             gpg --batch --import codesigning.asc
             shred --remove codesigning.asc
+            echo 'use-agent' >> ~/.gnupg/gpg.conf
+            echo 'pinentry-mode loopback' >> ~/.gnupg/gpg.conf
+            echo 'allow-loopback-pinentry' >> ~/.gnupg/gpg-agent.conf
 
 #----------------------------------------------------------------------------
   maven_deploy_modules:
@@ -254,6 +250,22 @@ jobs:
           actions:
             - maven_install
             - maven_test
+      - persist_to_workspace:
+          root: .
+          paths:
+            - examples/*
+            - modules/*
+            - target/*
+
+#----------------------------------------------------------------------------
+  release_part2:
+    executor: jdk8
+    steps:
+      - checkout
+      - attach_workspace:
+          at: .
+      - with_maven:
+          actions:
             - setup_gpg
             - maven_deploy_modules
             - maven_package_examples
@@ -289,6 +301,15 @@ workflows:
     jobs:
       - release:
           context: OG-OSS
+          filters:
+            branches:
+              ignore: /.*/
+            tags:
+              only: /^v.*/
+      - release_part2:
+          context: OG-OSS
+          requires:
+            - release
           filters:
             branches:
               ignore: /.*/

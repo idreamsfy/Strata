@@ -117,7 +117,7 @@ public final class PeriodicSchedule
    * The start date, which is the start of the first schedule period.
    * <p>
    * This is the start date of the schedule.
-   * It is is unadjusted and as such might be a weekend or holiday.
+   * It is unadjusted and as such might be a weekend or holiday.
    * Any applicable business day adjustment will be applied when creating the schedule.
    * This is also known as the unadjusted effective date.
    * <p>
@@ -131,7 +131,7 @@ public final class PeriodicSchedule
    * The end date, which is the end of the last schedule period.
    * <p>
    * This is the end date of the schedule.
-   * It is is unadjusted and as such might be a weekend or holiday.
+   * It is unadjusted and as such might be a weekend or holiday.
    * Any applicable business day adjustment will be applied when creating the schedule.
    * This is also known as the unadjusted maturity date or unadjusted termination date.
    * This date must be after the start date.
@@ -297,6 +297,7 @@ public final class PeriodicSchedule
       BusinessDayAdjustment businessDayAdjustment,
       StubConvention stubConvention,
       boolean preferEndOfMonth) {
+
     ArgChecker.notNull(unadjustedStartDate, "unadjustedStartDate");
     ArgChecker.notNull(unadjustedEndDate, "unadjustedEndDate");
     ArgChecker.notNull(frequency, "frequency");
@@ -334,6 +335,7 @@ public final class PeriodicSchedule
       BusinessDayAdjustment businessDayAdjustment,
       StubConvention stubConvention,
       RollConvention rollConvention) {
+
     ArgChecker.notNull(unadjustedStartDate, "unadjustedStartDate");
     ArgChecker.notNull(unadjustedEndDate, "unadjustedEndDate");
     ArgChecker.notNull(frequency, "frequency");
@@ -848,7 +850,7 @@ public final class PeriodicSchedule
   // and similar rule for numeric roll conventions
   // http://www.fpml.org/forums/topic/can-a-roll-convention-imply-a-stub/#post-7659
   // For 'StandardRollConventions', such as IMM, adjusted date is identified by finding the closest valid roll date
-  // and applying the the trade level business day adjustment
+  // and applying the trade level business day adjustment
   private LocalDate calculatedUnadjustedStartDate(ReferenceData refData) {
     // change date if
     // reference data is available
@@ -905,7 +907,6 @@ public final class PeriodicSchedule
       LocalDate rollImpliedDate = rollConvention.adjust(baseDate);
 
       if (!rollImpliedDate.equals(baseDate)) {
-
         //If roll date is relative to the month the assumption is that the adjusted date is not in a different month to
         //the original unadjusted date. This is safe as the roll day produced by monthly roll conventions are typically
         //not close to the end of the month and hence any reasonable adjustment will not move into the next month.
@@ -1090,7 +1091,7 @@ public final class PeriodicSchedule
    * Gets the start date, which is the start of the first schedule period.
    * <p>
    * This is the start date of the schedule.
-   * It is is unadjusted and as such might be a weekend or holiday.
+   * It is unadjusted and as such might be a weekend or holiday.
    * Any applicable business day adjustment will be applied when creating the schedule.
    * This is also known as the unadjusted effective date.
    * <p>
@@ -1108,7 +1109,7 @@ public final class PeriodicSchedule
    * Gets the end date, which is the end of the last schedule period.
    * <p>
    * This is the end date of the schedule.
-   * It is is unadjusted and as such might be a weekend or holiday.
+   * It is unadjusted and as such might be a weekend or holiday.
    * Any applicable business day adjustment will be applied when creating the schedule.
    * This is also known as the unadjusted maturity date or unadjusted termination date.
    * This date must be after the start date.
@@ -1759,7 +1760,7 @@ public final class PeriodicSchedule
      * Sets the start date, which is the start of the first schedule period.
      * <p>
      * This is the start date of the schedule.
-     * It is is unadjusted and as such might be a weekend or holiday.
+     * It is unadjusted and as such might be a weekend or holiday.
      * Any applicable business day adjustment will be applied when creating the schedule.
      * This is also known as the unadjusted effective date.
      * <p>
@@ -1779,7 +1780,7 @@ public final class PeriodicSchedule
      * Sets the end date, which is the end of the last schedule period.
      * <p>
      * This is the end date of the schedule.
-     * It is is unadjusted and as such might be a weekend or holiday.
+     * It is unadjusted and as such might be a weekend or holiday.
      * Any applicable business day adjustment will be applied when creating the schedule.
      * This is also known as the unadjusted maturity date or unadjusted termination date.
      * This date must be after the start date.

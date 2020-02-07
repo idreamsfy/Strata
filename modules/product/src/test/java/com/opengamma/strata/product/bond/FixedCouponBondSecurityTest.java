@@ -12,14 +12,13 @@ import static com.opengamma.strata.collect.TestHelper.assertSerialization;
 import static com.opengamma.strata.collect.TestHelper.coverBeanEquals;
 import static com.opengamma.strata.collect.TestHelper.coverImmutableBean;
 import static com.opengamma.strata.collect.TestHelper.date;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
-import static org.testng.Assert.assertEquals;
 
 import java.time.LocalDate;
 
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Test;
 
-import com.google.common.collect.ImmutableSet;
 import com.opengamma.strata.basics.ReferenceData;
 import com.opengamma.strata.basics.currency.CurrencyAmount;
 import com.opengamma.strata.basics.date.BusinessDayAdjustment;
@@ -39,7 +38,6 @@ import com.opengamma.strata.product.TradeInfo;
 /**
  * Test {@link FixedCouponBondSecurity}.
  */
-@Test
 public class FixedCouponBondSecurityTest {
 
   private static final FixedCouponBond PRODUCT = FixedCouponBondTest.sut();
@@ -61,46 +59,49 @@ public class FixedCouponBondSecurityTest {
   private static final int EX_COUPON_DAYS = 5;
 
   //-------------------------------------------------------------------------
+  @Test
   public void test_builder() {
     FixedCouponBondSecurity test = sut();
-    assertEquals(test.getInfo(), INFO);
-    assertEquals(test.getSecurityId(), PRODUCT.getSecurityId());
-    assertEquals(test.getCurrency(), PRODUCT.getCurrency());
-    assertEquals(test.getUnderlyingIds(), ImmutableSet.of());
+    assertThat(test.getInfo()).isEqualTo(INFO);
+    assertThat(test.getSecurityId()).isEqualTo(PRODUCT.getSecurityId());
+    assertThat(test.getCurrency()).isEqualTo(PRODUCT.getCurrency());
+    assertThat(test.getUnderlyingIds()).isEmpty();
   }
 
+  @Test
   public void test_builder_fail() {
     assertThatIllegalArgumentException()
         .isThrownBy(() -> FixedCouponBondSecurity.builder()
-        .info(INFO)
-        .dayCount(DAY_COUNT)
-        .fixedRate(FIXED_RATE)
-        .legalEntityId(LEGAL_ENTITY)
-        .currency(EUR)
-        .notional(NOTIONAL)
-        .accrualSchedule(PERIOD_SCHEDULE)
-        .settlementDateOffset(DATE_OFFSET)
-        .yieldConvention(YIELD_CONVENTION)
-        .exCouponPeriod(DaysAdjustment.ofBusinessDays(EX_COUPON_DAYS, EUTA, BUSINESS_ADJUST))
-        .build());
+            .info(INFO)
+            .dayCount(DAY_COUNT)
+            .fixedRate(FIXED_RATE)
+            .legalEntityId(LEGAL_ENTITY)
+            .currency(EUR)
+            .notional(NOTIONAL)
+            .accrualSchedule(PERIOD_SCHEDULE)
+            .settlementDateOffset(DATE_OFFSET)
+            .yieldConvention(YIELD_CONVENTION)
+            .exCouponPeriod(DaysAdjustment.ofBusinessDays(EX_COUPON_DAYS, EUTA, BUSINESS_ADJUST))
+            .build());
     assertThatIllegalArgumentException()
         .isThrownBy(() -> FixedCouponBondSecurity.builder()
-        .info(INFO)
-        .dayCount(DAY_COUNT)
-        .fixedRate(FIXED_RATE)
-        .legalEntityId(LEGAL_ENTITY)
-        .currency(EUR)
-        .notional(NOTIONAL)
-        .accrualSchedule(PERIOD_SCHEDULE)
-        .settlementDateOffset(DaysAdjustment.ofBusinessDays(-3, EUTA))
-        .yieldConvention(YIELD_CONVENTION)
-        .build());
+            .info(INFO)
+            .dayCount(DAY_COUNT)
+            .fixedRate(FIXED_RATE)
+            .legalEntityId(LEGAL_ENTITY)
+            .currency(EUR)
+            .notional(NOTIONAL)
+            .accrualSchedule(PERIOD_SCHEDULE)
+            .settlementDateOffset(DaysAdjustment.ofBusinessDays(-3, EUTA))
+            .yieldConvention(YIELD_CONVENTION)
+            .build());
   }
 
   //-------------------------------------------------------------------------
+  @Test
   public void test_createProduct() {
     FixedCouponBondSecurity test = sut();
-    assertEquals(test.createProduct(ReferenceData.empty()), PRODUCT);
+    assertThat(test.createProduct(ReferenceData.empty())).isEqualTo(PRODUCT);
     TradeInfo tradeInfo = TradeInfo.of(date(2016, 6, 30));
     FixedCouponBondTrade expectedTrade = FixedCouponBondTrade.builder()
         .info(tradeInfo)
@@ -108,9 +109,10 @@ public class FixedCouponBondSecurityTest {
         .quantity(100)
         .price(123.50)
         .build();
-    assertEquals(test.createTrade(tradeInfo, 100, 123.50, ReferenceData.empty()), expectedTrade);
+    assertThat(test.createTrade(tradeInfo, 100, 123.50, ReferenceData.empty())).isEqualTo(expectedTrade);
   }
 
+  @Test
   public void test_createPosition() {
     FixedCouponBondSecurity test = sut();
     PositionInfo positionInfo = PositionInfo.empty();
@@ -119,22 +121,24 @@ public class FixedCouponBondSecurityTest {
         .product(PRODUCT)
         .longQuantity(100)
         .build();
-    assertEquals(test.createPosition(positionInfo, 100, ReferenceData.empty()), expectedPosition1);
+    assertThat(test.createPosition(positionInfo, 100, ReferenceData.empty())).isEqualTo(expectedPosition1);
     FixedCouponBondPosition expectedPosition2 = FixedCouponBondPosition.builder()
         .info(positionInfo)
         .product(PRODUCT)
         .longQuantity(100)
         .shortQuantity(50)
         .build();
-    assertEquals(test.createPosition(positionInfo, 100, 50, ReferenceData.empty()), expectedPosition2);
+    assertThat(test.createPosition(positionInfo, 100, 50, ReferenceData.empty())).isEqualTo(expectedPosition2);
   }
 
   //-------------------------------------------------------------------------
+  @Test
   public void coverage() {
     coverImmutableBean(sut());
     coverBeanEquals(sut(), sut2());
   }
 
+  @Test
   public void test_serialization() {
     assertSerialization(sut());
   }

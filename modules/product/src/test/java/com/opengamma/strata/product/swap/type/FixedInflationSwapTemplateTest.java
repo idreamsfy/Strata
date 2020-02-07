@@ -26,14 +26,14 @@ import static com.opengamma.strata.product.common.PayReceive.PAY;
 import static com.opengamma.strata.product.common.PayReceive.RECEIVE;
 import static com.opengamma.strata.product.swap.PriceIndexCalculationMethod.INTERPOLATED;
 import static com.opengamma.strata.product.swap.PriceIndexCalculationMethod.MONTHLY;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
-import static org.testng.Assert.assertEquals;
 
 import java.time.LocalDate;
 import java.time.Period;
 import java.util.Optional;
 
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Test;
 
 import com.opengamma.strata.basics.ReferenceData;
 import com.opengamma.strata.basics.date.BusinessDayAdjustment;
@@ -44,7 +44,6 @@ import com.opengamma.strata.product.swap.SwapTrade;
 /**
  * Test {@link FixedInflationSwapTemplate}.
  */
-@Test
 public class FixedInflationSwapTemplateTest {
 
   private static final ReferenceData REF_DATA = ReferenceData.standard();
@@ -60,8 +59,10 @@ public class FixedInflationSwapTemplateTest {
       FixedRateSwapLegConvention.of(GBP, ACT_360, P6M, BDA_FOLLOW);
   private static final FixedRateSwapLegConvention FIXED2 =
       FixedRateSwapLegConvention.of(USD, ACT_365F, P3M, BDA_MOD_FOLLOW);
-  private static final InflationRateSwapLegConvention INFL = InflationRateSwapLegConvention.of(GB_HICP, LAG_3M, MONTHLY, BDA_MOD_FOLLOW);
-  private static final InflationRateSwapLegConvention INFL2 = InflationRateSwapLegConvention.of(US_CPI_U, LAG_3M, INTERPOLATED, BDA_MOD_FOLLOW);
+  private static final InflationRateSwapLegConvention INFL =
+      InflationRateSwapLegConvention.of(GB_HICP, LAG_3M, MONTHLY, BDA_MOD_FOLLOW);
+  private static final InflationRateSwapLegConvention INFL2 =
+      InflationRateSwapLegConvention.of(US_CPI_U, LAG_3M, INTERPOLATED, BDA_MOD_FOLLOW);
   private static final FixedInflationSwapConvention CONV = ImmutableFixedInflationSwapConvention.of(
       NAME,
       FIXED,
@@ -74,26 +75,30 @@ public class FixedInflationSwapTemplateTest {
       PLUS_ONE_DAY);
 
   //-------------------------------------------------------------------------
+  @Test
   public void test_of() {
     FixedInflationSwapTemplate test = FixedInflationSwapTemplate.of(TENOR_10Y, CONV);
-    assertEquals(test.getTenor(), TENOR_10Y);
-    assertEquals(test.getConvention(), CONV);
+    assertThat(test.getTenor()).isEqualTo(TENOR_10Y);
+    assertThat(test.getConvention()).isEqualTo(CONV);
   }
 
+  @Test
   public void test_of_period() {
     FixedInflationSwapTemplate test = FixedInflationSwapTemplate.of(TENOR_10Y, CONV);
-    assertEquals(test.getTenor(), TENOR_10Y);
-    assertEquals(test.getConvention(), CONV);
+    assertThat(test.getTenor()).isEqualTo(TENOR_10Y);
+    assertThat(test.getConvention()).isEqualTo(CONV);
   }
 
   //-------------------------------------------------------------------------
+  @Test
   public void test_builder_notEnoughData() {
     assertThatIllegalArgumentException()
         .isThrownBy(() -> FixedIborSwapTemplate.builder()
-        .build());
+            .build());
   }
 
   //-------------------------------------------------------------------------
+  @Test
   public void test_createTrade() {
     FixedInflationSwapTemplate base = FixedInflationSwapTemplate.of(TENOR_10Y, CONV);
     LocalDate tradeDate = LocalDate.of(2015, 5, 5);
@@ -103,13 +108,14 @@ public class FixedInflationSwapTemplateTest {
     Swap expected = Swap.of(
         FIXED.toLeg(startDate, endDate, PAY, NOTIONAL_2M, 0.25d),
         INFL.toLeg(startDate, endDate, RECEIVE, NOTIONAL_2M));
-    assertEquals(test.getInfo().getTradeDate(), Optional.of(tradeDate));
-    assertEquals(test.getProduct().getLegs().get(0), expected.getLegs().get(0));
-    assertEquals(test.getProduct().getLegs().get(1), expected.getLegs().get(1));
-    assertEquals(test.getProduct(), expected);
+    assertThat(test.getInfo().getTradeDate()).isEqualTo(Optional.of(tradeDate));
+    assertThat(test.getProduct().getLegs().get(0)).isEqualTo(expected.getLegs().get(0));
+    assertThat(test.getProduct().getLegs().get(1)).isEqualTo(expected.getLegs().get(1));
+    assertThat(test.getProduct()).isEqualTo(expected);
   }
 
   //-------------------------------------------------------------------------
+  @Test
   public void coverage() {
     FixedInflationSwapTemplate test = FixedInflationSwapTemplate.of(TENOR_10Y, CONV);
     coverImmutableBean(test);
@@ -117,6 +123,7 @@ public class FixedInflationSwapTemplateTest {
     coverBeanEquals(test, test2);
   }
 
+  @Test
   public void test_serialization() {
     FixedInflationSwapTemplate test = FixedInflationSwapTemplate.of(TENOR_10Y, CONV);
     assertSerialization(test);

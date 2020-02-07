@@ -153,6 +153,53 @@ public final class TradeInfo
     return new TradeInfo(id, counterparty, tradeDate, tradeTime, zone, settlementDate, updatedAttributes);
   }
 
+  @Override
+  public TradeInfo withAttributes(Attributes other) {
+    TradeInfoBuilder builder = toBuilder();
+    for (AttributeType<?> attrType : other.getAttributeTypes()) {
+      builder.addAttribute(attrType.captureWildcard(), other.getAttribute(attrType));
+    }
+    return builder.build();
+  }
+
+  @Override
+  public TradeInfo combinedWith(PortfolioItemInfo other) {
+    TradeInfoBuilder builder = toBuilder();
+    other.getId().filter(ignored -> this.id == null).ifPresent(builder::id);
+    if (other instanceof TradeInfo) {
+      TradeInfo otherInfo = (TradeInfo) other;
+      otherInfo.getCounterparty().filter(ignored -> this.counterparty == null).ifPresent(builder::counterparty);
+      otherInfo.getTradeDate().filter(ignored -> this.tradeDate == null).ifPresent(builder::tradeDate);
+      otherInfo.getTradeTime().filter(ignored -> this.tradeTime == null).ifPresent(builder::tradeTime);
+      otherInfo.getZone().filter(ignored -> this.zone == null).ifPresent(builder::zone);
+      otherInfo.getSettlementDate().filter(ignored -> this.settlementDate == null).ifPresent(builder::settlementDate);
+    }
+    for (AttributeType<?> attrType : other.getAttributeTypes()) {
+      if (!attributes.keySet().contains(attrType)) {
+        builder.addAttribute(attrType.captureWildcard(), other.getAttribute(attrType));
+      }
+    }
+    return builder.build();
+  }
+
+  @Override
+  public TradeInfo overrideWith(PortfolioItemInfo other) {
+    TradeInfoBuilder builder = toBuilder();
+    other.getId().ifPresent(builder::id);
+    if (other instanceof TradeInfo) {
+      TradeInfo otherInfo = (TradeInfo) other;
+      otherInfo.getCounterparty().ifPresent(builder::counterparty);
+      otherInfo.getTradeDate().ifPresent(builder::tradeDate);
+      otherInfo.getTradeTime().ifPresent(builder::tradeTime);
+      otherInfo.getZone().ifPresent(builder::zone);
+      otherInfo.getSettlementDate().ifPresent(builder::settlementDate);
+    }
+    for (AttributeType<?> attrType : other.getAttributeTypes()) {
+      builder.addAttribute(attrType.captureWildcard(), other.getAttribute(attrType));
+    }
+    return builder.build();
+  }
+
   /**
    * Returns a builder populated with the values of this instance.
    * 

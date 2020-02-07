@@ -5,19 +5,18 @@
  */
 package com.opengamma.strata.math.impl.regression;
 
-import static org.testng.AssertJUnit.assertEquals;
-import static org.testng.AssertJUnit.assertFalse;
-import static org.testng.internal.junit.ArrayAsserts.assertArrayEquals;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
+import static org.assertj.core.data.Offset.offset;
 
 import java.util.function.DoubleBinaryOperator;
 
 import org.apache.commons.math3.random.Well44497b;
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test.
  */
-@Test
 public class LeastSquaresRegressionResultTest {
 
   private static final LeastSquaresRegression REGRESSION = new OrdinaryLeastSquaresRegression();
@@ -46,94 +45,110 @@ public class LeastSquaresRegressionResultTest {
     INTERCEPT = REGRESSION.regress(x, null, y2, true);
   }
 
-  @Test(expectedExceptions = IllegalArgumentException.class)
+  @Test
   public void testInputs() {
-    new LeastSquaresRegressionResult(null);
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> new LeastSquaresRegressionResult(null));
   }
 
-  @Test(expectedExceptions = IllegalArgumentException.class)
+  @Test
   public void testNullArray() {
-    NO_INTERCEPT.getPredictedValue(null);
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> NO_INTERCEPT.getPredictedValue(null));
   }
 
-  @Test(expectedExceptions = IllegalArgumentException.class)
+  @Test
   public void testLongArray() {
-    NO_INTERCEPT.getPredictedValue(new double[] {2.4, 2.5, 3.4 });
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> NO_INTERCEPT.getPredictedValue(new double[] {2.4, 2.5, 3.4}));
   }
 
-  @Test(expectedExceptions = IllegalArgumentException.class)
+  @Test
   public void testShortArray() {
-    NO_INTERCEPT.getPredictedValue(new double[] {2.4 });
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> NO_INTERCEPT.getPredictedValue(new double[] {2.4}));
   }
 
   @Test
   public void testPredictedValue() {
     double[] z;
     for (int i = 0; i < 10; i++) {
-      z = new double[] {RANDOM.nextDouble(), RANDOM.nextDouble() };
-      assertEquals(F1.applyAsDouble(z[0], z[1]), NO_INTERCEPT.getPredictedValue(z), EPS);
-      assertEquals(F2.applyAsDouble(z[0], z[1]), INTERCEPT.getPredictedValue(z), EPS);
+      z = new double[] {RANDOM.nextDouble(), RANDOM.nextDouble()};
+      assertThat(F1.applyAsDouble(z[0], z[1])).isCloseTo(NO_INTERCEPT.getPredictedValue(z), offset(EPS));
+      assertThat(F2.applyAsDouble(z[0], z[1])).isCloseTo(INTERCEPT.getPredictedValue(z), offset(EPS));
     }
   }
 
   @Test
   public void testEqualsAndHashCode() {
-    final double[] residuals = new double[] {1, 2, 3 };
-    final double[] betas = new double[] {1.1, 2.1, 3.1 };
+    final double[] residuals = new double[] {1, 2, 3};
+    final double[] betas = new double[] {1.1, 2.1, 3.1};
     final double meanSquareError = 0.78;
-    final double[] standardErrorOfBeta = new double[] {1.2, 2.2, 3.2 };
+    final double[] standardErrorOfBeta = new double[] {1.2, 2.2, 3.2};
     final double rSquared = 0.98;
     final double rSquaredAdjusted = 0.96;
-    final double[] tStats = new double[] {1.3, 2.3, 3.3 };
-    final double[] pValues = new double[] {1.4, 2.4, 3.4 };
+    final double[] tStats = new double[] {1.3, 2.3, 3.3};
+    final double[] pValues = new double[] {1.4, 2.4, 3.4};
     final boolean hasIntercept = false;
-    final LeastSquaresRegressionResult result = new LeastSquaresRegressionResult(betas, residuals, meanSquareError, standardErrorOfBeta, rSquared, rSquaredAdjusted, tStats, pValues, hasIntercept);
+    final LeastSquaresRegressionResult result = new LeastSquaresRegressionResult(
+        betas, residuals, meanSquareError, standardErrorOfBeta, rSquared, rSquaredAdjusted, tStats, pValues, hasIntercept);
     LeastSquaresRegressionResult other = new LeastSquaresRegressionResult(result);
-    assertEquals(result, other);
-    assertEquals(result.hashCode(), other.hashCode());
-    other = new LeastSquaresRegressionResult(betas, residuals, meanSquareError, standardErrorOfBeta, rSquared, rSquaredAdjusted, tStats, pValues, hasIntercept);
-    assertEquals(result, other);
-    assertEquals(result.hashCode(), other.hashCode());
-    final double[] x = new double[] {1.5, 2.5, 3.5 };
-    other = new LeastSquaresRegressionResult(x, residuals, meanSquareError, standardErrorOfBeta, rSquared, rSquaredAdjusted, tStats, pValues, hasIntercept);
-    assertFalse(result.equals(other));
-    other = new LeastSquaresRegressionResult(betas, x, meanSquareError, standardErrorOfBeta, rSquared, rSquaredAdjusted, tStats, pValues, hasIntercept);
-    assertFalse(result.equals(other));
-    other = new LeastSquaresRegressionResult(betas, residuals, meanSquareError + 1, standardErrorOfBeta, rSquared, rSquaredAdjusted, tStats, pValues, hasIntercept);
-    assertFalse(result.equals(other));
-    other = new LeastSquaresRegressionResult(betas, residuals, meanSquareError, x, rSquared, rSquaredAdjusted, tStats, pValues, hasIntercept);
-    assertFalse(result.equals(other));
-    other = new LeastSquaresRegressionResult(betas, residuals, meanSquareError, standardErrorOfBeta, rSquared + 1, rSquaredAdjusted, tStats, pValues, hasIntercept);
-    assertFalse(result.equals(other));
-    other = new LeastSquaresRegressionResult(betas, residuals, meanSquareError, standardErrorOfBeta, rSquared, rSquaredAdjusted + 1, tStats, pValues, hasIntercept);
-    assertFalse(result.equals(other));
-    other = new LeastSquaresRegressionResult(betas, residuals, meanSquareError, standardErrorOfBeta, rSquared, rSquaredAdjusted, x, pValues, hasIntercept);
-    assertFalse(result.equals(other));
-    other = new LeastSquaresRegressionResult(betas, residuals, meanSquareError, standardErrorOfBeta, rSquared, rSquaredAdjusted, tStats, x, hasIntercept);
-    assertFalse(result.equals(other));
-    other = new LeastSquaresRegressionResult(betas, residuals, meanSquareError, standardErrorOfBeta, rSquared, rSquaredAdjusted, tStats, pValues, !hasIntercept);
-    assertFalse(result.equals(other));
+    assertThat(result).isEqualTo(other);
+    assertThat(result.hashCode()).isEqualTo(other.hashCode());
+    other = new LeastSquaresRegressionResult(
+        betas, residuals, meanSquareError, standardErrorOfBeta, rSquared, rSquaredAdjusted, tStats, pValues, hasIntercept);
+    assertThat(result).isEqualTo(other);
+    assertThat(result.hashCode()).isEqualTo(other.hashCode());
+    final double[] x = new double[] {1.5, 2.5, 3.5};
+    other = new LeastSquaresRegressionResult(
+        x, residuals, meanSquareError, standardErrorOfBeta, rSquared, rSquaredAdjusted, tStats, pValues, hasIntercept);
+    assertThat(result.equals(other)).isFalse();
+    other = new LeastSquaresRegressionResult(
+        betas, x, meanSquareError, standardErrorOfBeta, rSquared, rSquaredAdjusted, tStats, pValues, hasIntercept);
+    assertThat(result.equals(other)).isFalse();
+    other = new LeastSquaresRegressionResult(
+        betas, residuals, meanSquareError + 1, standardErrorOfBeta, rSquared, rSquaredAdjusted, tStats, pValues, hasIntercept);
+    assertThat(result.equals(other)).isFalse();
+    other = new LeastSquaresRegressionResult(
+        betas, residuals, meanSquareError, x, rSquared, rSquaredAdjusted, tStats, pValues, hasIntercept);
+    assertThat(result.equals(other)).isFalse();
+    other = new LeastSquaresRegressionResult(
+        betas, residuals, meanSquareError, standardErrorOfBeta, rSquared + 1, rSquaredAdjusted, tStats, pValues, hasIntercept);
+    assertThat(result.equals(other)).isFalse();
+    other = new LeastSquaresRegressionResult(
+        betas, residuals, meanSquareError, standardErrorOfBeta, rSquared, rSquaredAdjusted + 1, tStats, pValues, hasIntercept);
+    assertThat(result.equals(other)).isFalse();
+    other = new LeastSquaresRegressionResult(
+        betas, residuals, meanSquareError, standardErrorOfBeta, rSquared, rSquaredAdjusted, x, pValues, hasIntercept);
+    assertThat(result.equals(other)).isFalse();
+    other = new LeastSquaresRegressionResult(
+        betas, residuals, meanSquareError, standardErrorOfBeta, rSquared, rSquaredAdjusted, tStats, x, hasIntercept);
+    assertThat(result.equals(other)).isFalse();
+    other = new LeastSquaresRegressionResult(
+        betas, residuals, meanSquareError, standardErrorOfBeta, rSquared, rSquaredAdjusted, tStats, pValues, !hasIntercept);
+    assertThat(result.equals(other)).isFalse();
   }
 
   @Test
   public void testGetters() {
-    final double[] residuals = new double[] {1, 2, 3 };
-    final double[] betas = new double[] {1.1, 2.1, 3.1 };
+    final double[] residuals = new double[] {1, 2, 3};
+    final double[] betas = new double[] {1.1, 2.1, 3.1};
     final double meanSquareError = 0.78;
-    final double[] standardErrorOfBeta = new double[] {1.2, 2.2, 3.2 };
+    final double[] standardErrorOfBeta = new double[] {1.2, 2.2, 3.2};
     final double rSquared = 0.98;
     final double rSquaredAdjusted = 0.96;
-    final double[] tStats = new double[] {1.3, 2.3, 3.3 };
-    final double[] pValues = new double[] {1.4, 2.4, 3.4 };
+    final double[] tStats = new double[] {1.3, 2.3, 3.3};
+    final double[] pValues = new double[] {1.4, 2.4, 3.4};
     final boolean hasIntercept = false;
-    final LeastSquaresRegressionResult result = new LeastSquaresRegressionResult(betas, residuals, meanSquareError, standardErrorOfBeta, rSquared, rSquaredAdjusted, tStats, pValues, hasIntercept);
-    assertEquals(result.getAdjustedRSquared(), rSquaredAdjusted, 0);
-    assertArrayEquals(result.getBetas(), betas, 0);
-    assertEquals(result.getMeanSquareError(), meanSquareError, 0);
-    assertArrayEquals(result.getPValues(), pValues, 0);
-    assertArrayEquals(result.getResiduals(), residuals, 0);
-    assertEquals(result.getRSquared(), rSquared, 0);
-    assertArrayEquals(result.getStandardErrorOfBetas(), standardErrorOfBeta, 0);
-    assertArrayEquals(result.getTStatistics(), tStats, 0);
+    final LeastSquaresRegressionResult result = new LeastSquaresRegressionResult(
+        betas, residuals, meanSquareError, standardErrorOfBeta, rSquared, rSquaredAdjusted, tStats, pValues, hasIntercept);
+    assertThat(result.getAdjustedRSquared()).isEqualTo(rSquaredAdjusted);
+    assertThat(result.getBetas()).isEqualTo(betas);
+    assertThat(result.getMeanSquareError()).isEqualTo(meanSquareError);
+    assertThat(result.getPValues()).isEqualTo(pValues);
+    assertThat(result.getResiduals()).isEqualTo(residuals);
+    assertThat(result.getRSquared()).isEqualTo(rSquared);
+    assertThat(result.getStandardErrorOfBetas()).isEqualTo(standardErrorOfBeta);
+    assertThat(result.getTStatistics()).isEqualTo(tStats);
   }
 }

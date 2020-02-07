@@ -454,12 +454,20 @@ public final class TradeCsvLoader {
   private <T extends Trade> ValueWithFailures<List<T>> parseFile(CsvIterator csv, Class<T> tradeType) {
     List<T> trades = new ArrayList<>();
     List<FailureItem> failures = new ArrayList<>();
-    while (csv.hasNext()) {
-      CsvRow row = csv.next();
+    for (CsvRow row : csv.asIterable()) {
       try {
         String typeRaw = row.getField(TYPE_FIELD);
         TradeInfo info = parseTradeInfo(row);
         String typeUpper = typeRaw.toUpperCase(Locale.ENGLISH);
+        // allow type matching to be overridden
+        Optional<Trade> overrideOpt = resolver.overrideParseTrade(typeUpper, row, info);
+        if (overrideOpt.isPresent()) {
+          if (tradeType.isInstance(overrideOpt.get())) {
+            trades.add(tradeType.cast(overrideOpt.get()));
+          }
+          continue;
+        }
+        // standard type matching
         switch (typeUpper) {
           case "FRA":
             if (tradeType == FraTrade.class || tradeType == Trade.class) {
@@ -509,7 +517,7 @@ public final class TradeCsvLoader {
           case "VARIABLE":
             failures.add(FailureItem.of(
                 FailureReason.PARSING,
-                "CSV file contained a 'Variable' type at line {lineNumber} that was not preceeded by a 'Swap'",
+                "CSV file contained a 'Variable' type at line {lineNumber} that was not preceeded by a 'Swap' or 'Swaption'",
                 row.lineNumber()));
             break;
           case "FX":
@@ -543,6 +551,7 @@ public final class TradeCsvLoader {
             }
             break;
           default:
+            // type is not a standard one
             Optional<Trade> parsedOpt = resolver.parseOtherTrade(typeUpper, row, info);
             if (parsedOpt.isPresent()) {
               if (tradeType.isInstance(parsedOpt.get())) {

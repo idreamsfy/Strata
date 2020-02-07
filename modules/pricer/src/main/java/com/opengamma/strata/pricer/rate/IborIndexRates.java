@@ -74,6 +74,7 @@ public interface IborIndexRates
       LocalDate valuationDate,
       Curve forwardCurve,
       LocalDateDoubleTimeSeries fixings) {
+
     if (forwardCurve.getMetadata().getYValueType().equals(ValueType.FORWARD_RATE)) {
       return SimpleIborIndexRates.of(index, valuationDate, forwardCurve, fixings);
     }
@@ -169,7 +170,7 @@ public interface IborIndexRates
   public abstract PointSensitivityBuilder rateIgnoringFixingsPointSensitivity(IborIndexObservation observation);
 
   /**
-   * Explains the calculation of the the historic or forward rate at the specified fixing date.
+   * Explains the calculation of the historic or forward rate at the specified fixing date.
    * <p>
    * This adds information to the {@link ExplainMapBuilder} to aid understanding of the computation.
    * It does this by adding a populated {@link ExplainKey#OBSERVATIONS} entry.

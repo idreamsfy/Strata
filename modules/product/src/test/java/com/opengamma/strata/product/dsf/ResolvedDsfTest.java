@@ -18,12 +18,12 @@ import static com.opengamma.strata.collect.TestHelper.coverBeanEquals;
 import static com.opengamma.strata.collect.TestHelper.coverImmutableBean;
 import static com.opengamma.strata.product.common.PayReceive.PAY;
 import static com.opengamma.strata.product.common.PayReceive.RECEIVE;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
-import static org.testng.Assert.assertEquals;
 
 import java.time.LocalDate;
 
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Test;
 
 import com.opengamma.strata.basics.ReferenceData;
 import com.opengamma.strata.basics.date.BusinessDayAdjustment;
@@ -48,7 +48,6 @@ import com.opengamma.strata.product.swap.type.FixedIborSwapConventions;
 /**
  * Test {@link ResolvedDsf}.
  */
-@Test
 public class ResolvedDsfTest {
 
   private static final ReferenceData REF_DATA = ReferenceData.standard();
@@ -65,35 +64,39 @@ public class ResolvedDsfTest {
   private static final double NOTIONAL = PRODUCT.getNotional();
 
   //-------------------------------------------------------------------------
+  @Test
   public void test_builder() {
     ResolvedDsf test = sut();
-    assertEquals(test.getDeliveryDate(), DELIVERY_DATE);
-    assertEquals(test.getLastTradeDate(), LAST_TRADE_DATE);
-    assertEquals(test.getNotional(), NOTIONAL);
-    assertEquals(test.getCurrency(), USD);
-    assertEquals(test.getUnderlyingSwap(), RSWAP);
+    assertThat(test.getDeliveryDate()).isEqualTo(DELIVERY_DATE);
+    assertThat(test.getLastTradeDate()).isEqualTo(LAST_TRADE_DATE);
+    assertThat(test.getNotional()).isEqualTo(NOTIONAL);
+    assertThat(test.getCurrency()).isEqualTo(USD);
+    assertThat(test.getUnderlyingSwap()).isEqualTo(RSWAP);
   }
 
+  @Test
   public void test_builder_deliveryAfterStart() {
     assertThatIllegalArgumentException()
         .isThrownBy(() -> ResolvedDsf.builder()
-        .notional(NOTIONAL)
-        .deliveryDate(LocalDate.of(2014, 9, 19))
-        .lastTradeDate(LAST_TRADE_DATE)
-        .underlyingSwap(RSWAP)
-        .build());
+            .notional(NOTIONAL)
+            .deliveryDate(LocalDate.of(2014, 9, 19))
+            .lastTradeDate(LAST_TRADE_DATE)
+            .underlyingSwap(RSWAP)
+            .build());
   }
 
+  @Test
   public void test_builder_tradeAfterdelivery() {
     assertThatIllegalArgumentException()
         .isThrownBy(() -> ResolvedDsf.builder()
-        .notional(NOTIONAL)
-        .deliveryDate(DELIVERY_DATE)
-        .lastTradeDate(LocalDate.of(2014, 9, 11))
-        .underlyingSwap(RSWAP)
-        .build());
+            .notional(NOTIONAL)
+            .deliveryDate(DELIVERY_DATE)
+            .lastTradeDate(LocalDate.of(2014, 9, 11))
+            .underlyingSwap(RSWAP)
+            .build());
   }
 
+  @Test
   public void test_builder_notUnitNotional() {
     SwapLeg fixedLeg10 = RateCalculationSwapLeg.builder()
         .payReceive(RECEIVE)
@@ -142,28 +145,30 @@ public class ResolvedDsfTest {
     Swap swap2 = Swap.of(SWAP.getLeg(RECEIVE).get(), iborLeg500);
     assertThatIllegalArgumentException()
         .isThrownBy(() -> ResolvedDsf.builder()
-        .securityId(PRODUCT.getSecurityId())
-        .notional(NOTIONAL)
-        .deliveryDate(DELIVERY_DATE)
-        .lastTradeDate(LAST_TRADE_DATE)
-        .underlyingSwap(swap1.resolve(REF_DATA))
-        .build());
+            .securityId(PRODUCT.getSecurityId())
+            .notional(NOTIONAL)
+            .deliveryDate(DELIVERY_DATE)
+            .lastTradeDate(LAST_TRADE_DATE)
+            .underlyingSwap(swap1.resolve(REF_DATA))
+            .build());
     assertThatIllegalArgumentException()
         .isThrownBy(() -> ResolvedDsf.builder()
-        .securityId(PRODUCT.getSecurityId())
-        .notional(NOTIONAL)
-        .deliveryDate(DELIVERY_DATE)
-        .lastTradeDate(LAST_TRADE_DATE)
-        .underlyingSwap(swap2.resolve(REF_DATA))
-        .build());
+            .securityId(PRODUCT.getSecurityId())
+            .notional(NOTIONAL)
+            .deliveryDate(DELIVERY_DATE)
+            .lastTradeDate(LAST_TRADE_DATE)
+            .underlyingSwap(swap2.resolve(REF_DATA))
+            .build());
   }
 
   //-------------------------------------------------------------------------
+  @Test
   public void coverage() {
     coverImmutableBean(sut());
     coverBeanEquals(sut(), sut2());
   }
 
+  @Test
   public void test_serialization() {
     assertSerialization(sut());
   }

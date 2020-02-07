@@ -5,16 +5,17 @@
  */
 package com.opengamma.strata.math.impl.function.special;
 
-import static org.testng.AssertJUnit.assertEquals;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
+import static org.assertj.core.data.Offset.offset;
 
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Test;
 
 import com.opengamma.strata.math.impl.function.DoubleFunction1D;
 
 /**
  * Test.
  */
-@Test
 public class LegendrePolynomialFunctionTest {
 
   private static final DoubleFunction1D P0 = x -> 1d;
@@ -41,28 +42,29 @@ public class LegendrePolynomialFunctionTest {
         xSq * xSq * xSq * xSq + 90090 * xSq * xSq * xSq - 30030 * xSq * xSq + 3465 * xSq - 63);
   };
 
-  private static final DoubleFunction1D[] P = new DoubleFunction1D[] {P0, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10 };
+  private static final DoubleFunction1D[] P = new DoubleFunction1D[] {P0, P1, P2, P3, P4, P5, P6, P7, P8, P9, P10};
   private static final LegendrePolynomialFunction LEGENDRE = new LegendrePolynomialFunction();
   private static final double EPS = 1e-12;
 
-  @Test(expectedExceptions = IllegalArgumentException.class)
+  @Test
   public void testBadN() {
-    LEGENDRE.getPolynomials(-3);
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> LEGENDRE.getPolynomials(-3));
   }
 
   @Test
   public void test() {
     DoubleFunction1D[] p = LEGENDRE.getPolynomials(0);
-    assertEquals(p.length, 1);
+    assertThat(p.length).isEqualTo(1);
     final double x = 1.23;
-    assertEquals(p[0].applyAsDouble(x), 1, EPS);
+    assertThat(p[0].applyAsDouble(x)).isCloseTo(1, offset(EPS));
     p = LEGENDRE.getPolynomials(1);
-    assertEquals(p.length, 2);
-    assertEquals(p[1].applyAsDouble(x), x, EPS);
+    assertThat(p.length).isEqualTo(2);
+    assertThat(p[1].applyAsDouble(x)).isCloseTo(x, offset(EPS));
     for (int i = 0; i <= 10; i++) {
       p = LEGENDRE.getPolynomials(i);
       for (int j = 0; j <= i; j++) {
-        assertEquals(P[j].applyAsDouble(x), p[j].applyAsDouble(x), EPS);
+        assertThat(P[j].applyAsDouble(x)).isCloseTo(p[j].applyAsDouble(x), offset(EPS));
       }
     }
   }

@@ -7,7 +7,7 @@ package com.opengamma.strata.product;
 
 import java.util.Optional;
 
-import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 import com.opengamma.strata.collect.Messages;
 
 /**
@@ -24,7 +24,7 @@ public interface Attributes {
    * @return the empty instance
    */
   public static Attributes empty() {
-    return SimpleAttributes.EMPTY;
+    return SimpleAttributes.empty();
   }
 
   /**
@@ -39,10 +39,23 @@ public interface Attributes {
    * @return the instance
    */
   public static <T> Attributes of(AttributeType<T> type, T value) {
-    return new SimpleAttributes(ImmutableMap.of(type, type.toStoredForm(value)));
+    return SimpleAttributes.of(type, value);
   }
 
   //-------------------------------------------------------------------------
+  /**
+   * Gets the attribute types that are available.
+   * <p>
+   * See {@link AttributeType#captureWildcard()} for a way to capture the wildcard type.
+   * <p>
+   * The default implementation returns an empty set (backwards compatibility prevents an abstract method for now).
+   * 
+   * @return the attribute types
+   */
+  public default ImmutableSet<AttributeType<?>> getAttributeTypes() {
+    return ImmutableSet.of(); // TODO: Remove default in Strata v3
+  }
+
   /**
    * Gets the attribute associated with the specified type.
    * <p>
@@ -98,5 +111,22 @@ public interface Attributes {
    * @return a new instance based on this one with the attribute added
    */
   public abstract <T> Attributes withAttribute(AttributeType<T> type, T value);
+
+  /**
+   * Returns a copy of this instance with the attributes added.
+   * <p>
+   * This returns a new instance with the specified attributes added.
+   * The attributes are added using {@code Map.putAll(type, value)} semantics.
+   * 
+   * @param other  the other instance to copy from
+   * @return an instance based on this one with the attributes from the other instance
+   */
+  public default Attributes withAttributes(Attributes other) {
+    Attributes combined = this;
+    for (AttributeType<?> type : other.getAttributeTypes()) {
+      combined = combined.withAttribute(type.captureWildcard(), other.getAttribute(type));
+    }
+    return combined;
+  }
 
 }

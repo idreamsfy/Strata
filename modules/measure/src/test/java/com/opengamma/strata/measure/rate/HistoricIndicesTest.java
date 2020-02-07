@@ -10,13 +10,13 @@ import static com.opengamma.strata.basics.index.IborIndices.EUR_EURIBOR_2M;
 import static com.opengamma.strata.basics.index.IborIndices.EUR_EURIBOR_3M;
 import static com.opengamma.strata.basics.schedule.Frequency.P3M;
 import static com.opengamma.strata.product.common.PayReceive.PAY;
-import static org.testng.Assert.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Test;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -64,12 +64,12 @@ import com.opengamma.strata.product.swap.SwapTrade;
 /**
  * Test historic indices.
  */
-@Test
 public class HistoricIndicesTest {
 
+  @Test
   @SuppressWarnings("deprecation")
   public void testHistoricIndex() {
-    
+
     // trade with interpolated front stub using 2M EURIBOR
     PeriodicSchedule schedule = PeriodicSchedule.builder()
         .startDate(LocalDate.of(2014, 9, 12))
@@ -123,13 +123,13 @@ public class HistoricIndicesTest {
 
     IndexQuoteId euribor2m = IndexQuoteId.of(EUR_EURIBOR_2M);
     LocalDateDoubleTimeSeries euribor2mFixings = LocalDateDoubleTimeSeries.of(LocalDate.of(2014, 9, 10), 0.018);
-    
+
     IndexQuoteId euribor3m = IndexQuoteId.of(EUR_EURIBOR_3M);
     LocalDateDoubleTimeSeries euribor3mFixings = LocalDateDoubleTimeSeries.builder()
         .put(LocalDate.of(2014, 9, 10), 0.019)
         .put(LocalDate.of(2014, 10, 9), 0.02)
         .build();
-    
+
     Map<MarketDataId<?>, Object> curves = ImmutableMap.of(curveId, curve);
     ImmutableMap<ObservableId, LocalDateDoubleTimeSeries> timeSeries =
         ImmutableMap.of(euribor2m, euribor2mFixings, euribor3m, euribor3mFixings);
@@ -154,9 +154,9 @@ public class HistoricIndicesTest {
     try (CalculationRunner runner = CalculationRunner.ofMultiThreaded()) {
       results = runner.calculate(rules, ImmutableList.of(trade), columns, marketData, ReferenceData.standard());
     }
-    
+
     // assert result is succes
-    assertTrue(results.get(0, 0).isSuccess());
+    assertThat(results.get(0, 0).isSuccess()).isTrue();
   }
 
 }

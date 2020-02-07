@@ -9,14 +9,15 @@ import static com.opengamma.strata.basics.currency.Currency.EUR;
 import static com.opengamma.strata.basics.currency.Currency.USD;
 import static com.opengamma.strata.basics.date.DayCounts.ACT_365F;
 import static com.opengamma.strata.product.common.LongShort.SHORT;
-import static org.testng.Assert.assertEquals;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.data.Offset.offset;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Test;
 
 import com.opengamma.strata.basics.currency.CurrencyAmount;
 import com.opengamma.strata.basics.currency.CurrencyPair;
@@ -38,7 +39,6 @@ import com.opengamma.strata.product.fxopt.ResolvedFxVanillaOptionTrade;
 /**
  * Test {@link BlackFxVanillaOptionTradePricer}. 
  */
-@Test
 public class BlackFxVanillaOptionTradePricerTest {
 
   private static final LocalDate VAL_DATE = RatesProviderDataSets.VAL_DATE_2014_01_22;
@@ -54,11 +54,11 @@ public class BlackFxVanillaOptionTradePricerTest {
   private static final DoubleArray ATM = DoubleArray.of(0.175, 0.185, 0.18, 0.17, 0.16, 0.16);
   private static final DoubleArray DELTA = DoubleArray.of(0.10, 0.25);
   private static final DoubleMatrix RISK_REVERSAL = DoubleMatrix.ofUnsafe(new double[][] {
-    {-0.010, -0.0050 }, {-0.011, -0.0060 }, {-0.012, -0.0070 },
-    {-0.013, -0.0080 }, {-0.014, -0.0090 }, {-0.014, -0.0090 } });
+      {-0.010, -0.0050}, {-0.011, -0.0060}, {-0.012, -0.0070},
+      {-0.013, -0.0080}, {-0.014, -0.0090}, {-0.014, -0.0090}});
   private static final DoubleMatrix STRANGLE = DoubleMatrix.ofUnsafe(new double[][] {
       {0.0300, 0.0100}, {0.0310, 0.0110}, {0.0320, 0.0120},
-    {0.0330, 0.0130 }, {0.0340, 0.0140 }, {0.0340, 0.0140 } });
+      {0.0330, 0.0130}, {0.0340, 0.0140}, {0.0340, 0.0140}});
   private static final InterpolatedStrikeSmileDeltaTermStructure SMILE_TERM =
       InterpolatedStrikeSmileDeltaTermStructure.of(TIME_TO_EXPIRY, DELTA, ATM, RISK_REVERSAL, STRANGLE, ACT_365F);
   private static final CurrencyPair CURRENCY_PAIR = CurrencyPair.of(EUR, USD);
@@ -89,46 +89,52 @@ public class BlackFxVanillaOptionTradePricerTest {
   private static final DiscountingPaymentPricer PRICER_PAYMENT = DiscountingPaymentPricer.DEFAULT;
   private static final double TOL = 1.0e-13;
 
+  @Test
   public void test_presentValue() {
     MultiCurrencyAmount pvSensiTrade = PRICER_TRADE.presentValue(OPTION_TRADE, RATES_PROVIDER, VOLS);
     CurrencyAmount pvSensiProduct = PRICER_PRODUCT.presentValue(OPTION_PRODUCT, RATES_PROVIDER, VOLS);
     CurrencyAmount pvSensiPremium = PRICER_PAYMENT.presentValue(PREMIUM, RATES_PROVIDER);
-    assertEquals(pvSensiTrade, MultiCurrencyAmount.of(pvSensiProduct, pvSensiPremium));
+    assertThat(pvSensiTrade).isEqualTo(MultiCurrencyAmount.of(pvSensiProduct, pvSensiPremium));
   }
 
+  @Test
   public void test_presentValueSensitivity() {
     PointSensitivities pvSensiTrade = PRICER_TRADE.presentValueSensitivityRatesStickyStrike(
         OPTION_TRADE, RATES_PROVIDER, VOLS);
     PointSensitivities pvSensiProduct = PRICER_PRODUCT.presentValueSensitivityRatesStickyStrike(
         OPTION_PRODUCT, RATES_PROVIDER, VOLS);
     PointSensitivities pvSensiPremium = PRICER_PAYMENT.presentValueSensitivity(PREMIUM, RATES_PROVIDER).build();
-    assertEquals(pvSensiTrade, pvSensiProduct.combinedWith(pvSensiPremium));
+    assertThat(pvSensiTrade).isEqualTo(pvSensiProduct.combinedWith(pvSensiPremium));
   }
 
+  @Test
   public void test_presentValueSensitivityBlackVolatility() {
     PointSensitivities pvSensiTrade =
         PRICER_TRADE.presentValueSensitivityModelParamsVolatility(OPTION_TRADE, RATES_PROVIDER, VOLS);
     PointSensitivities pvSensiProduct =
         PRICER_PRODUCT.presentValueSensitivityModelParamsVolatility(OPTION_PRODUCT, RATES_PROVIDER, VOLS).build();
-    assertEquals(pvSensiTrade, pvSensiProduct);
+    assertThat(pvSensiTrade).isEqualTo(pvSensiProduct);
   }
 
+  @Test
   public void test_currencyExposure() {
     MultiCurrencyAmount ceComputed = PRICER_TRADE.currencyExposure(OPTION_TRADE, RATES_PROVIDER, VOLS);
     PointSensitivities point = PRICER_TRADE.presentValueSensitivityRatesStickyStrike(OPTION_TRADE, RATES_PROVIDER, VOLS);
     MultiCurrencyAmount pv = PRICER_TRADE.presentValue(OPTION_TRADE, RATES_PROVIDER, VOLS);
     MultiCurrencyAmount ceExpected = RATES_PROVIDER.currencyExposure(point).plus(pv);
-    assertEquals(ceComputed.size(), 2);
-    assertEquals(ceComputed.getAmount(EUR).getAmount(), ceExpected.getAmount(EUR).getAmount(), TOL * NOTIONAL);
-    assertEquals(ceComputed.getAmount(USD).getAmount(), ceExpected.getAmount(USD).getAmount(), TOL * NOTIONAL);
+    assertThat(ceComputed.size()).isEqualTo(2);
+    assertThat(ceComputed.getAmount(EUR).getAmount()).isCloseTo(ceExpected.getAmount(EUR).getAmount(), offset(TOL * NOTIONAL));
+    assertThat(ceComputed.getAmount(USD).getAmount()).isCloseTo(ceExpected.getAmount(USD).getAmount(), offset(TOL * NOTIONAL));
   }
 
+  @Test
   public void test_currentCash_zero() {
-    assertEquals(PRICER_TRADE.currentCash(OPTION_TRADE, VAL_DATE), CurrencyAmount.zero(PREMIUM.getCurrency()));
+    assertThat(PRICER_TRADE.currentCash(OPTION_TRADE, VAL_DATE)).isEqualTo(CurrencyAmount.zero(PREMIUM.getCurrency()));
   }
 
+  @Test
   public void test_currentCash_onSettle() {
-    assertEquals(PRICER_TRADE.currentCash(OPTION_TRADE, CASH_SETTLE_DATE), PREMIUM.getValue());
+    assertThat(PRICER_TRADE.currentCash(OPTION_TRADE, CASH_SETTLE_DATE)).isEqualTo(PREMIUM.getValue());
   }
 
 }

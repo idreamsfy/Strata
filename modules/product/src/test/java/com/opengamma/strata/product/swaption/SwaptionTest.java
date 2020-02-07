@@ -13,16 +13,15 @@ import static com.opengamma.strata.collect.TestHelper.coverBeanEquals;
 import static com.opengamma.strata.collect.TestHelper.coverImmutableBean;
 import static com.opengamma.strata.product.common.LongShort.LONG;
 import static com.opengamma.strata.product.common.LongShort.SHORT;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
-import static org.testng.Assert.assertEquals;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneId;
 
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Test;
 
-import com.google.common.collect.ImmutableSet;
 import com.opengamma.strata.basics.ReferenceData;
 import com.opengamma.strata.basics.date.AdjustableDate;
 import com.opengamma.strata.basics.date.BusinessDayAdjustment;
@@ -39,7 +38,6 @@ import com.opengamma.strata.product.swap.type.XCcyIborIborSwapConventions;
 /**
  * Test {@link Swaption}.
  */
-@Test
 public class SwaptionTest {
 
   private static final ReferenceData REF_DATA = ReferenceData.standard();
@@ -65,86 +63,94 @@ public class SwaptionTest {
       .createTrade(TRADE_DATE, Tenor.TENOR_10Y, BuySell.BUY, NOTIONAL, NOTIONAL * 1.1, FIXED_RATE, REF_DATA).getProduct();
 
   //-------------------------------------------------------------------------
+  @Test
   public void test_builder() {
     Swaption test = sut();
-    assertEquals(test.getExpiryDate(), ADJUSTABLE_EXPIRY_DATE);
-    assertEquals(test.getExpiryTime(), EXPIRY_TIME);
-    assertEquals(test.getExpiryZone(), ZONE);
-    assertEquals(test.getExpiry(), EXPIRY_DATE.atTime(EXPIRY_TIME).atZone(ZONE));
-    assertEquals(test.getLongShort(), LONG);
-    assertEquals(test.getSwaptionSettlement(), PHYSICAL_SETTLE);
-    assertEquals(test.getUnderlying(), SWAP);
-    assertEquals(test.getCurrency(), USD);
-    assertEquals(test.getIndex(), IborIndices.USD_LIBOR_3M);
-    assertEquals(test.isCrossCurrency(), false);
-    assertEquals(test.allPaymentCurrencies(), ImmutableSet.of(USD));
-    assertEquals(test.allCurrencies(), ImmutableSet.of(USD));
+    assertThat(test.getExpiryDate()).isEqualTo(ADJUSTABLE_EXPIRY_DATE);
+    assertThat(test.getExpiryTime()).isEqualTo(EXPIRY_TIME);
+    assertThat(test.getExpiryZone()).isEqualTo(ZONE);
+    assertThat(test.getExpiry()).isEqualTo(EXPIRY_DATE.atTime(EXPIRY_TIME).atZone(ZONE));
+    assertThat(test.getLongShort()).isEqualTo(LONG);
+    assertThat(test.getSwaptionSettlement()).isEqualTo(PHYSICAL_SETTLE);
+    assertThat(test.getUnderlying()).isEqualTo(SWAP);
+    assertThat(test.getCurrency()).isEqualTo(USD);
+    assertThat(test.getIndex()).isEqualTo(IborIndices.USD_LIBOR_3M);
+    assertThat(test.isCrossCurrency()).isFalse();
+    assertThat(test.allPaymentCurrencies()).containsOnly(USD);
+    assertThat(test.allCurrencies()).containsOnly(USD);
   }
 
+  @Test
   public void test_builder_expiryAfterStart() {
     assertThatIllegalArgumentException()
         .isThrownBy(() -> Swaption.builder()
-        .expiryDate(AdjustableDate.of(LocalDate.of(2014, 6, 17), ADJUSTMENT))
-        .expiryTime(EXPIRY_TIME)
-        .expiryZone(ZONE)
-        .longShort(LONG)
-        .swaptionSettlement(PHYSICAL_SETTLE)
-        .underlying(SWAP)
-        .build());
+            .expiryDate(AdjustableDate.of(LocalDate.of(2014, 6, 17), ADJUSTMENT))
+            .expiryTime(EXPIRY_TIME)
+            .expiryZone(ZONE)
+            .longShort(LONG)
+            .swaptionSettlement(PHYSICAL_SETTLE)
+            .underlying(SWAP)
+            .build());
   }
 
+  @Test
   public void test_builder_invalidSwapOis() {
     assertThatIllegalArgumentException()
         .isThrownBy(() -> Swaption.builder()
-        .expiryDate(ADJUSTABLE_EXPIRY_DATE)
-        .expiryTime(EXPIRY_TIME)
-        .expiryZone(ZONE)
-        .longShort(LONG)
-        .swaptionSettlement(PHYSICAL_SETTLE)
-        .underlying(SWAP_OIS)
-        .build());
+            .expiryDate(ADJUSTABLE_EXPIRY_DATE)
+            .expiryTime(EXPIRY_TIME)
+            .expiryZone(ZONE)
+            .longShort(LONG)
+            .swaptionSettlement(PHYSICAL_SETTLE)
+            .underlying(SWAP_OIS)
+            .build());
   }
 
+  @Test
   public void test_builder_invalidSwapBasis() {
     assertThatIllegalArgumentException()
         .isThrownBy(() -> Swaption.builder()
-        .expiryDate(ADJUSTABLE_EXPIRY_DATE)
-        .expiryTime(EXPIRY_TIME)
-        .expiryZone(ZONE)
-        .longShort(LONG)
-        .swaptionSettlement(PHYSICAL_SETTLE)
-        .underlying(SWAP_BASIS)
-        .build());
+            .expiryDate(ADJUSTABLE_EXPIRY_DATE)
+            .expiryTime(EXPIRY_TIME)
+            .expiryZone(ZONE)
+            .longShort(LONG)
+            .swaptionSettlement(PHYSICAL_SETTLE)
+            .underlying(SWAP_BASIS)
+            .build());
   }
 
+  @Test
   public void test_builder_invalidSwapXCcy() {
     assertThatIllegalArgumentException()
         .isThrownBy(() -> Swaption.builder()
-        .expiryDate(ADJUSTABLE_EXPIRY_DATE)
-        .expiryTime(EXPIRY_TIME)
-        .expiryZone(ZONE)
-        .longShort(LONG)
-        .swaptionSettlement(PHYSICAL_SETTLE)
-        .underlying(SWAP_XCCY)
-        .build());
+            .expiryDate(ADJUSTABLE_EXPIRY_DATE)
+            .expiryTime(EXPIRY_TIME)
+            .expiryZone(ZONE)
+            .longShort(LONG)
+            .swaptionSettlement(PHYSICAL_SETTLE)
+            .underlying(SWAP_XCCY)
+            .build());
   }
 
   //-------------------------------------------------------------------------
+  @Test
   public void test_resolve() {
     Swaption base = sut();
     ResolvedSwaption test = base.resolve(REF_DATA);
-    assertEquals(test.getExpiry(), ADJUSTMENT.adjust(EXPIRY_DATE, REF_DATA).atTime(EXPIRY_TIME).atZone(ZONE));
-    assertEquals(test.getLongShort(), LONG);
-    assertEquals(test.getSwaptionSettlement(), PHYSICAL_SETTLE);
-    assertEquals(test.getUnderlying(), SWAP.resolve(REF_DATA));
+    assertThat(test.getExpiry()).isEqualTo(ADJUSTMENT.adjust(EXPIRY_DATE, REF_DATA).atTime(EXPIRY_TIME).atZone(ZONE));
+    assertThat(test.getLongShort()).isEqualTo(LONG);
+    assertThat(test.getSwaptionSettlement()).isEqualTo(PHYSICAL_SETTLE);
+    assertThat(test.getUnderlying()).isEqualTo(SWAP.resolve(REF_DATA));
   }
 
   //-------------------------------------------------------------------------
+  @Test
   public void coverage() {
     coverImmutableBean(sut());
     coverBeanEquals(sut(), sut2());
   }
 
+  @Test
   public void test_serialization() {
     assertSerialization(sut());
   }

@@ -24,6 +24,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.io.CharSource;
 import com.google.common.io.Files;
 
@@ -34,48 +35,48 @@ public class CsvFileTest {
 
   private static final Object ANOTHER_TYPE = "";
 
-  private final String CSV1 = "" +
+  private static final String CSV1 = "" +
       "h1,h2\n" +
       "r11,r12\n" +
       "r21 ,r22\n" +
       "r31,";
 
-  private final String CSV1T = "" +
+  private static final String CSV1T = "" +
       "h1\th2\n" +
       "r11\tr12\n" +
       "r21\tr22";
 
-  private final String CSV2 = "" +
+  private static final String CSV2 = "" +
       "h1,h2\n" +
       "#r11,r12\n" +
       ";r11,r12\n" +
       "\n" +
       "r21,r22\n";
 
-  private final String CSV3 = "" +
+  private static final String CSV3 = "" +
       "r11,r12\n" +
       ",\n" +
       "r21,r22\n";
 
-  private final String CSV4 = "" +
+  private static final String CSV4 = "" +
       "\"alpha\",\"be, \"\"at\"\", one\"\n" +
       "\"alpha\"\",\"be\"\"\", \"\"at\"\", one\"\n" +
       "r21,\" r22 \"\n";
 
-  private final String CSV4B = "" +
+  private static final String CSV4B = "" +
       "=\"alpha\",=\"be, \"\"at\"\", one\"\n" +
       "r21,=\" r22 \"\n";
 
-  private final String CSV5 = "" +
+  private static final String CSV5 = "" +
       "a,b,c,b,c\n" +
       "aa,b1,c1,b2,c2\n";
 
-  private final String CSV6 = "" +
+  private static final String CSV6 = "" +
       "a,b,c\n" +
       "r11\n" +
       "r21,r22";
 
-  private final String CSV7 = "" +
+  private static final String CSV7 = "" +
       "# Comment about the file\n" +
       "h1,h2\n" +
       "r1,r2\n";
@@ -92,8 +93,10 @@ public class CsvFileTest {
     CsvFile csvFile = CsvFile.of(CharSource.wrap(""), false);
     assertThat(csvFile.headers().size()).isEqualTo(0);
     assertThat(csvFile.rowCount()).isEqualTo(0);
-    assertThat(csvFile.containsHeader("Foo")).isEqualTo(false);
-    assertThat(csvFile.containsHeader(Pattern.compile("Foo"))).isEqualTo(false);
+    assertThat(csvFile.containsHeader("Foo")).isFalse();
+    assertThat(csvFile.containsHeaders(ImmutableSet.of())).isTrue();
+    assertThat(csvFile.containsHeaders(ImmutableSet.of("foo"))).isFalse();
+    assertThat(csvFile.containsHeader(Pattern.compile("Foo"))).isFalse();
   }
 
   @Test
@@ -106,8 +109,8 @@ public class CsvFileTest {
     CsvFile csvFile = CsvFile.of(CharSource.wrap(CSV1), false);
     assertThat(csvFile.headers().size()).isEqualTo(0);
     assertThat(csvFile.rowCount()).isEqualTo(4);
-    assertThat(csvFile.containsHeader("Foo")).isEqualTo(false);
-    assertThat(csvFile.containsHeader(Pattern.compile("Foo"))).isEqualTo(false);
+    assertThat(csvFile.containsHeader("Foo")).isFalse();
+    assertThat(csvFile.containsHeader(Pattern.compile("Foo"))).isFalse();
     assertThat(csvFile.row(0).lineNumber()).isEqualTo(1);
     assertThat(csvFile.row(1).lineNumber()).isEqualTo(2);
     assertThat(csvFile.row(2).lineNumber()).isEqualTo(3);
@@ -135,8 +138,8 @@ public class CsvFileTest {
   public void test_of_simple_no_header_tabs() {
     CsvFile csvFile = CsvFile.of(CharSource.wrap(CSV1T), false, '\t');
     assertThat(csvFile.headers().size()).isEqualTo(0);
-    assertThat(csvFile.containsHeader("Foo")).isEqualTo(false);
-    assertThat(csvFile.containsHeader(Pattern.compile("Foo"))).isEqualTo(false);
+    assertThat(csvFile.containsHeader("Foo")).isFalse();
+    assertThat(csvFile.containsHeader(Pattern.compile("Foo"))).isFalse();
     assertThat(csvFile.rowCount()).isEqualTo(3);
     assertThat(csvFile.row(0).lineNumber()).isEqualTo(1);
     assertThat(csvFile.row(1).lineNumber()).isEqualTo(2);
@@ -159,9 +162,13 @@ public class CsvFileTest {
   @Test
   public void test_of_simple_with_header() {
     CsvFile csvFile = CsvFile.of(CharSource.wrap(CSV1), true);
-    assertThat(csvFile.containsHeader("Foo")).isEqualTo(false);
-    assertThat(csvFile.containsHeader("h1")).isEqualTo(true);
-    assertThat(csvFile.containsHeader(Pattern.compile("Foo"))).isEqualTo(false);
+    assertThat(csvFile.containsHeader("Foo")).isFalse();
+    assertThat(csvFile.containsHeader("h1")).isTrue();
+    assertThat(csvFile.containsHeaders(ImmutableSet.of())).isTrue();
+    assertThat(csvFile.containsHeaders(ImmutableSet.of("h1"))).isTrue();
+    assertThat(csvFile.containsHeaders(ImmutableSet.of("h1", "h2"))).isTrue();
+    assertThat(csvFile.containsHeaders(ImmutableSet.of("h1", "h2", "h3"))).isFalse();
+    assertThat(csvFile.containsHeader(Pattern.compile("Foo"))).isFalse();
     assertThat(csvFile.containsHeader(Pattern.compile("h[0-9]"))).isTrue();
     ImmutableList<String> headers = csvFile.headers();
     assertThat(headers.size()).isEqualTo(2);
@@ -238,8 +245,8 @@ public class CsvFileTest {
   public void test_of_duplicate_headers() {
     CsvFile csvFile = CsvFile.of(CharSource.wrap(CSV5), true);
     assertThat(csvFile.headers()).isEqualTo(ImmutableList.of("a", "b", "c", "b", "c"));
-    assertThat(csvFile.containsHeader("Foo")).isEqualTo(false);
-    assertThat(csvFile.containsHeader("a")).isEqualTo(true);
+    assertThat(csvFile.containsHeader("Foo")).isFalse();
+    assertThat(csvFile.containsHeader("a")).isTrue();
     assertThat(csvFile.row(0).getField("a")).isEqualTo("aa");
     assertThat(csvFile.row(0).getField("b")).isEqualTo("b1");
     assertThat(csvFile.row(0).getField("c")).isEqualTo("c1");
@@ -498,6 +505,19 @@ public class CsvFileTest {
   }
 
   //-------------------------------------------------------------------------
+  @Test
+  public void test_with_headers() {
+    CsvFile csvFile = CsvFile.of(ImmutableList.of("A", "B"), ImmutableList.of(ImmutableList.of("1", "2")));
+
+    ImmutableList<String> newHeaders = ImmutableList.of("C", "D");
+    CsvFile withNewHeaders = csvFile.withHeaders(newHeaders);
+
+    assertThat(withNewHeaders.headers()).isEqualTo(newHeaders);
+    assertThat(withNewHeaders.rows()).hasSize(1);
+    assertThat(withNewHeaders.rows().get(0).fields()).isEqualTo(csvFile.row(0).fields());
+  }
+
+  //-------------------------------------------------------------------------
   public static Object[][] data_findSeparator() {
     return new Object[][] {
         {"", ','},
@@ -556,21 +576,21 @@ public class CsvFileTest {
     CsvFile b = CsvFile.of(CharSource.wrap(CSV2), true);
     CsvFile c = CsvFile.of(CharSource.wrap(CSV3), false);
     // file
-    assertThat(a1.equals(a1)).isEqualTo(true);
-    assertThat(a1.equals(a2)).isEqualTo(true);
-    assertThat(a1.equals(b)).isEqualTo(false);
-    assertThat(a1.equals(c)).isEqualTo(false);
-    assertThat(a1.equals(null)).isEqualTo(false);
-    assertThat(a1.equals(ANOTHER_TYPE)).isEqualTo(false);
+    assertThat(a1.equals(a1)).isTrue();
+    assertThat(a1.equals(a2)).isTrue();
+    assertThat(a1.equals(b)).isFalse();
+    assertThat(a1.equals(c)).isFalse();
+    assertThat(a1.equals(null)).isFalse();
+    assertThat(a1.equals(ANOTHER_TYPE)).isFalse();
     assertThat(a1.hashCode()).isEqualTo(a2.hashCode());
     assertThat(a1.toString()).isNotNull();
     // row
-    assertThat(a1.row(0).equals(a1.row(0))).isEqualTo(true);
-    assertThat(a1.row(0).equals(a2.row(0))).isEqualTo(true);
-    assertThat(a1.row(0).equals(b.row(0))).isEqualTo(false);
-    assertThat(c.row(0).equals(c.row(1))).isEqualTo(false);
-    assertThat(a1.row(0).equals(ANOTHER_TYPE)).isEqualTo(false);
-    assertThat(a1.row(0).equals(null)).isEqualTo(false);
+    assertThat(a1.row(0).equals(a1.row(0))).isTrue();
+    assertThat(a1.row(0).equals(a2.row(0))).isTrue();
+    assertThat(a1.row(0).equals(b.row(0))).isFalse();
+    assertThat(c.row(0).equals(c.row(1))).isFalse();
+    assertThat(a1.row(0).equals(ANOTHER_TYPE)).isFalse();
+    assertThat(a1.row(0).equals(null)).isFalse();
     assertThat(a1.row(0).hashCode()).isEqualTo(a2.row(0).hashCode());
     assertThat(a1.row(0)).isNotNull();
   }

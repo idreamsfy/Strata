@@ -16,13 +16,13 @@ import java.io.UncheckedIOException;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Type;
 import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
+import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Optional;
 
 import org.joda.beans.Bean;
 import org.joda.beans.BeanBuilder;
@@ -34,11 +34,12 @@ import org.joda.beans.impl.BasicImmutableBeanBuilder;
 import org.joda.beans.impl.BasicMetaBean;
 import org.joda.beans.impl.BasicMetaProperty;
 
-import com.google.common.base.Optional;
+import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.hash.HashCode;
 import com.google.common.hash.HashFunction;
+import com.google.common.hash.Hashing;
 import com.google.common.io.BaseEncoding;
 import com.google.common.io.ByteProcessor;
 import com.google.common.io.ByteSource;
@@ -73,10 +74,14 @@ public final class ArrayByteSource extends BeanByteSource implements ImmutableBe
    * The byte array.
    */
   private final byte[] array;
+  /**
+   * The file name, null if not known.
+   */
+  private final String fileName;
 
   //-------------------------------------------------------------------------
   /**
-   * Creates an instance, copying the array.
+   * Obtains an instance, copying the array.
    * 
    * @param array  the array, copied
    * @return the byte source
@@ -124,7 +129,7 @@ public final class ArrayByteSource extends BeanByteSource implements ImmutableBe
   }
 
   /**
-   * Creates an instance, not copying the array.
+   * Obtains an instance, not copying the array.
    * <p>
    * This method is inherently unsafe as it relies on good behavior by callers.
    * Callers must never make any changes to the passed in array after calling this method.
@@ -138,7 +143,7 @@ public final class ArrayByteSource extends BeanByteSource implements ImmutableBe
   }
 
   /**
-   * Creates an instance from a string using UTF-8.
+   * Obtains an instance from a string using UTF-8.
    * 
    * @param str  the string to store using UTF-8
    * @return the byte source
@@ -149,7 +154,7 @@ public final class ArrayByteSource extends BeanByteSource implements ImmutableBe
 
   //-------------------------------------------------------------------------
   /**
-   * Creates an instance from another byte source.
+   * Obtains an instance from another byte source.
    * 
    * @param other  the other byte source
    * @return the byte source
@@ -159,11 +164,26 @@ public final class ArrayByteSource extends BeanByteSource implements ImmutableBe
     if (other instanceof ArrayByteSource) {
       return (ArrayByteSource) other;
     }
-    return new ArrayByteSource(Unchecked.wrap(() -> other.read()));
+    String fileName = null;
+    if (other instanceof BeanByteSource) {
+      fileName = ((BeanByteSource) other).getFileName().orElse(null);
+    } else {
+      String str = other.toString();
+      if (str.startsWith("Files.asByteSource(")) {
+        int pos = str.indexOf(')', 19);
+        fileName = Paths.get(str.substring(19, pos)).getFileName().toString();
+      } else if (str.startsWith("Resources.asByteSource(")) {
+        int pos = str.indexOf(')', 23);
+        String path = str.substring(23, pos);
+        int lastSlash = path.lastIndexOf('/');
+        fileName = path.substring(lastSlash + 1);
+      }
+    }
+    return new ArrayByteSource(Unchecked.wrap(() -> other.read()), fileName);
   }
 
   /**
-   * Creates an instance from an input stream.
+   * Obtains an instance from an input stream.
    * <p>
    * This method use the supplier to open the input stream, extract the bytes and close the stream.
    * It is intended that invoking the supplier opens the stream.
@@ -176,15 +196,29 @@ public final class ArrayByteSource extends BeanByteSource implements ImmutableBe
   public static ArrayByteSource from(CheckedSupplier<InputStream> inputStreamSupplier) {
     return Unchecked.wrap(() -> {
       try (InputStream in = inputStreamSupplier.get()) {
-        byte[] bytes = Unchecked.wrap(() -> ByteStreams.toByteArray(in));
-        return new ArrayByteSource(bytes);
+        return from(in);
       }
     });
   }
 
+  /**
+   * Obtains an instance from an input stream.
+   * <p>
+   * This method uses an already open input stream, extracting the bytes.
+   * The stream is not closed - that is the responsibility of the caller.
+   * 
+   * @param inputStream  the open input stream, which will not be closed
+   * @return the byte source
+   * @throws IOException if an IO error occurs
+   */
+  public static ArrayByteSource from(InputStream inputStream) throws IOException {
+    byte[] bytes = ByteStreams.toByteArray(inputStream);
+    return new ArrayByteSource(bytes);
+  }
+
   //-------------------------------------------------------------------------
   /**
-   * Creates an instance from a base-64 encoded string.
+   * Obtains an instance from a base-64 encoded string.
    * 
    * @param base64  the base64 string to convert
    * @return the decoded byte source
@@ -195,7 +229,7 @@ public final class ArrayByteSource extends BeanByteSource implements ImmutableBe
   }
 
   /**
-   * Creates an instance from a hex encoded string, sometimes referred to as base-16.
+   * Obtains an instance from a hex encoded string, sometimes referred to as base-16.
    * 
    * @param hex  the hex string to convert
    * @return the decoded byte source
@@ -206,19 +240,41 @@ public final class ArrayByteSource extends BeanByteSource implements ImmutableBe
   }
 
   //-------------------------------------------------------------------------
-  /**
-   * Creates an instance, without copying the array.
-   * 
-   * @param array  the array, not copied
-   */
+  // creates an instance, without copying the array
   private ArrayByteSource(byte[] array) {
     this.array = array;
+    this.fileName = null;
+  }
+
+  // creates an instance, without copying the array
+  ArrayByteSource(byte[] array, String fileName) {
+    this.array = array;
+    this.fileName = Strings.emptyToNull(fileName);
   }
 
   //-------------------------------------------------------------------------
   @Override
   public MetaBean metaBean() {
     return Meta.META;
+  }
+
+  @Override
+  public Optional<String> getFileName() {
+    return Optional.ofNullable(fileName);
+  }
+
+  /**
+   * Returns an instance with the file name updated.
+   * <p>
+   * If a path is passed in, only the file name is retained.
+   * 
+   * @param fileName the file name, an empty string can be used to remove the file name
+   * @return a source with the specified file name
+   */
+  public ArrayByteSource withFileName(String fileName) {
+    ArgChecker.notNull(fileName, "fileName");
+    int lastSlash = fileName.lastIndexOf('/');
+    return new ArrayByteSource(array, fileName.substring(lastSlash + 1));
   }
 
   //-------------------------------------------------------------------------
@@ -266,34 +322,35 @@ public final class ArrayByteSource extends BeanByteSource implements ImmutableBe
   }
 
   //-------------------------------------------------------------------------
+  @Override
+  public HashCode hash(HashFunction hashFunction) {
+    // overridden to use array directly for performance
+    return hashFunction.hashBytes(array);
+  }
+
+  //-------------------------------------------------------------------------
   /**
    * Returns the MD5 hash of the bytes.
+   * <p>
+   * The returned hash is in byte form.
    * 
    * @return the MD5 hash
+   * @deprecated Use {@link #toHash(HashFunction)}
    */
+  @Deprecated
   public ArrayByteSource toMd5() {
-    try {
-      // MessageDigest instances are not thread safe so must be created each time
-      MessageDigest md = MessageDigest.getInstance("MD5");
-      return ArrayByteSource.ofUnsafe(md.digest(array));
-    } catch (NoSuchAlgorithmException ex) {
-      throw new IllegalStateException(ex);
-    }
+    return toHash(Hashing.md5());
   }
 
   /**
    * Returns the SHA-512 hash of the bytes.
    * 
    * @return the SHA-512 hash
+   * @deprecated Use {@link #toHash(HashFunction)}
    */
+  @Deprecated
   public ArrayByteSource toSha512() {
-    try {
-      // MessageDigest instances are not thread safe so must be created each time
-      MessageDigest md = MessageDigest.getInstance("SHA-512");
-      return ArrayByteSource.ofUnsafe(md.digest(array));
-    } catch (NoSuchAlgorithmException ex) {
-      throw new IllegalStateException(ex);
-    }
+    return ArrayByteSource.ofUnsafe(hash(Hashing.sha512()).asBytes());
   }
 
   /**
@@ -301,7 +358,9 @@ public final class ArrayByteSource extends BeanByteSource implements ImmutableBe
    * 
    * @return the base-64 encoded form
    */
+  @Override
   public ArrayByteSource toBase64() {
+    // overridden to use array directly for performance
     return ArrayByteSource.ofUnsafe(Base64.getEncoder().encode(array));
   }
 
@@ -312,7 +371,9 @@ public final class ArrayByteSource extends BeanByteSource implements ImmutableBe
    * 
    * @return the base-64 encoded string
    */
+  @Override
   public String toBase64String() {
+    // overridden to use array directly for performance
     return Base64.getEncoder().encodeToString(array);
   }
 
@@ -347,8 +408,8 @@ public final class ArrayByteSource extends BeanByteSource implements ImmutableBe
    * @return the size, which is always known
    */
   @Override
-  public Optional<Long> sizeIfKnown() {
-    return Optional.of(size());
+  public com.google.common.base.Optional<Long> sizeIfKnown() {
+    return com.google.common.base.Optional.of(size());
   }
 
   @Override
@@ -366,7 +427,7 @@ public final class ArrayByteSource extends BeanByteSource implements ImmutableBe
     int minPos = (int) offset;
     long len = Math.min(Math.min(length, Integer.MAX_VALUE), array.length);
     int maxPos = (int) Math.min(minPos + len, array.length);
-    return new ArrayByteSource(Arrays.copyOfRange(array, minPos, maxPos));
+    return new ArrayByteSource(Arrays.copyOfRange(array, minPos, maxPos), fileName);
   }
 
   @Override
@@ -387,16 +448,16 @@ public final class ArrayByteSource extends BeanByteSource implements ImmutableBe
   }
 
   @Override
-  public HashCode hash(HashFunction hashFunction) {
-    return hashFunction.hashBytes(array);
-  }
-
-  @Override
   public boolean contentEquals(ByteSource other) throws IOException {
     if (other instanceof ArrayByteSource) {
       return equals(other);
     }
     return super.contentEquals(other);
+  }
+
+  @Override
+  public ArrayByteSource load() {
+    return this;
   }
 
   //-------------------------------------------------------------------------
@@ -415,7 +476,7 @@ public final class ArrayByteSource extends BeanByteSource implements ImmutableBe
 
   @Override
   public String toString() {
-    return "ArrayByteSource[" + size() + " bytes]";
+    return "ArrayByteSource[" + size() + " bytes" + (fileName != null ? ", " + fileName : "") + "]";
   }
 
   //-------------------------------------------------------------------------
@@ -467,7 +528,50 @@ public final class ArrayByteSource extends BeanByteSource implements ImmutableBe
         throw new UnsupportedOperationException("Property cannot be written: " + name());
       }
     };
-    private static final ImmutableMap<String, MetaProperty<?>> MAP = ImmutableMap.of("array", ARRAY);
+    private static final MetaProperty<String> FILE_NAME = new BasicMetaProperty<String>("fileName") {
+
+      @Override
+      public MetaBean metaBean() {
+        return META;
+      }
+
+      @Override
+      public Class<?> declaringType() {
+        return ArrayByteSource.class;
+      }
+
+      @Override
+      public Class<String> propertyType() {
+        return String.class;
+      }
+
+      @Override
+      public Type propertyGenericType() {
+        return String.class;
+      }
+
+      @Override
+      public PropertyStyle style() {
+        return PropertyStyle.IMMUTABLE;
+      }
+
+      @Override
+      public List<Annotation> annotations() {
+        return ImmutableList.of();
+      }
+
+      @Override
+      public String get(Bean bean) {
+        return ((ArrayByteSource) bean).fileName;
+      }
+
+      @Override
+      public void set(Bean bean, Object value) {
+        throw new UnsupportedOperationException("Property cannot be written: " + name());
+      }
+    };
+    private static final ImmutableMap<String, MetaProperty<?>> MAP =
+        ImmutableMap.of("array", ARRAY, "fileName", FILE_NAME);
 
     private Meta() {
     }
@@ -481,11 +585,14 @@ public final class ArrayByteSource extends BeanByteSource implements ImmutableBe
     public BeanBuilder<ArrayByteSource> builder() {
       return new BasicImmutableBeanBuilder<ArrayByteSource>(this) {
         private byte[] array = new byte[0];
+        private String fileName;
 
         @Override
         public Object get(String propertyName) {
           if (propertyName.equals(ARRAY.name())) {
             return array;  // not cloned for performance
+          } else if (propertyName.equals(FILE_NAME.name())) {
+            return fileName;
           } else {
             throw new NoSuchElementException("Unknown property: " + propertyName);
           }
@@ -495,6 +602,8 @@ public final class ArrayByteSource extends BeanByteSource implements ImmutableBe
         public BeanBuilder<ArrayByteSource> set(String propertyName, Object value) {
           if (propertyName.equals(ARRAY.name())) {
             this.array = ((byte[]) ArgChecker.notNull(value, "value"));  // not cloned for performance
+          } else if (propertyName.equals(FILE_NAME.name())) {
+            this.fileName = (String) value;
           } else {
             throw new NoSuchElementException("Unknown property: " + propertyName);
           }

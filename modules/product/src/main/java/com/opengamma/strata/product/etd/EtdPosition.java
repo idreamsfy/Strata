@@ -110,12 +110,23 @@ public interface EtdPosition
   public abstract EtdPosition withInfo(PositionInfo info);
 
   /**
-   * Returns an instance with the specified quantity.
+   * Returns an instance with the specified net quantity.
    * 
-   * @param quantity  the new quantity
-   * @return the instance with the specified quantity
+   * @param quantity  the new net quantity
+   * @return the instance with the specified net quantity
    */
   @Override
   public abstract EtdPosition withQuantity(double quantity);
+
+  /**
+   * Returns an instance with the specified quantities.
+   * 
+   * @param longQuantity  the new long quantity
+   * @param shortQuantity  the new short quantity
+   * @return the instance with the specified quantities
+   */
+  public default EtdPosition withQuantities(double longQuantity, double shortQuantity) {
+    return withQuantity(longQuantity - shortQuantity);
+  }
 
 }

@@ -11,14 +11,14 @@ import static com.opengamma.strata.basics.date.HolidayCalendarIds.SAT_SUN;
 import static com.opengamma.strata.collect.TestHelper.assertSerialization;
 import static com.opengamma.strata.collect.TestHelper.coverBeanEquals;
 import static com.opengamma.strata.collect.TestHelper.coverImmutableBean;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
-import static org.testng.Assert.assertEquals;
 
 import java.time.LocalDate;
 import java.time.Period;
 import java.util.Optional;
 
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Test;
 
 import com.google.common.collect.ImmutableList;
 import com.opengamma.strata.basics.ReferenceData;
@@ -38,7 +38,6 @@ import com.opengamma.strata.product.SecurityId;
  * Test {@link BondFuture}.
  */
 @SuppressWarnings("unchecked")
-@Test
 public class BondFutureTest {
 
   private static final ReferenceData REF_DATA = ReferenceData.standard();
@@ -98,6 +97,7 @@ public class BondFutureTest {
   private static final Rounding ROUNDING = Rounding.ofDecimalPlaces(3);
 
   //-------------------------------------------------------------------------
+  @Test
   public void test_builder_full() {
     BondFuture test = BondFuture.builder()
         .securityId(SECURITY_ID)
@@ -110,18 +110,19 @@ public class BondFutureTest {
         .lastTradeDate(LAST_TRADING_DATE)
         .rounding(ROUNDING)
         .build();
-    assertEquals(test.getDeliveryBasket(), ImmutableList.copyOf(BOND_PRODUCT));
-    assertEquals(test.getConversionFactors(), ImmutableList.copyOf(CONVERSION_FACTOR));
-    assertEquals(test.getCurrency(), USD);
-    assertEquals(test.getNotional(), NOTIONAL);
-    assertEquals(test.getFirstNoticeDate(), FIRST_NOTICE_DATE);
-    assertEquals(test.getLastNoticeDate(), LAST_NOTICE_DATE);
-    assertEquals(test.getFirstDeliveryDate(), Optional.of(FIRST_DELIVERY_DATE));
-    assertEquals(test.getLastDeliveryDate(), Optional.of(LAST_DELIVERY_DATE));
-    assertEquals(test.getLastTradeDate(), LAST_TRADING_DATE);
-    assertEquals(test.getRounding(), ROUNDING);
+    assertThat(test.getDeliveryBasket()).isEqualTo(ImmutableList.copyOf(BOND_PRODUCT));
+    assertThat(test.getConversionFactors()).isEqualTo(ImmutableList.copyOf(CONVERSION_FACTOR));
+    assertThat(test.getCurrency()).isEqualTo(USD);
+    assertThat(test.getNotional()).isEqualTo(NOTIONAL);
+    assertThat(test.getFirstNoticeDate()).isEqualTo(FIRST_NOTICE_DATE);
+    assertThat(test.getLastNoticeDate()).isEqualTo(LAST_NOTICE_DATE);
+    assertThat(test.getFirstDeliveryDate()).isEqualTo(Optional.of(FIRST_DELIVERY_DATE));
+    assertThat(test.getLastDeliveryDate()).isEqualTo(Optional.of(LAST_DELIVERY_DATE));
+    assertThat(test.getLastTradeDate()).isEqualTo(LAST_TRADING_DATE);
+    assertThat(test.getRounding()).isEqualTo(ROUNDING);
   }
 
+  @Test
   public void test_builder_noDeliveryDate() {
     BondFuture test = BondFuture.builder()
         .securityId(SECURITY_ID)
@@ -132,93 +133,95 @@ public class BondFutureTest {
         .lastTradeDate(LAST_TRADING_DATE)
         .rounding(ROUNDING)
         .build();
-    assertEquals(test.getDeliveryBasket(), ImmutableList.copyOf(BOND_PRODUCT));
-    assertEquals(test.getConversionFactors(), ImmutableList.copyOf(CONVERSION_FACTOR));
-    assertEquals(test.getCurrency(), USD);
-    assertEquals(test.getNotional(), NOTIONAL);
-    assertEquals(test.getFirstNoticeDate(), FIRST_NOTICE_DATE);
-    assertEquals(test.getLastNoticeDate(), LAST_NOTICE_DATE);
-    assertEquals(test.getFirstDeliveryDate(), Optional.empty());
-    assertEquals(test.getLastDeliveryDate(), Optional.empty());
-    assertEquals(test.getLastTradeDate(), LAST_TRADING_DATE);
-    assertEquals(test.getRounding(), ROUNDING);
+    assertThat(test.getDeliveryBasket()).isEqualTo(ImmutableList.copyOf(BOND_PRODUCT));
+    assertThat(test.getConversionFactors()).isEqualTo(ImmutableList.copyOf(CONVERSION_FACTOR));
+    assertThat(test.getCurrency()).isEqualTo(USD);
+    assertThat(test.getNotional()).isEqualTo(NOTIONAL);
+    assertThat(test.getFirstNoticeDate()).isEqualTo(FIRST_NOTICE_DATE);
+    assertThat(test.getLastNoticeDate()).isEqualTo(LAST_NOTICE_DATE);
+    assertThat(test.getFirstDeliveryDate()).isEqualTo(Optional.empty());
+    assertThat(test.getLastDeliveryDate()).isEqualTo(Optional.empty());
+    assertThat(test.getLastTradeDate()).isEqualTo(LAST_TRADING_DATE);
+    assertThat(test.getRounding()).isEqualTo(ROUNDING);
 
   }
 
+  @Test
   public void test_builder_fail() {
     // wrong size
     assertThatIllegalArgumentException()
         .isThrownBy(() -> BondFuture.builder()
-        .securityId(SECURITY_ID)
-        .deliveryBasket(BOND_PRODUCT[0])
-        .conversionFactors(CONVERSION_FACTOR)
-        .firstNoticeDate(FIRST_NOTICE_DATE)
-        .lastNoticeDate(LAST_NOTICE_DATE)
-        .lastTradeDate(LAST_TRADING_DATE)
-        .rounding(ROUNDING)
-        .build());
+            .securityId(SECURITY_ID)
+            .deliveryBasket(BOND_PRODUCT[0])
+            .conversionFactors(CONVERSION_FACTOR)
+            .firstNoticeDate(FIRST_NOTICE_DATE)
+            .lastNoticeDate(LAST_NOTICE_DATE)
+            .lastTradeDate(LAST_TRADING_DATE)
+            .rounding(ROUNDING)
+            .build());
     // first notice date missing
     assertThatIllegalArgumentException()
         .isThrownBy(() -> BondFuture.builder()
-        .securityId(SECURITY_ID)
-        .deliveryBasket(BOND_PRODUCT)
-        .conversionFactors(CONVERSION_FACTOR)
-        .lastNoticeDate(LAST_NOTICE_DATE)
-        .lastTradeDate(LAST_TRADING_DATE)
-        .rounding(ROUNDING)
-        .build());
+            .securityId(SECURITY_ID)
+            .deliveryBasket(BOND_PRODUCT)
+            .conversionFactors(CONVERSION_FACTOR)
+            .lastNoticeDate(LAST_NOTICE_DATE)
+            .lastTradeDate(LAST_TRADING_DATE)
+            .rounding(ROUNDING)
+            .build());
     // last notice date missing
     assertThatIllegalArgumentException()
         .isThrownBy(() -> BondFuture.builder()
-        .securityId(SECURITY_ID)
-        .deliveryBasket(BOND_PRODUCT)
-        .conversionFactors(CONVERSION_FACTOR)
-        .firstNoticeDate(FIRST_NOTICE_DATE)
-        .lastTradeDate(LAST_TRADING_DATE)
-        .rounding(ROUNDING)
-        .build());
+            .securityId(SECURITY_ID)
+            .deliveryBasket(BOND_PRODUCT)
+            .conversionFactors(CONVERSION_FACTOR)
+            .firstNoticeDate(FIRST_NOTICE_DATE)
+            .lastTradeDate(LAST_TRADING_DATE)
+            .rounding(ROUNDING)
+            .build());
     // basket list empty
     assertThatIllegalArgumentException()
         .isThrownBy(() -> BondFuture.builder()
-        .securityId(SECURITY_ID)
-        .conversionFactors(CONVERSION_FACTOR)
-        .firstNoticeDate(FIRST_NOTICE_DATE)
-        .lastNoticeDate(LAST_NOTICE_DATE)
-        .lastTradeDate(LAST_TRADING_DATE)
-        .rounding(ROUNDING)
-        .build());
+            .securityId(SECURITY_ID)
+            .conversionFactors(CONVERSION_FACTOR)
+            .firstNoticeDate(FIRST_NOTICE_DATE)
+            .lastNoticeDate(LAST_NOTICE_DATE)
+            .lastTradeDate(LAST_TRADING_DATE)
+            .rounding(ROUNDING)
+            .build());
     // notional mismatch
     FixedCouponBond bond0 = BOND_PRODUCT[0];
     FixedCouponBond bond1 = bond0.toBuilder().notional(100).build();
     FixedCouponBond bond2 = bond0.toBuilder().currency(Currency.CAD).build();
     assertThatIllegalArgumentException()
         .isThrownBy(() -> BondFuture.builder()
-        .securityId(SECURITY_ID)
-        .deliveryBasket(bond0, bond1)
-        .conversionFactors(CONVERSION_FACTOR[0], CONVERSION_FACTOR[1])
-        .firstNoticeDate(FIRST_NOTICE_DATE)
-        .lastNoticeDate(LAST_NOTICE_DATE)
-        .firstDeliveryDate(FIRST_DELIVERY_DATE)
-        .lastDeliveryDate(LAST_DELIVERY_DATE)
-        .lastTradeDate(LAST_TRADING_DATE)
-        .rounding(ROUNDING)
-        .build());
+            .securityId(SECURITY_ID)
+            .deliveryBasket(bond0, bond1)
+            .conversionFactors(CONVERSION_FACTOR[0], CONVERSION_FACTOR[1])
+            .firstNoticeDate(FIRST_NOTICE_DATE)
+            .lastNoticeDate(LAST_NOTICE_DATE)
+            .firstDeliveryDate(FIRST_DELIVERY_DATE)
+            .lastDeliveryDate(LAST_DELIVERY_DATE)
+            .lastTradeDate(LAST_TRADING_DATE)
+            .rounding(ROUNDING)
+            .build());
     // currency mismatch
     assertThatIllegalArgumentException()
         .isThrownBy(() -> BondFuture.builder()
-        .securityId(SECURITY_ID)
-        .deliveryBasket(bond0, bond2)
-        .conversionFactors(CONVERSION_FACTOR[0], CONVERSION_FACTOR[1])
-        .firstNoticeDate(FIRST_NOTICE_DATE)
-        .lastNoticeDate(LAST_NOTICE_DATE)
-        .firstDeliveryDate(FIRST_DELIVERY_DATE)
-        .lastDeliveryDate(LAST_DELIVERY_DATE)
-        .lastTradeDate(LAST_TRADING_DATE)
-        .rounding(ROUNDING)
-        .build());
+            .securityId(SECURITY_ID)
+            .deliveryBasket(bond0, bond2)
+            .conversionFactors(CONVERSION_FACTOR[0], CONVERSION_FACTOR[1])
+            .firstNoticeDate(FIRST_NOTICE_DATE)
+            .lastNoticeDate(LAST_NOTICE_DATE)
+            .firstDeliveryDate(FIRST_DELIVERY_DATE)
+            .lastDeliveryDate(LAST_DELIVERY_DATE)
+            .lastTradeDate(LAST_TRADING_DATE)
+            .rounding(ROUNDING)
+            .build());
   }
 
   //-------------------------------------------------------------------------
+  @Test
   public void test_resolve() {
     ResolvedBondFuture expected = ResolvedBondFuture.builder()
         .securityId(SECURITY_ID)
@@ -231,15 +234,17 @@ public class BondFutureTest {
         .lastDeliveryDate(LAST_DELIVERY_DATE)
         .rounding(ROUNDING)
         .build();
-    assertEquals(sut().resolve(REF_DATA), expected);
+    assertThat(sut().resolve(REF_DATA)).isEqualTo(expected);
   }
 
   //-------------------------------------------------------------------------
+  @Test
   public void coverage() {
     coverImmutableBean(sut());
     coverBeanEquals(sut(), sut2());
   }
 
+  @Test
   public void serialization() {
     assertSerialization(sut());
   }

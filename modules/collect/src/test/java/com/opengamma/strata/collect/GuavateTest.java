@@ -169,6 +169,14 @@ public class GuavateTest {
 
   //-------------------------------------------------------------------------
   @Test
+  public void test_first() {
+    assertThat(Guavate.first(ImmutableSet.of())).isEqualTo(Optional.empty());
+    assertThat(Guavate.first(ImmutableSet.of("a"))).hasValue("a");
+    assertThat(Guavate.first(ImmutableSet.of("a", "b"))).hasValue("a");
+  }
+
+  //-------------------------------------------------------------------------
+  @Test
   public void test_stream_Iterable() {
     Iterable<String> iterable = Arrays.asList("a", "b", "c");
     List<String> test = Guavate.stream(iterable)
@@ -440,6 +448,7 @@ public class GuavateTest {
         .isThrownBy(() -> list.stream().collect(Guavate.toImmutableSortedMap(s -> s.length(), s -> "!" + s)));
   }
 
+  @Test
   public void test_toImmutableSortedMap_keyValue_duplicateKeys_merge() {
     List<String> list = Arrays.asList("a", "ab", "c", "bb", "b", "a");
     ImmutableSortedMap<Integer, String> test = list.stream()

@@ -5,11 +5,13 @@
  */
 package com.opengamma.strata.math.impl.interpolation;
 
-import static org.testng.Assert.assertEquals;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
+import static org.assertj.core.data.Offset.offset;
 
 import java.util.function.Function;
 
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Test;
 
 import com.opengamma.strata.collect.array.DoubleMatrix;
 import com.opengamma.strata.math.impl.function.DoubleFunction1D;
@@ -21,7 +23,6 @@ import com.opengamma.strata.math.impl.statistics.descriptive.SampleStandardDevia
 /**
  * Test.
  */
-@Test
 public class PolynomialsLeastSquaresFitterTest {
   private static final double EPS = 1e-14;
 
@@ -31,10 +32,11 @@ public class PolynomialsLeastSquaresFitterTest {
   /**
    * Checks coefficients of polynomial f(x) are recovered and residuals, { y_i -f(x_i) }, are accurate
    */
-  public void PolynomialFunctionRecoverTest() {
+  @Test
+  public void polynomialFunctionRecoverTest() {
 
     final PolynomialsLeastSquaresFitter regObj = new PolynomialsLeastSquaresFitter();
-    final double[] coeff = new double[] {3.4, 5.6, 1., -4. };
+    final double[] coeff = new double[] {3.4, 5.6, 1., -4.};
 
     DoubleFunction1D func = new RealPolynomialFunction1D(coeff);
 
@@ -69,7 +71,7 @@ public class PolynomialsLeastSquaresFitterTest {
     double[] coeffResult = result.getBetas();
 
     for (int i = 0; i < degree + 1; ++i) {
-      assertEquals(coeff[i], coeffResult[i], EPS * Math.abs(coeff[i]));
+      assertThat(coeff[i]).isCloseTo(coeffResult[i], offset(EPS * Math.abs(coeff[i])));
     }
 
     final double[] residuals = result.getResiduals();
@@ -80,11 +82,11 @@ public class PolynomialsLeastSquaresFitterTest {
     }
 
     for (int i = 0; i < nPts; ++i) {
-      assertEquals(Math.abs(yValuesFit[i] - yValues[i]), 0., Math.abs(yValues[i]) * EPS);
+      assertThat(Math.abs(yValuesFit[i] - yValues[i])).isCloseTo(0., offset(Math.abs(yValues[i]) * EPS));
     }
 
     for (int i = 0; i < nPts; ++i) {
-      assertEquals(Math.abs(yValuesFit[i] - yValues[i]), Math.abs(residuals[i]), Math.abs(yValues[i]) * EPS);
+      assertThat(Math.abs(yValuesFit[i] - yValues[i])).isCloseTo(Math.abs(residuals[i]), offset(Math.abs(yValues[i]) * EPS));
     }
 
     double sum = 0.;
@@ -104,16 +106,16 @@ public class PolynomialsLeastSquaresFitterTest {
       yValuesFit[i] = func.applyAsDouble(xValues[i]);
     }
 
-    assertEquals(nPts - (degree + 1), resultVer.getDof(), 0);
+    assertThat(nPts - (degree + 1)).isEqualTo(resultVer.getDof());
     for (int i = 0; i < degree + 1; ++i) {
-      assertEquals(coeff[i], coeffResult[i], EPS * Math.abs(coeff[i]));
+      assertThat(coeff[i]).isCloseTo(coeffResult[i], offset(EPS * Math.abs(coeff[i])));
     }
 
     for (int i = 0; i < nPts; ++i) {
-      assertEquals(Math.abs(yValuesFit[i] - yValues[i]), 0., Math.abs(yValues[i]) * EPS);
+      assertThat(Math.abs(yValuesFit[i] - yValues[i])).isCloseTo(0., offset(Math.abs(yValues[i]) * EPS));
     }
 
-    assertEquals(sum, resultVer.getDiffNorm(), EPS);
+    assertThat(sum).isCloseTo(resultVer.getDiffNorm(), offset(EPS));
 
     /**
      * Tests for regressVerbose(.., true)
@@ -124,11 +126,11 @@ public class PolynomialsLeastSquaresFitterTest {
     coeffResult = resultNorm.getCoeff();
     final double[] meanAndStd = resultNorm.getMeanAndStd();
 
-    assertEquals(nPts - (degree + 1), resultNorm.getDof(), 0);
-    assertEquals(mean, meanAndStd[0], EPS);
-    assertEquals(std, meanAndStd[1], EPS);
+    assertThat(nPts - (degree + 1)).isEqualTo(resultNorm.getDof());
+    assertThat(mean).isCloseTo(meanAndStd[0], offset(EPS));
+    assertThat(std).isCloseTo(meanAndStd[1], offset(EPS));
     for (int i = 0; i < degree + 1; ++i) {
-      assertEquals(coeff[i], coeffResult[i], EPS * Math.abs(coeff[i]));
+      assertThat(coeff[i]).isCloseTo(coeffResult[i], offset(EPS * Math.abs(coeff[i])));
     }
 
     func = new RealPolynomialFunction1D(coeffResult);
@@ -138,7 +140,7 @@ public class PolynomialsLeastSquaresFitterTest {
     }
 
     for (int i = 0; i < nPts; ++i) {
-      assertEquals(Math.abs(yValuesFit[i] - yValuesNorm[i]), 0., Math.abs(yValuesNorm[i]) * EPS);
+      assertThat(Math.abs(yValuesFit[i] - yValuesNorm[i])).isCloseTo(0., offset(Math.abs(yValuesNorm[i]) * EPS));
     }
 
     sum = 0.;
@@ -147,18 +149,19 @@ public class PolynomialsLeastSquaresFitterTest {
     }
     sum = Math.sqrt(sum);
 
-    assertEquals(sum, resultNorm.getDiffNorm(), EPS);
+    assertThat(sum).isCloseTo(resultNorm.getDiffNorm(), offset(EPS));
 
   }
 
   /**
    * 
    */
-  public void RmatrixTest() {
+  @Test
+  public void rmatrixTest() {
 
     final PolynomialsLeastSquaresFitter regObj1 = new PolynomialsLeastSquaresFitter();
-    final double[] xValues = new double[] {-1., 0, 1. };
-    final double[] yValues = new double[] {1., 0, 1. };
+    final double[] xValues = new double[] {-1., 0, 1.};
+    final double[] yValues = new double[] {1., 0, 1.};
     final double[][] rMatrix = new double[][] {
         {-Math.sqrt(3.), 0., -2. / Math.sqrt(3.)},
         {0., -Math.sqrt(2.), 0.},
@@ -172,7 +175,7 @@ public class PolynomialsLeastSquaresFitterTest {
 
     for (int i = 0; i < 3; ++i) {
       for (int j = 0; j < 3; ++j) {
-        assertEquals(rMatrix[i][j], rMatResult.get(i, j), EPS);
+        assertThat(rMatrix[i][j]).isCloseTo(rMatResult.get(i, j), offset(EPS));
       }
     }
 
@@ -182,7 +185,7 @@ public class PolynomialsLeastSquaresFitterTest {
 
     for (int i = 0; i < 3; ++i) {
       for (int j = 0; j < 3; ++j) {
-        assertEquals(rMatrix[i][j], rMatResult.get(i, j), EPS);
+        assertThat(rMatrix[i][j]).isCloseTo(rMatResult.get(i, j), offset(EPS));
       }
     }
 
@@ -191,344 +194,345 @@ public class PolynomialsLeastSquaresFitterTest {
   /**
    * An error is thrown if rescaling of xValues is NOT used and we try to access data, mean and standard deviation 
    */
-  @Test(expectedExceptions = IllegalArgumentException.class)
-  public void NormalisationErrorTest() {
+  @Test
+  public void normalisationErrorTest() {
 
     final PolynomialsLeastSquaresFitter regObj = new PolynomialsLeastSquaresFitter();
 
     final int degree = 4;
 
-    final double[] xValues = new double[] {0, 1, 2, 3, 5, 6 };
-    final double[] yValues = new double[] {1, 2, 3, 4, 2, 1 };
+    final double[] xValues = new double[] {0, 1, 2, 3, 5, 6};
+    final double[] yValues = new double[] {1, 2, 3, 4, 2, 1};
 
     PolynomialsLeastSquaresFitterResult result = regObj.regressVerbose(xValues, yValues, degree, false);
-    result.getMeanAndStd();
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> result.getMeanAndStd());
 
   }
 
   /**
    * Number of data points should be larger than (degree + 1) of a polynomial
    */
-  @Test(expectedExceptions = IllegalArgumentException.class)
-  public void DataShortTest() {
+  @Test
+  public void dataShortTest() {
 
     final PolynomialsLeastSquaresFitter regObj = new PolynomialsLeastSquaresFitter();
 
     final int degree = 6;
 
-    final double[] xValues = new double[] {0, 1, 2, 3, 5, 6 };
-    final double[] yValues = new double[] {1, 2, 3, 4, 2, 1 };
+    final double[] xValues = new double[] {0, 1, 2, 3, 5, 6};
+    final double[] yValues = new double[] {1, 2, 3, 4, 2, 1};
 
-    regObj.regress(xValues, yValues, degree);
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> regObj.regress(xValues, yValues, degree));
 
   }
 
   /**
    * 
    */
-  @Test(expectedExceptions = IllegalArgumentException.class)
-  public void DataShortVerboseFalseTest() {
+  @Test
+  public void dataShortVerboseFalseTest() {
 
     final PolynomialsLeastSquaresFitter regObj = new PolynomialsLeastSquaresFitter();
 
     final int degree = 6;
 
-    final double[] xValues = new double[] {0, 1, 2, 3, 5, 6 };
-    final double[] yValues = new double[] {1, 2, 3, 4, 2, 1 };
+    final double[] xValues = new double[] {0, 1, 2, 3, 5, 6};
+    final double[] yValues = new double[] {1, 2, 3, 4, 2, 1};
 
-    regObj.regressVerbose(xValues, yValues, degree, false);
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> regObj.regressVerbose(xValues, yValues, degree, false));
 
   }
 
   /**
    * 
    */
-  @Test(expectedExceptions = IllegalArgumentException.class)
-  public void DataShortVerboseTrueTest() {
+  @Test
+  public void dataShortVerboseTrueTest() {
 
     final PolynomialsLeastSquaresFitter regObj = new PolynomialsLeastSquaresFitter();
 
     final int degree = 6;
 
-    final double[] xValues = new double[] {0, 1, 2, 3, 5, 6 };
-    final double[] yValues = new double[] {1, 2, 3, 4, 2, 1 };
+    final double[] xValues = new double[] {0, 1, 2, 3, 5, 6};
+    final double[] yValues = new double[] {1, 2, 3, 4, 2, 1};
 
-    regObj.regressVerbose(xValues, yValues, degree, true);
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> regObj.regressVerbose(xValues, yValues, degree, true));
 
   }
 
   /**
    * Degree of polynomial must be positive 
    */
-  @Test(expectedExceptions = IllegalArgumentException.class)
-  public void MinusDegreeTest() {
+  @Test
+  public void minusDegreeTest() {
 
     final PolynomialsLeastSquaresFitter regObj = new PolynomialsLeastSquaresFitter();
 
     final int degree = -4;
 
-    final double[] xValues = new double[] {0, 1, 2, 3, 5, 6 };
-    final double[] yValues = new double[] {1, 2, 3, 4, 2, 1 };
+    final double[] xValues = new double[] {0, 1, 2, 3, 5, 6};
+    final double[] yValues = new double[] {1, 2, 3, 4, 2, 1};
 
-    regObj.regress(xValues, yValues, degree);
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> regObj.regress(xValues, yValues, degree));
 
   }
 
   /**
    * 
    */
-  @Test(expectedExceptions = IllegalArgumentException.class)
-  public void MinusDegreeVerboseFalseTest() {
+  @Test
+  public void minusDegreeVerboseFalseTest() {
 
     final PolynomialsLeastSquaresFitter regObj = new PolynomialsLeastSquaresFitter();
 
     final int degree = -4;
 
-    final double[] xValues = new double[] {0, 1, 2, 3, 5, 6 };
-    final double[] yValues = new double[] {1, 2, 3, 4, 2, 1 };
+    final double[] xValues = new double[] {0, 1, 2, 3, 5, 6};
+    final double[] yValues = new double[] {1, 2, 3, 4, 2, 1};
 
-    regObj.regressVerbose(xValues, yValues, degree, false);
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> regObj.regressVerbose(xValues, yValues, degree, false));
 
   }
 
   /**
    * 
    */
-  @Test(expectedExceptions = IllegalArgumentException.class)
-  public void MinusDegreeVerboseTrueTest() {
+  @Test
+  public void minusDegreeVerboseTrueTest() {
 
     final PolynomialsLeastSquaresFitter regObj = new PolynomialsLeastSquaresFitter();
 
     final int degree = -4;
 
-    final double[] xValues = new double[] {0, 1, 2, 3, 5, 6 };
-    final double[] yValues = new double[] {1, 2, 3, 4, 2, 1 };
+    final double[] xValues = new double[] {0, 1, 2, 3, 5, 6};
+    final double[] yValues = new double[] {1, 2, 3, 4, 2, 1};
 
-    regObj.regressVerbose(xValues, yValues, degree, true);
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> regObj.regressVerbose(xValues, yValues, degree, true));
 
   }
 
   /**
    * xValues length should be the same as yValues length
    */
-  @Test(expectedExceptions = IllegalArgumentException.class)
-  public void WrongDataLengthTest() {
+  @Test
+  public void wrongDataLengthTest() {
 
     final PolynomialsLeastSquaresFitter regObj = new PolynomialsLeastSquaresFitter();
 
     final int degree = 4;
 
-    final double[] xValues = new double[] {0, 1, 2, 3, 5, 6 };
-    final double[] yValues = new double[] {1, 2, 3, 4, 2, 1, 2 };
+    final double[] xValues = new double[] {0, 1, 2, 3, 5, 6};
+    final double[] yValues = new double[] {1, 2, 3, 4, 2, 1, 2};
 
-    regObj.regress(xValues, yValues, degree);
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> regObj.regress(xValues, yValues, degree));
 
   }
 
   /**
    * 
    */
-  @Test(expectedExceptions = IllegalArgumentException.class)
-  public void WrongDataLengthVerboseFalseTest() {
+  @Test
+  public void wrongDataLengthVerboseFalseTest() {
 
     final PolynomialsLeastSquaresFitter regObj = new PolynomialsLeastSquaresFitter();
 
     final int degree = 4;
 
-    final double[] xValues = new double[] {0, 1, 2, 3, 5, 6 };
-    final double[] yValues = new double[] {1, 2, 3, 4, 2, 1, 2 };
+    final double[] xValues = new double[] {0, 1, 2, 3, 5, 6};
+    final double[] yValues = new double[] {1, 2, 3, 4, 2, 1, 2};
 
-    regObj.regressVerbose(xValues, yValues, degree, false);
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> regObj.regressVerbose(xValues, yValues, degree, false));
 
   }
 
   /**
    * 
    */
-  @Test(expectedExceptions = IllegalArgumentException.class)
-  public void WrongDataLengthVerboseTureTest() {
+  @Test
+  public void wrongDataLengthVerboseTureTest() {
 
     final PolynomialsLeastSquaresFitter regObj = new PolynomialsLeastSquaresFitter();
 
     final int degree = 4;
 
-    final double[] xValues = new double[] {0, 1, 2, 3, 5, 6 };
-    final double[] yValues = new double[] {1, 2, 3, 4, 2, 1, 2 };
+    final double[] xValues = new double[] {0, 1, 2, 3, 5, 6};
+    final double[] yValues = new double[] {1, 2, 3, 4, 2, 1, 2};
 
-    regObj.regressVerbose(xValues, yValues, degree, true);
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> regObj.regressVerbose(xValues, yValues, degree, true));
 
   }
 
   /**
    * An error is thrown if too many repeated data are found
    */
-  @Test(expectedExceptions = IllegalArgumentException.class)
-  public void RepeatDataTest() {
+  @Test
+  public void repeatDataTest() {
 
     final PolynomialsLeastSquaresFitter regObj = new PolynomialsLeastSquaresFitter();
 
     final int degree = 4;
 
-    final double[] xValues = new double[] {0, 1, 2, 3, 1, 1 };
-    final double[] yValues = new double[] {1, 2, 3, 4, 2, 2 };
+    final double[] xValues = new double[] {0, 1, 2, 3, 1, 1};
+    final double[] yValues = new double[] {1, 2, 3, 4, 2, 2};
 
-    regObj.regress(xValues, yValues, degree);
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> regObj.regress(xValues, yValues, degree));
 
   }
 
   /**
    * 
    */
-  @Test(expectedExceptions = IllegalArgumentException.class)
-  public void RepeatDataVerboseFalseTest() {
+  @Test
+  public void repeatDataVerboseFalseTest() {
 
     final PolynomialsLeastSquaresFitter regObj = new PolynomialsLeastSquaresFitter();
 
     final int degree = 4;
 
-    final double[] xValues = new double[] {0, 1, 2, 3, 1, 1 };
-    final double[] yValues = new double[] {1, 2, 3, 4, 2, 2 };
+    final double[] xValues = new double[] {0, 1, 2, 3, 1, 1};
+    final double[] yValues = new double[] {1, 2, 3, 4, 2, 2};
 
-    regObj.regressVerbose(xValues, yValues, degree, false);
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> regObj.regressVerbose(xValues, yValues, degree, false));
 
   }
 
   /**
    * 
    */
-  @Test(expectedExceptions = IllegalArgumentException.class)
-  public void RepeatDataVerboseTrueTest() {
+  @Test
+  public void repeatDataVerboseTrueTest() {
 
     final PolynomialsLeastSquaresFitter regObj = new PolynomialsLeastSquaresFitter();
 
     final int degree = 4;
 
-    final double[] xValues = new double[] {0, 1, 2, 3, 1, 1 };
-    final double[] yValues = new double[] {1, 2, 3, 4, 2, 2 };
+    final double[] xValues = new double[] {0, 1, 2, 3, 1, 1};
+    final double[] yValues = new double[] {1, 2, 3, 4, 2, 2};
 
-    regObj.regressVerbose(xValues, yValues, degree, true);
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> regObj.regressVerbose(xValues, yValues, degree, true));
 
   }
 
   /**
    * 
    */
-  @Test(expectedExceptions = IllegalArgumentException.class)
-  public void ExtremeValueTest() {
+  @Test
+  public void extremeValueTest() {
 
     final PolynomialsLeastSquaresFitter regObj = new PolynomialsLeastSquaresFitter();
 
     final int degree = 4;
 
-    final double[] xValues = new double[] {0, 1e-307, 2e-307, 3e18, 4 };
-    final double[] yValues = new double[] {1, 2, 3, 4, 5 };
+    final double[] xValues = new double[] {0, 1e-307, 2e-307, 3e18, 4};
+    final double[] yValues = new double[] {1, 2, 3, 4, 5};
 
-    regObj.regress(xValues, yValues, degree);
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> regObj.regress(xValues, yValues, degree));
 
   }
 
   /**
    * 
    */
-  @Test(expectedExceptions = IllegalArgumentException.class)
-  public void ExtremeValueVerboseFalseTest() {
+  @Test
+  public void extremeValueVerboseFalseTest() {
 
     final PolynomialsLeastSquaresFitter regObj = new PolynomialsLeastSquaresFitter();
 
     final int degree = 4;
 
-    final double[] xValues = new double[] {0, 1e-307, 2e-307, 3e18, 4 };
-    final double[] yValues = new double[] {1, 2, 3, 4, 5 };
+    final double[] xValues = new double[] {0, 1e-307, 2e-307, 3e18, 4};
+    final double[] yValues = new double[] {1, 2, 3, 4, 5};
 
-    regObj.regressVerbose(xValues, yValues, degree, false);
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> regObj.regressVerbose(xValues, yValues, degree, false));
 
   }
 
   /**
    * 
    */
-  @Test(expectedExceptions = IllegalArgumentException.class)
-  public void ExtremeValueVerboseTrueAlphaTest() {
+  @Test
+  public void extremeValueVerboseTrueAlphaTest() {
 
     final PolynomialsLeastSquaresFitter regObj = new PolynomialsLeastSquaresFitter();
 
     final int degree = 4;
 
-    final double[] xValues = new double[] {0, 1e-307, 2e-307, 3e-307, 4 };
-    final double[] yValues = new double[] {1, 2, 3, 4, 5 };
+    final double[] xValues = new double[] {0, 1e-307, 2e-307, 3e-307, 4};
+    final double[] yValues = new double[] {1, 2, 3, 4, 5};
 
-    regObj.regressVerbose(xValues, yValues, degree, true);
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> regObj.regressVerbose(xValues, yValues, degree, true));
 
   }
 
   /**
    * 
    */
-  @Test(expectedExceptions = IllegalArgumentException.class)
-  public void NullTest() {
+  @Test
+  public void nullTest() {
 
     final PolynomialsLeastSquaresFitter regObj = new PolynomialsLeastSquaresFitter();
-
     final int degree = 4;
+    double[] xValues = null;
+    double[] yValues = null;
 
-    final int nPts = 5;
-    double[] xValues = new double[nPts];
-    double[] yValues = new double[nPts];
-
-    xValues = null;
-    yValues = null;
-
-    regObj.regress(xValues, yValues, degree);
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> regObj.regress(xValues, yValues, degree));
 
   }
 
   /**
    * 
    */
-  @Test(expectedExceptions = IllegalArgumentException.class)
-  public void NullVerboseFalseTest() {
+  @Test
+  public void nullVerboseFalseTest() {
 
     final PolynomialsLeastSquaresFitter regObj = new PolynomialsLeastSquaresFitter();
-
     final int degree = 4;
+    double[] xValues = null;
+    double[] yValues = null;
 
-    final int nPts = 5;
-    double[] xValues = new double[nPts];
-    double[] yValues = new double[nPts];
-
-    xValues = null;
-    yValues = null;
-
-    regObj.regressVerbose(xValues, yValues, degree, false);
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> regObj.regressVerbose(xValues, yValues, degree, false));
 
   }
 
   /**
    * 
    */
-  @Test(expectedExceptions = IllegalArgumentException.class)
-  public void NullVerboseTrueTest() {
+  @Test
+  public void nullVerboseTrueTest() {
 
     final PolynomialsLeastSquaresFitter regObj = new PolynomialsLeastSquaresFitter();
-
     final int degree = 4;
+    double[] xValues = null;
+    double[] yValues = null;
 
-    final int nPts = 5;
-    double[] xValues = new double[nPts];
-    double[] yValues = new double[nPts];
-
-    xValues = null;
-    yValues = null;
-
-    regObj.regressVerbose(xValues, yValues, degree, true);
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> regObj.regressVerbose(xValues, yValues, degree, true));
 
   }
 
   /**
    * 
    */
-  @Test(expectedExceptions = IllegalArgumentException.class)
-  public void InfinityTest() {
+  @Test
+  public void infinityTest() {
 
     final PolynomialsLeastSquaresFitter regObj = new PolynomialsLeastSquaresFitter();
 
@@ -545,15 +549,16 @@ public class PolynomialsLeastSquaresFitterTest {
       yValues[i] = 1. / zero;
     }
 
-    regObj.regress(xValues, yValues, degree);
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> regObj.regress(xValues, yValues, degree));
 
   }
 
   /**
    * 
    */
-  @Test(expectedExceptions = IllegalArgumentException.class)
-  public void InfinityVerboseFalseTest() {
+  @Test
+  public void infinityVerboseFalseTest() {
 
     final PolynomialsLeastSquaresFitter regObj = new PolynomialsLeastSquaresFitter();
 
@@ -570,15 +575,16 @@ public class PolynomialsLeastSquaresFitterTest {
       yValues[i] = 1. / zero;
     }
 
-    regObj.regressVerbose(xValues, yValues, degree, false);
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> regObj.regressVerbose(xValues, yValues, degree, false));
 
   }
 
   /**
    * 
    */
-  @Test(expectedExceptions = IllegalArgumentException.class)
-  public void InfinityVerboseTrueTest() {
+  @Test
+  public void infinityVerboseTrueTest() {
 
     final PolynomialsLeastSquaresFitter regObj = new PolynomialsLeastSquaresFitter();
 
@@ -595,15 +601,16 @@ public class PolynomialsLeastSquaresFitterTest {
       yValues[i] = 1. / zero;
     }
 
-    regObj.regressVerbose(xValues, yValues, degree, true);
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> regObj.regressVerbose(xValues, yValues, degree, true));
 
   }
 
   /**
    * 
    */
-  @Test(expectedExceptions = IllegalArgumentException.class)
-  public void NaNTest() {
+  @Test
+  public void naNTest() {
 
     final PolynomialsLeastSquaresFitter regObj = new PolynomialsLeastSquaresFitter();
 
@@ -618,15 +625,16 @@ public class PolynomialsLeastSquaresFitterTest {
       yValues[i] = Double.NaN;
     }
 
-    regObj.regress(xValues, yValues, degree);
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> regObj.regress(xValues, yValues, degree));
 
   }
 
   /**
    * 
    */
-  @Test(expectedExceptions = IllegalArgumentException.class)
-  public void NaNVerboseFalseTest() {
+  @Test
+  public void naNVerboseFalseTest() {
 
     final PolynomialsLeastSquaresFitter regObj = new PolynomialsLeastSquaresFitter();
 
@@ -641,15 +649,16 @@ public class PolynomialsLeastSquaresFitterTest {
       yValues[i] = Double.NaN;
     }
 
-    regObj.regressVerbose(xValues, yValues, degree, false);
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> regObj.regressVerbose(xValues, yValues, degree, false));
 
   }
 
   /**
    * 
    */
-  @Test(expectedExceptions = IllegalArgumentException.class)
-  public void NaNVerboseTrueTest() {
+  @Test
+  public void naNVerboseTrueTest() {
 
     final PolynomialsLeastSquaresFitter regObj = new PolynomialsLeastSquaresFitter();
 
@@ -664,58 +673,62 @@ public class PolynomialsLeastSquaresFitterTest {
       yValues[i] = Double.NaN;
     }
 
-    regObj.regressVerbose(xValues, yValues, degree, true);
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> regObj.regressVerbose(xValues, yValues, degree, true));
 
   }
 
   /**
    * 
    */
-  @Test(expectedExceptions = IllegalArgumentException.class)
-  public void LargeNumberTest() {
+  @Test
+  public void largeNumberTest() {
 
     final PolynomialsLeastSquaresFitter regObj = new PolynomialsLeastSquaresFitter();
 
     final int degree = 4;
 
-    double[] xValues = new double[] {1, 2, 3, 4e2, 5, 6, 7 };
-    double[] yValues = new double[] {1, 2, 3, 4, 5, 6, 7 };
+    double[] xValues = new double[] {1, 2, 3, 4e2, 5, 6, 7};
+    double[] yValues = new double[] {1, 2, 3, 4, 5, 6, 7};
 
-    regObj.regress(xValues, yValues, degree);
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> regObj.regress(xValues, yValues, degree));
 
   }
 
   /**
    * 
    */
-  @Test(expectedExceptions = IllegalArgumentException.class)
-  public void LargeNumberVerboseFalseTest() {
+  @Test
+  public void largeNumberVerboseFalseTest() {
 
     final PolynomialsLeastSquaresFitter regObj = new PolynomialsLeastSquaresFitter();
 
     final int degree = 4;
 
-    double[] xValues = new double[] {1, 2, 3, 4e2, 5, 6, 7 };
-    double[] yValues = new double[] {1, 2, 3, 4, 5, 6, 7 };
+    double[] xValues = new double[] {1, 2, 3, 4e2, 5, 6, 7};
+    double[] yValues = new double[] {1, 2, 3, 4, 5, 6, 7};
 
-    regObj.regressVerbose(xValues, yValues, degree, false);
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> regObj.regressVerbose(xValues, yValues, degree, false));
 
   }
 
   /**
    * 
    */
-  @Test(expectedExceptions = IllegalArgumentException.class)
-  public void LargeNumberVerboseTrueTest() {
+  @Test
+  public void largeNumberVerboseTrueTest() {
 
     final PolynomialsLeastSquaresFitter regObj = new PolynomialsLeastSquaresFitter();
 
     final int degree = 6;
 
-    double[] xValues = new double[] {1, 2, 3, 4e17, 5, 6, 7 };
-    double[] yValues = new double[] {1, 2, 3, 4, 5, 6, 7 };
+    double[] xValues = new double[] {1, 2, 3, 4e17, 5, 6, 7};
+    double[] yValues = new double[] {1, 2, 3, 4, 5, 6, 7};
 
-    regObj.regressVerbose(xValues, yValues, degree, true);
+    assertThatIllegalArgumentException()
+        .isThrownBy(() -> regObj.regressVerbose(xValues, yValues, degree, true));
 
   }
 

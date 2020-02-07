@@ -18,7 +18,7 @@ import java.time.LocalDate;
 import java.time.Period;
 import java.util.Set;
 
-import org.testng.annotations.Test;
+import org.junit.jupiter.api.Test;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
@@ -67,7 +67,6 @@ import com.opengamma.strata.product.swap.PriceIndexCalculationMethod;
 /**
  * Test {@link CapitalIndexedBondTradeCalculationFunction}.
  */
-@Test
 public class CapitalIndexedBondTradeCalculationFunctionTest {
 
   private static final ReferenceData REF_DATA = ReferenceData.standard();
@@ -129,8 +128,10 @@ public class CapitalIndexedBondTradeCalculationFunctionTest {
   private static final CalculationParameters PARAMS = CalculationParameters.of(RATES_LOOKUP, LED_LOOKUP);
 
   //-------------------------------------------------------------------------
+  @Test
   public void test_requirementsAndCurrency() {
-    CapitalIndexedBondTradeCalculationFunction<CapitalIndexedBondTrade> function = CapitalIndexedBondTradeCalculationFunction.TRADE;
+    CapitalIndexedBondTradeCalculationFunction<CapitalIndexedBondTrade> function =
+        CapitalIndexedBondTradeCalculationFunction.TRADE;
     Set<Measure> measures = function.supportedMeasures();
     FunctionRequirements reqs = function.requirements(TRADE, measures, PARAMS, REF_DATA);
     assertThat(reqs.getOutputCurrencies()).containsOnly(CURRENCY);
@@ -139,8 +140,10 @@ public class CapitalIndexedBondTradeCalculationFunctionTest {
     assertThat(function.naturalCurrency(TRADE, REF_DATA)).isEqualTo(CURRENCY);
   }
 
+  @Test
   public void test_simpleMeasures() {
-    CapitalIndexedBondTradeCalculationFunction<CapitalIndexedBondTrade> function = CapitalIndexedBondTradeCalculationFunction.TRADE;
+    CapitalIndexedBondTradeCalculationFunction<CapitalIndexedBondTrade> function =
+        CapitalIndexedBondTradeCalculationFunction.TRADE;
     ScenarioMarketData md = marketData();
     RatesProvider ratesProvider = RATES_LOOKUP.marketDataView(md.scenario(0)).ratesProvider();
     LegalEntityDiscountingProvider ledProvider = LED_LOOKUP.marketDataView(md.scenario(0)).discountingProvider();
@@ -165,8 +168,10 @@ public class CapitalIndexedBondTradeCalculationFunctionTest {
             Measures.RESOLVED_TARGET, Result.success(RTRADE));
   }
 
+  @Test
   public void test_pv01() {
-    CapitalIndexedBondTradeCalculationFunction<CapitalIndexedBondTrade> function = CapitalIndexedBondTradeCalculationFunction.TRADE;
+    CapitalIndexedBondTradeCalculationFunction<CapitalIndexedBondTrade> function =
+        CapitalIndexedBondTradeCalculationFunction.TRADE;
     ScenarioMarketData md = marketData();
     RatesProvider ratesProvider = RATES_LOOKUP.marketDataView(md.scenario(0)).ratesProvider();
     LegalEntityDiscountingProvider ledProvider = LED_LOOKUP.marketDataView(md.scenario(0)).discountingProvider();
