@@ -25,6 +25,7 @@ import org.joda.beans.impl.direct.DirectMetaPropertyMap;
 
 import com.opengamma.strata.basics.ReferenceData;
 import com.opengamma.strata.collect.ArgChecker;
+import com.opengamma.strata.product.PortfolioItemInfo;
 import com.opengamma.strata.product.PortfolioItemSummary;
 import com.opengamma.strata.product.ProductType;
 import com.opengamma.strata.product.ResolvableTrade;
@@ -87,8 +88,8 @@ public final class FixedCouponBondTrade
 
   //-------------------------------------------------------------------------
   @Override
-  public FixedCouponBondTrade withInfo(TradeInfo info) {
-    return new FixedCouponBondTrade(info, product, quantity, price);
+  public FixedCouponBondTrade withInfo(PortfolioItemInfo info) {
+    return new FixedCouponBondTrade(TradeInfo.from(info), product, quantity, price);
   }
 
   @Override
@@ -275,9 +276,9 @@ public final class FixedCouponBondTrade
   public String toString() {
     StringBuilder buf = new StringBuilder(160);
     buf.append("FixedCouponBondTrade{");
-    buf.append("info").append('=').append(info).append(',').append(' ');
-    buf.append("product").append('=').append(product).append(',').append(' ');
-    buf.append("quantity").append('=').append(quantity).append(',').append(' ');
+    buf.append("info").append('=').append(JodaBeanUtils.toString(info)).append(',').append(' ');
+    buf.append("product").append('=').append(JodaBeanUtils.toString(product)).append(',').append(' ');
+    buf.append("quantity").append('=').append(JodaBeanUtils.toString(quantity)).append(',').append(' ');
     buf.append("price").append('=').append(JodaBeanUtils.toString(price));
     buf.append('}');
     return buf.toString();

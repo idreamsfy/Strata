@@ -17,6 +17,7 @@ import org.joda.beans.gen.BeanDefinition;
 import org.joda.beans.gen.PropertyDefinition;
 import org.joda.beans.impl.light.LightMetaBean;
 
+import com.opengamma.strata.product.PortfolioItemInfo;
 import com.opengamma.strata.product.ResolvedProduct;
 import com.opengamma.strata.product.ResolvedTrade;
 import com.opengamma.strata.product.Trade;
@@ -45,7 +46,7 @@ public final class DummyFraTrade
   }
 
   @Override
-  public Trade withInfo(TradeInfo info) {
+  public Trade withInfo(PortfolioItemInfo info) {
     return this;
   }
 
@@ -141,7 +142,7 @@ public final class DummyFraTrade
   public String toString() {
     StringBuilder buf = new StringBuilder(96);
     buf.append("DummyFraTrade{");
-    buf.append("date").append('=').append(date).append(',').append(' ');
+    buf.append("date").append('=').append(JodaBeanUtils.toString(date)).append(',').append(' ');
     buf.append("fixedRate").append('=').append(JodaBeanUtils.toString(fixedRate));
     buf.append('}');
     return buf.toString();

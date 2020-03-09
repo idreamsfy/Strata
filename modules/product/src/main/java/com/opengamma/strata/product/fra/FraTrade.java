@@ -27,6 +27,7 @@ import org.joda.beans.impl.direct.DirectMetaProperty;
 import org.joda.beans.impl.direct.DirectMetaPropertyMap;
 
 import com.opengamma.strata.basics.ReferenceData;
+import com.opengamma.strata.product.PortfolioItemInfo;
 import com.opengamma.strata.product.PortfolioItemSummary;
 import com.opengamma.strata.product.ProductTrade;
 import com.opengamma.strata.product.ProductType;
@@ -80,8 +81,8 @@ public final class FraTrade
 
   //-------------------------------------------------------------------------
   @Override
-  public FraTrade withInfo(TradeInfo info) {
-    return new FraTrade(info, product);
+  public FraTrade withInfo(PortfolioItemInfo info) {
+    return new FraTrade(TradeInfo.from(info), product);
   }
 
   //-------------------------------------------------------------------------
@@ -217,7 +218,7 @@ public final class FraTrade
   public String toString() {
     StringBuilder buf = new StringBuilder(96);
     buf.append("FraTrade{");
-    buf.append("info").append('=').append(info).append(',').append(' ');
+    buf.append("info").append('=').append(JodaBeanUtils.toString(info)).append(',').append(' ');
     buf.append("product").append('=').append(JodaBeanUtils.toString(product));
     buf.append('}');
     return buf.toString();

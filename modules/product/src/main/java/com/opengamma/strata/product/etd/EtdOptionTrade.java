@@ -23,6 +23,7 @@ import org.joda.beans.impl.direct.DirectMetaProperty;
 import org.joda.beans.impl.direct.DirectMetaPropertyMap;
 
 import com.opengamma.strata.basics.currency.Currency;
+import com.opengamma.strata.product.PortfolioItemInfo;
 import com.opengamma.strata.product.PortfolioItemSummary;
 import com.opengamma.strata.product.ProductType;
 import com.opengamma.strata.product.ResolvableSecurityTrade;
@@ -108,8 +109,8 @@ public final class EtdOptionTrade
 
   //-------------------------------------------------------------------------
   @Override
-  public EtdOptionTrade withInfo(TradeInfo info) {
-    return new EtdOptionTrade(info, security, quantity, price);
+  public EtdOptionTrade withInfo(PortfolioItemInfo info) {
+    return new EtdOptionTrade(TradeInfo.from(info), security, quantity, price);
   }
 
   @Override
@@ -261,9 +262,9 @@ public final class EtdOptionTrade
   public String toString() {
     StringBuilder buf = new StringBuilder(160);
     buf.append("EtdOptionTrade{");
-    buf.append("info").append('=').append(info).append(',').append(' ');
-    buf.append("security").append('=').append(security).append(',').append(' ');
-    buf.append("quantity").append('=').append(quantity).append(',').append(' ');
+    buf.append("info").append('=').append(JodaBeanUtils.toString(info)).append(',').append(' ');
+    buf.append("security").append('=').append(JodaBeanUtils.toString(security)).append(',').append(' ');
+    buf.append("quantity").append('=').append(JodaBeanUtils.toString(quantity)).append(',').append(' ');
     buf.append("price").append('=').append(JodaBeanUtils.toString(price));
     buf.append('}');
     return buf.toString();

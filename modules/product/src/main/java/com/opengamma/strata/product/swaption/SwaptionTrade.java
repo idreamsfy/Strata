@@ -25,6 +25,7 @@ import org.joda.beans.impl.direct.DirectMetaPropertyMap;
 import com.opengamma.strata.basics.ReferenceData;
 import com.opengamma.strata.basics.currency.AdjustablePayment;
 import com.opengamma.strata.basics.currency.Payment;
+import com.opengamma.strata.product.PortfolioItemInfo;
 import com.opengamma.strata.product.PortfolioItemSummary;
 import com.opengamma.strata.product.ProductTrade;
 import com.opengamma.strata.product.ProductType;
@@ -99,8 +100,8 @@ public final class SwaptionTrade
 
   //-------------------------------------------------------------------------
   @Override
-  public SwaptionTrade withInfo(TradeInfo info) {
-    return new SwaptionTrade(info, product, premium);
+  public SwaptionTrade withInfo(PortfolioItemInfo info) {
+    return new SwaptionTrade(TradeInfo.from(info), product, premium);
   }
 
   //-------------------------------------------------------------------------
@@ -242,8 +243,8 @@ public final class SwaptionTrade
   public String toString() {
     StringBuilder buf = new StringBuilder(128);
     buf.append("SwaptionTrade{");
-    buf.append("info").append('=').append(info).append(',').append(' ');
-    buf.append("product").append('=').append(product).append(',').append(' ');
+    buf.append("info").append('=').append(JodaBeanUtils.toString(info)).append(',').append(' ');
+    buf.append("product").append('=').append(JodaBeanUtils.toString(product)).append(',').append(' ');
     buf.append("premium").append('=').append(JodaBeanUtils.toString(premium));
     buf.append('}');
     return buf.toString();

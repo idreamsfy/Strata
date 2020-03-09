@@ -27,6 +27,7 @@ import com.opengamma.strata.basics.ReferenceData;
 import com.opengamma.strata.basics.Resolvable;
 import com.opengamma.strata.basics.currency.Currency;
 import com.opengamma.strata.collect.ArgChecker;
+import com.opengamma.strata.product.PortfolioItemInfo;
 import com.opengamma.strata.product.PortfolioItemSummary;
 import com.opengamma.strata.product.PositionInfo;
 import com.opengamma.strata.product.ProductType;
@@ -156,8 +157,8 @@ public final class IborFuturePosition
 
   //-------------------------------------------------------------------------
   @Override
-  public IborFuturePosition withInfo(PositionInfo info) {
-    return new IborFuturePosition(info, product, longQuantity, shortQuantity);
+  public IborFuturePosition withInfo(PortfolioItemInfo info) {
+    return new IborFuturePosition(PositionInfo.from(info), product, longQuantity, shortQuantity);
   }
 
   @Override
@@ -316,12 +317,13 @@ public final class IborFuturePosition
 
   @Override
   public String toString() {
-    StringBuilder buf = new StringBuilder(160);
+    StringBuilder buf = new StringBuilder(192);
     buf.append("IborFuturePosition{");
-    buf.append("info").append('=').append(info).append(',').append(' ');
-    buf.append("product").append('=').append(product).append(',').append(' ');
-    buf.append("longQuantity").append('=').append(longQuantity).append(',').append(' ');
-    buf.append("shortQuantity").append('=').append(JodaBeanUtils.toString(shortQuantity));
+    buf.append("info").append('=').append(JodaBeanUtils.toString(info)).append(',').append(' ');
+    buf.append("product").append('=').append(JodaBeanUtils.toString(product)).append(',').append(' ');
+    buf.append("longQuantity").append('=').append(JodaBeanUtils.toString(longQuantity)).append(',').append(' ');
+    buf.append("shortQuantity").append('=').append(JodaBeanUtils.toString(shortQuantity)).append(',').append(' ');
+    buf.append("quantity").append('=').append(JodaBeanUtils.toString(getQuantity()));
     buf.append('}');
     return buf.toString();
   }
@@ -620,12 +622,13 @@ public final class IborFuturePosition
     //-----------------------------------------------------------------------
     @Override
     public String toString() {
-      StringBuilder buf = new StringBuilder(160);
+      StringBuilder buf = new StringBuilder(192);
       buf.append("IborFuturePosition.Builder{");
       buf.append("info").append('=').append(JodaBeanUtils.toString(info)).append(',').append(' ');
       buf.append("product").append('=').append(JodaBeanUtils.toString(product)).append(',').append(' ');
       buf.append("longQuantity").append('=').append(JodaBeanUtils.toString(longQuantity)).append(',').append(' ');
-      buf.append("shortQuantity").append('=').append(JodaBeanUtils.toString(shortQuantity));
+      buf.append("shortQuantity").append('=').append(JodaBeanUtils.toString(shortQuantity)).append(',').append(' ');
+      buf.append("quantity").append('=').append(JodaBeanUtils.toString(null));
       buf.append('}');
       return buf.toString();
     }

@@ -26,6 +26,7 @@ import com.opengamma.strata.basics.ReferenceData;
 import com.opengamma.strata.basics.currency.AdjustablePayment;
 import com.opengamma.strata.basics.currency.CurrencyAmount;
 import com.opengamma.strata.basics.currency.CurrencyPair;
+import com.opengamma.strata.product.PortfolioItemInfo;
 import com.opengamma.strata.product.PortfolioItemSummary;
 import com.opengamma.strata.product.ProductType;
 import com.opengamma.strata.product.ResolvableTrade;
@@ -76,8 +77,8 @@ public final class FxSingleBarrierOptionTrade
 
   //-------------------------------------------------------------------------
   @Override
-  public FxSingleBarrierOptionTrade withInfo(TradeInfo info) {
-    return new FxSingleBarrierOptionTrade(info, product, premium);
+  public FxSingleBarrierOptionTrade withInfo(PortfolioItemInfo info) {
+    return new FxSingleBarrierOptionTrade(TradeInfo.from(info), product, premium);
   }
 
   //-------------------------------------------------------------------------
@@ -223,8 +224,8 @@ public final class FxSingleBarrierOptionTrade
   public String toString() {
     StringBuilder buf = new StringBuilder(128);
     buf.append("FxSingleBarrierOptionTrade{");
-    buf.append("info").append('=').append(info).append(',').append(' ');
-    buf.append("product").append('=').append(product).append(',').append(' ');
+    buf.append("info").append('=').append(JodaBeanUtils.toString(info)).append(',').append(' ');
+    buf.append("product").append('=').append(JodaBeanUtils.toString(product)).append(',').append(' ');
     buf.append("premium").append('=').append(JodaBeanUtils.toString(premium));
     buf.append('}');
     return buf.toString();

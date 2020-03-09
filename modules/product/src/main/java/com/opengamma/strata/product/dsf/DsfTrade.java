@@ -24,6 +24,7 @@ import org.joda.beans.impl.direct.DirectMetaPropertyMap;
 
 import com.opengamma.strata.basics.ReferenceData;
 import com.opengamma.strata.collect.ArgChecker;
+import com.opengamma.strata.product.PortfolioItemInfo;
 import com.opengamma.strata.product.PortfolioItemSummary;
 import com.opengamma.strata.product.ProductType;
 import com.opengamma.strata.product.ResolvableTrade;
@@ -93,8 +94,8 @@ public final class DsfTrade
 
   //-------------------------------------------------------------------------
   @Override
-  public DsfTrade withInfo(TradeInfo info) {
-    return new DsfTrade(info, product, quantity, price);
+  public DsfTrade withInfo(PortfolioItemInfo info) {
+    return new DsfTrade(TradeInfo.from(info), product, quantity, price);
   }
 
   @Override
@@ -269,9 +270,9 @@ public final class DsfTrade
   public String toString() {
     StringBuilder buf = new StringBuilder(160);
     buf.append("DsfTrade{");
-    buf.append("info").append('=').append(info).append(',').append(' ');
-    buf.append("product").append('=').append(product).append(',').append(' ');
-    buf.append("quantity").append('=').append(quantity).append(',').append(' ');
+    buf.append("info").append('=').append(JodaBeanUtils.toString(info)).append(',').append(' ');
+    buf.append("product").append('=').append(JodaBeanUtils.toString(product)).append(',').append(' ');
+    buf.append("quantity").append('=').append(JodaBeanUtils.toString(quantity)).append(',').append(' ');
     buf.append("price").append('=').append(JodaBeanUtils.toString(price));
     buf.append('}');
     return buf.toString();

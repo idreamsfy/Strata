@@ -25,6 +25,7 @@ import org.joda.beans.impl.direct.DirectMetaPropertyMap;
 import com.opengamma.strata.basics.ReferenceData;
 import com.opengamma.strata.basics.currency.AdjustablePayment;
 import com.opengamma.strata.basics.schedule.PeriodicSchedule;
+import com.opengamma.strata.product.PortfolioItemInfo;
 import com.opengamma.strata.product.PortfolioItemSummary;
 import com.opengamma.strata.product.ProductTrade;
 import com.opengamma.strata.product.ProductType;
@@ -72,8 +73,8 @@ public final class CdsIndexTrade
 
   //-------------------------------------------------------------------------
   @Override
-  public CdsIndexTrade withInfo(TradeInfo info) {
-    return new CdsIndexTrade(info, product, upfrontFee);
+  public CdsIndexTrade withInfo(PortfolioItemInfo info) {
+    return new CdsIndexTrade(TradeInfo.from(info), product, upfrontFee);
   }
 
   //-------------------------------------------------------------------------
@@ -221,8 +222,8 @@ public final class CdsIndexTrade
   public String toString() {
     StringBuilder buf = new StringBuilder(128);
     buf.append("CdsIndexTrade{");
-    buf.append("info").append('=').append(info).append(',').append(' ');
-    buf.append("product").append('=').append(product).append(',').append(' ');
+    buf.append("info").append('=').append(JodaBeanUtils.toString(info)).append(',').append(' ');
+    buf.append("product").append('=').append(JodaBeanUtils.toString(product)).append(',').append(' ');
     buf.append("upfrontFee").append('=').append(JodaBeanUtils.toString(upfrontFee));
     buf.append('}');
     return buf.toString();
