@@ -27,6 +27,7 @@ import java.util.Optional;
 import org.joda.beans.Bean;
 import org.joda.beans.BeanBuilder;
 import org.joda.beans.ImmutableBean;
+import org.joda.beans.JodaBeanUtils;
 import org.joda.beans.MetaBean;
 import org.joda.beans.MetaProperty;
 import org.joda.beans.PropertyStyle;
@@ -527,7 +528,7 @@ public final class ArrayByteSource extends BeanByteSource implements ImmutableBe
   @Override
   public boolean contentEquals(ByteSource other) throws IOException {
     if (other instanceof ArrayByteSource) {
-      return equals(other);
+      return JodaBeanUtils.equal(array, ((ArrayByteSource) other).array);
     }
     return super.contentEquals(other);
   }
@@ -540,15 +541,23 @@ public final class ArrayByteSource extends BeanByteSource implements ImmutableBe
   //-------------------------------------------------------------------------
   @Override
   public boolean equals(Object obj) {
-    if (obj instanceof ArrayByteSource) {
-      return Arrays.equals(array, ((ArrayByteSource) obj).array);
+    if (obj == this) {
+      return true;
+    }
+    if (obj != null && obj.getClass() == this.getClass()) {
+      ArrayByteSource other = ((ArrayByteSource) obj);
+      return JodaBeanUtils.equal(fileName, other.fileName) &&
+          JodaBeanUtils.equal(array, other.array);
     }
     return false;
   }
 
   @Override
   public int hashCode() {
-    return Arrays.hashCode(array);
+    int hash = getClass().hashCode();
+    hash = hash * 31 + JodaBeanUtils.hashCode(fileName);
+    hash = hash * 31 + JodaBeanUtils.hashCode(array);
+    return hash;
   }
 
   @Override
@@ -689,7 +698,8 @@ public final class ArrayByteSource extends BeanByteSource implements ImmutableBe
 
         @Override
         public ArrayByteSource build() {
-          return ArrayByteSource.ofUnsafe(array);
+          ArrayByteSource byteSource = ArrayByteSource.ofUnsafe(array);
+          return fileName != null ? byteSource.withFileName(fileName) : byteSource;
         }
       };
     }

@@ -117,6 +117,9 @@ public class FloatingRateNamesTest {
         {"HKD-HONIA-OIS-COMPOUND", "HKD-HONIA", FloatingRateType.OVERNIGHT_COMPOUNDED},
         {"HKD-HONIX-OIS-COMPOUND", "HKD-HONIA", FloatingRateType.OVERNIGHT_COMPOUNDED},
         {"INR-MIBOR-OIS-COMPOUND", "INR-OMIBOR", FloatingRateType.OVERNIGHT_COMPOUNDED},
+        {"RUB-RUONIA-OIS-COMPOUND", "RUB-RUONIA", FloatingRateType.OVERNIGHT_COMPOUNDED},
+        {"SGD-SORA-COMPOUND", "SGD-SORA", FloatingRateType.OVERNIGHT_COMPOUNDED},
+        {"TRY-TLREF-OIS-COMPOUND", "TRY-TLREF", FloatingRateType.OVERNIGHT_COMPOUNDED},
     };
   }
 
@@ -200,6 +203,14 @@ public class FloatingRateNamesTest {
     assertThat(FloatingRateName.of("GBP-WMBA-SONIA-COMPOUND").normalized()).isEqualTo(FloatingRateName.of("GBP-SONIA"));
     for (FloatingRateName name : FloatingRateName.extendedEnum().lookupAll().values()) {
       assertThat(name.normalized()).isNotNull();
+    }
+  }
+
+  //-------------------------------------------------------------------------
+  @Test
+  public void test_getFloatingRateName() {
+    for (FloatingRateName name : FloatingRateName.extendedEnum().lookupAll().values()) {
+      assertThat(name.getFloatingRateName()).isEqualTo(name);
     }
   }
 

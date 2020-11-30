@@ -268,6 +268,7 @@ public class GlobalHolidayCalendarsTest {
         {2015, mds(2015, md(1, 1), md(4, 3), md(4, 6), md(5, 4), md(5, 25), md(8, 31), md(12, 25), md(12, 28))},
         {2016, mds(2016, md(1, 1), md(3, 25), md(3, 28), md(5, 2), md(5, 30), md(8, 29), md(12, 26), md(12, 27))},
         {2020, mds(2020, md(1, 1), md(4, 10), md(4, 13), md(5, 8), md(5, 25), md(8, 31), md(12, 25), md(12, 28))},
+        {2022, mds(2022, md(1, 3), md(4, 15), md(4, 18), md(5, 2), md(6, 2), md(6, 3), md(8, 29), md(12, 26), md(12, 27))},
     };
   }
 
@@ -899,6 +900,9 @@ public class GlobalHolidayCalendarsTest {
         {2016, mds(2016, md(1, 1), md(3, 14), md(3, 15), md(3, 28), md(5, 1), md(5, 16),
             md(10, 31), md(11, 1), md(12, 24), md(12, 25), md(12, 26)),
             ImmutableList.of(date(2016, 3, 5), date(2016, 10, 15))},
+        {2020, mds(2020, md(1, 1), md(3, 15), md(4, 10), md(4, 13), md(5, 1), md(6, 1),
+            md(8, 20), md(8, 21), md(10, 23), md(12, 24), md(12, 25), md(12, 26)),
+            ImmutableList.of(date(2020, 8, 29), date(2020, 12, 12))},
     };
   }
 

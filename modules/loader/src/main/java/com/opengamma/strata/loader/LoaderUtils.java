@@ -27,6 +27,7 @@ import java.util.Locale;
 import java.util.Optional;
 
 import com.google.common.base.CharMatcher;
+import com.opengamma.strata.basics.StandardSchemes;
 import com.opengamma.strata.basics.currency.Currency;
 import com.opengamma.strata.basics.date.BusinessDayConvention;
 import com.opengamma.strata.basics.date.DayCount;
@@ -52,15 +53,15 @@ public final class LoaderUtils {
   /**
    * Default scheme for trades.
    */
-  public static final String DEFAULT_TRADE_SCHEME = "OG-Trade";
+  public static final String DEFAULT_TRADE_SCHEME = StandardSchemes.OG_TRADE_SCHEME;
   /**
    * Default scheme for positions.
    */
-  public static final String DEFAULT_POSITION_SCHEME = "OG-Position";
+  public static final String DEFAULT_POSITION_SCHEME = StandardSchemes.OG_POSITION_SCHEME;
   /**
    * Default scheme for securities.
    */
-  public static final String DEFAULT_SECURITY_SCHEME = "OG-Security";
+  public static final String DEFAULT_SECURITY_SCHEME = StandardSchemes.OG_SECURITY_SCHEME;
 
   // date formats
   private static final DateTimeFormatter D_M_YEAR_SLASH = new DateTimeFormatterBuilder()
@@ -159,6 +160,8 @@ public final class LoaderUtils {
 
   /**
    * Parses an integer from the input string.
+   * <p>
+   * If input value is bracketed, it will be parsed as a negative integer. For e.g. '(23)' will be parsed as -23.
    * 
    * @param str  the string to parse
    * @return the parsed value
@@ -166,7 +169,7 @@ public final class LoaderUtils {
    */
   public static int parseInteger(String str) {
     try {
-      return Integer.parseInt(str);
+      return Integer.parseInt(normalizeIfBracketed(str));
     } catch (NumberFormatException ex) {
       NumberFormatException nfex = new NumberFormatException("Unable to parse integer from '" + str + "'");
       nfex.initCause(ex);
@@ -176,14 +179,16 @@ public final class LoaderUtils {
 
   /**
    * Parses a double from the input string.
-   * 
+   * <p>
+   * If input value is bracketed, it will be parsed as a negative number. For e.g. '(1.23)' will be parsed as -1.23d.
+   *
    * @param str  the string to parse
    * @return the parsed value
    * @throws NumberFormatException if the string cannot be parsed
    */
   public static double parseDouble(String str) {
     try {
-      return new BigDecimal(str).doubleValue();
+      return new BigDecimal(normalizeIfBracketed(str)).doubleValue();
     } catch (NumberFormatException ex) {
       NumberFormatException nfex = new NumberFormatException("Unable to parse double from '" + str + "'");
       nfex.initCause(ex);
@@ -193,6 +198,9 @@ public final class LoaderUtils {
 
   /**
    * Parses a double from the input string, converting it from a percentage to a decimal values.
+   * <p>
+   * If input value is bracketed, it will be parsed as a negative decimal percentage.
+   * For e.g. '(12.34)' will be parsed as -0.1234d.
    * 
    * @param str  the string to parse
    * @return the parsed value
@@ -200,7 +208,7 @@ public final class LoaderUtils {
    */
   public static double parseDoublePercent(String str) {
     try {
-      return new BigDecimal(str).movePointLeft(2).doubleValue();
+      return new BigDecimal(normalizeIfBracketed(str)).movePointLeft(2).doubleValue();
     } catch (NumberFormatException ex) {
       NumberFormatException nfex = new NumberFormatException("Unable to parse percentage from '" + str + "'");
       nfex.initCause(ex);
@@ -210,6 +218,9 @@ public final class LoaderUtils {
 
   /**
    * Parses a decimal from the input string.
+   * <p>
+   * If input value is bracketed, it will be parsed as a negative big decimal.
+   * For e.g. '(12.3456789)' will be parsed as a big decimal -12.3456789.
    * 
    * @param str  the string to parse
    * @return the parsed value
@@ -217,7 +228,7 @@ public final class LoaderUtils {
    */
   public static BigDecimal parseBigDecimal(String str) {
     try {
-      return new BigDecimal(str);
+      return new BigDecimal(normalizeIfBracketed(str));
     } catch (NumberFormatException ex) {
       NumberFormatException nfex = new NumberFormatException("Unable to parse BigDecimal from '" + str + "'");
       nfex.initCause(ex);
@@ -227,18 +238,30 @@ public final class LoaderUtils {
 
   /**
    * Parses a decimal from the input string, converting it from a percentage to a decimal values.
-   * 
+   * <p>
+   * If input value is bracketed, it will be parsed as a negative decimal percent.
+   * For e.g. '(12.3456789)' will be parsed as a big decimal -0.123456789.
+   *
    * @param str  the string to parse
    * @return the parsed value
    * @throws NumberFormatException if the string cannot be parsed
    */
   public static BigDecimal parseBigDecimalPercent(String str) {
     try {
-      return new BigDecimal(str).movePointLeft(2);
+      return new BigDecimal(normalizeIfBracketed(str)).movePointLeft(2);
     } catch (NumberFormatException ex) {
       NumberFormatException nfex = new NumberFormatException("Unable to parse BigDecimal percentage from '" + str + "'");
       nfex.initCause(ex);
       throw nfex;
+    }
+  }
+
+  private static String normalizeIfBracketed(String value) {
+    if (value.length() > 2 && value.startsWith("(") && value.endsWith(")")) {
+      String valueWithoutBrackets = value.substring(1, value.length() - 1);
+      return "-" + valueWithoutBrackets; // prepends the negative sign
+    } else {
+      return value;
     }
   }
 

@@ -249,7 +249,9 @@ public class ArrayByteSourceTest {
     assertThat(test.getFileName()).isEmpty();
     assertThat(test.withFileName("name.txt").getFileName()).hasValue("name.txt");
     assertThat(test.withFileName("foo/name.txt").getFileName()).hasValue("name.txt");
+    assertThat(test.withFileName("foo/name.txt").getFileNameOrThrow()).isEqualTo("name.txt");
     assertThat(test.withFileName("").getFileName()).isEmpty();
+    assertThatIllegalArgumentException().isThrownBy(() -> test.withFileName("").getFileNameOrThrow());
     assertThatIllegalArgumentException().isThrownBy(() -> test.withFileName(null).getFileName());
   }
 
@@ -331,6 +333,7 @@ public class ArrayByteSourceTest {
     assertThat(test.contentEquals(test)).isTrue();
     assertThat(test.toString()).isEqualTo("ArrayByteSource[3 bytes]");
     assertThat(test.withFileName("name.txt").toString()).isEqualTo("ArrayByteSource[3 bytes, name.txt]");
+    assertThat(test.withFileName("name.txt").contentEquals(test)).isTrue();
   }
 
   //-------------------------------------------------------------------------
@@ -419,15 +422,19 @@ public class ArrayByteSourceTest {
     String json = JodaBeanSer.PRETTY.jsonWriter().write(test);
     ArrayByteSource roundTrip = JodaBeanSer.PRETTY.jsonReader().read(json, ArrayByteSource.class);
     assertThat(roundTrip).isEqualTo(test);
+    assertThat(roundTrip.getFileName()).isNotPresent();
   }
 
   @Test
   public void testSerializeNamed() {
     byte[] bytes = new byte[] {65, 66, 67, 99};
-    ArrayByteSource test = ArrayByteSource.copyOf(bytes).withFileName("foo.txt");
+    String fileName = "foo.txt";
+    ArrayByteSource test = ArrayByteSource.copyOf(bytes).withFileName(fileName);
     String json = JodaBeanSer.PRETTY.jsonWriter().write(test);
     ArrayByteSource roundTrip = JodaBeanSer.PRETTY.jsonReader().read(json, ArrayByteSource.class);
     assertThat(roundTrip).isEqualTo(test);
+    // additional checks to ensure filenames are also equal
+    assertThat(roundTrip.getFileName()).hasValue(fileName);
   }
 
 }

@@ -120,6 +120,7 @@ final class GlobalHolidayCalendars {
   // 1968, 3rd Jun, 2nd Sep - http://hansard.millbanksystems.com/written_answers/1965/jun/03/bank-holidays-1967-and-1968
   // 1969, 26th May, 1st Sep - http://hansard.millbanksystems.com/written_answers/1967/mar/21/bank-holidays-1969-dates
   // 1970, 25th May, 31st Aug - http://hansard.millbanksystems.com/written_answers/1967/jul/28/bank-holidays
+  // 2022, 2nd and 3rd Jun - https://www.gov.uk/government/news/extra-bank-holiday-to-mark-the-queens-platinum-jubilee-in-2022
   static ImmutableHolidayCalendar generateLondon() {
     List<LocalDate> holidays = new ArrayList<>(2000);
     for (int year = 1950; year <= 2099; year++) {
@@ -146,6 +147,10 @@ final class GlobalHolidayCalendars {
         // diamond jubilee
         holidays.add(date(2012, 6, 4));
         holidays.add(date(2012, 6, 5));
+      } else if (year == 2022) {
+        // platinum jubilee
+        holidays.add(date(2022, 6, 2));
+        holidays.add(date(2022, 6, 3));
       } else if (year == 1967 || year == 1970) {
         holidays.add(first(year, 5).with(lastInMonth(MONDAY)));
       } else if (year < 1971) {
@@ -1028,6 +1033,7 @@ final class GlobalHolidayCalendars {
   // http://www.ucmsgroup.hu/newsletter/public-holiday-and-related-work-schedule-changes-in-2015/
   // http://www.ucmsgroup.hu/newsletter/public-holiday-and-related-work-schedule-changes-in-2014/
   // https://www.bse.hu/Products-and-Services/Trading-information/tranding-calendar-2019
+  // https://www.bse.hu/Products-and-Services/Trading-information/trading-calendar-2020
   static ImmutableHolidayCalendar generateBudapest() {
     List<LocalDate> holidays = new ArrayList<>(2000);
     Set<LocalDate> workDays = new HashSet<>(500);
@@ -1047,7 +1053,10 @@ final class GlobalHolidayCalendars {
       // pentecost monday
       holidays.add(easter(year).plusDays(50));
       // state foundation day
-      addDateWithHungarianBridging(date(year, 8, 20), 0, -2, holidays, workDays);
+      // in 2015 the working saturday was 2 weeks before, in 2020 it was 1 week after
+      // unclear what the logic behind this is,
+      int foundationDayThuRelativeWeeks = year == 2020 ? 1 : -2;
+      addDateWithHungarianBridging(date(year, 8, 20), 0 , foundationDayThuRelativeWeeks, holidays, workDays);
       // national day
       addDateWithHungarianBridging(date(year, 10, 23), 0, -1, holidays, workDays);
       // all saints day

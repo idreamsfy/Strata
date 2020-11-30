@@ -57,6 +57,14 @@ public class ValueWithFailuresTest {
   }
 
   @Test
+  public void test_of_set() {
+    ValueWithFailures<String> test = ValueWithFailures.of("success", ImmutableSet.of(FAILURE1, FAILURE2));
+    assertThat(test.hasFailures()).isEqualTo(true);
+    assertThat(test.getValue()).isEqualTo("success");
+    assertThat(test.getFailures()).containsExactlyInAnyOrder(FAILURE1, FAILURE2);
+  }
+
+  @Test
   public void test_of_supplier_success() {
     ValueWithFailures<String> test = ValueWithFailures.of("", () -> "A");
     assertThat(test.hasFailures()).isEqualTo(false);
@@ -83,6 +91,23 @@ public class ValueWithFailuresTest {
         base.map(list -> list.stream().map(s -> Integer.valueOf(s)).collect(toImmutableList()));
     assertThat(test.getValue()).isEqualTo(ImmutableList.of(Integer.valueOf(1), Integer.valueOf(2)));
     assertThat(test.getFailures()).isEqualTo(ImmutableList.of(FAILURE1));
+  }
+
+  @Test
+  public void test_mapFailureItems() {
+    ValueWithFailures<List<String>> base = ValueWithFailures.of(ImmutableList.of("1", "2"), ImmutableList.of(FAILURE1));
+    ValueWithFailures<List<String>> test = base.mapFailures(item -> FAILURE2);
+
+    assertThat(test.getValue()).isEqualTo(base.getValue());
+    assertThat(test.getFailures()).isEqualTo(ImmutableList.of(FAILURE2));
+  }
+
+  @Test
+  public void test_mapFailureItems_noFailures() {
+    ValueWithFailures<List<String>> base = ValueWithFailures.of(ImmutableList.of("1", "2"), ImmutableList.of());
+    ValueWithFailures<List<String>> test = base.mapFailures(item -> FAILURE2);
+
+    assertThat(test).isEqualTo(base);
   }
 
   @Test
