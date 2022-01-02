@@ -13,6 +13,7 @@ import static java.util.stream.Collectors.toList;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
+import static org.assertj.core.api.Assertions.assertThatNullPointerException;
 
 import java.time.Duration;
 import java.time.LocalDate;
@@ -36,6 +37,8 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableListMultimap;
@@ -186,6 +189,20 @@ public class GuavateTest {
 
   //-------------------------------------------------------------------------
   @Test
+  public void test_list() {
+    assertThat(Guavate.list("a")).isEqualTo(ImmutableList.of("a"));
+    assertThat(Guavate.list("a", "b", "c")).isEqualTo(ImmutableList.of("a", "b", "c"));
+  }
+
+  @Test
+  public void test_set() {
+    assertThat(Guavate.set("a")).isEqualTo(ImmutableSet.of("a"));
+    assertThat(Guavate.set("a", "b", "c")).isEqualTo(ImmutableSet.of("a", "b", "c"));
+    assertThat(Guavate.set("a", "b", "b")).isEqualTo(ImmutableSet.of("a", "b"));
+  }
+
+  //-------------------------------------------------------------------------
+  @Test
   public void test_stream_Iterable() {
     Iterable<String> iterable = Arrays.asList("a", "b", "c");
     List<String> test = Guavate.stream(iterable)
@@ -229,6 +246,24 @@ public class GuavateTest {
     Optional<String> optional = Optional.empty();
     List<String> extracted = new ArrayList<>();
     for (String str : Guavate.inOptional(optional)) {
+      extracted.add(str);
+    }
+    assertThat(extracted).isEmpty();
+  }
+
+  @Test
+  public void test_inNullable_present() {
+    List<String> extracted = new ArrayList<>();
+    for (String str : Guavate.inNullable("a")) {
+      extracted.add(str);
+    }
+    assertThat(extracted).containsExactly("a");
+  }
+
+  @Test
+  public void test_inNullable_null() {
+    List<String> extracted = new ArrayList<>();
+    for (String str : Guavate.inNullable((String) null)) {
       extracted.add(str);
     }
     assertThat(extracted).isEmpty();
@@ -326,6 +361,18 @@ public class GuavateTest {
   public void test_filteringOptional() {
     List<Optional<String>> list = ImmutableList.of(Optional.of("A"), Optional.empty(), Optional.of("C"));
     assertThat(list.stream().flatMap(Guavate.filteringOptional()).collect(toList())).isEqualTo(ImmutableList.of("A", "C"));
+  }
+
+  //-------------------------------------------------------------------------
+  @Test
+  public void test_toOptional() {
+    List<String> list = Arrays.asList("a", "ab");
+    assertThat(list.stream().filter(s -> s.length() == 1).collect(Guavate.toOptional()))
+        .isEqualTo(Optional.of("a"));
+    assertThat(list.stream().filter(s -> s.length() == 0).collect(Guavate.toOptional()))
+        .isEqualTo(Optional.empty());
+    assertThatIllegalArgumentException().isThrownBy(() -> list.stream().collect(Guavate.toOptional()));
+    assertThatNullPointerException().isThrownBy(() -> Stream.of((String[]) null).collect(Guavate.toOptional()));
   }
 
   //-------------------------------------------------------------------------
@@ -851,6 +898,15 @@ public class GuavateTest {
 
   //-------------------------------------------------------------------------
   @Test
+  public void test_genericClass() {
+    Class<List<String>> test1 = Guavate.genericClass(List.class);
+    assertThat(test1).isEqualTo(List.class);
+    Class<List<Number>> test2 = Guavate.genericClass(List.class);
+    assertThat(test2).isEqualTo(List.class);
+  }
+
+  //-------------------------------------------------------------------------
+  @Test
   public void test_callerClass() {
     assertThat(Guavate.callerClass(0)).isEqualTo(Guavate.CallerClassSecurityManager.class);
     assertThat(Guavate.callerClass(1)).isEqualTo(Guavate.class);
@@ -861,6 +917,33 @@ public class GuavateTest {
   @Test
   public void test_validUtilityClass() {
     assertUtilityClass(Guavate.class);
+  }
+
+  //-------------------------------------------------------------------------
+  @ParameterizedTest
+  public static Object[][] data_substring() {
+    return new Object[][] {
+        {"a.b.c", ".", "a", "b.c", "a.b", "c"},
+        {"a..b..c", "..", "a", "b..c", "a..b", "c"},
+        {"...", ".", "", "..", "..", ""},
+        {"", ".", "", "", "", ""},
+    };
+  }
+
+  @ParameterizedTest
+  @MethodSource("data_substring")
+  public void test_substring(
+      String input,
+      String separator,
+      String beforeFirst,
+      String afterFirst,
+      String beforeLast,
+      String afterLast) {
+
+    assertThat(Guavate.substringBeforeFirst(input, separator)).isEqualTo(beforeFirst);
+    assertThat(Guavate.substringAfterFirst(input, separator)).isEqualTo(afterFirst);
+    assertThat(Guavate.substringBeforeLast(input, separator)).isEqualTo(beforeLast);
+    assertThat(Guavate.substringAfterLast(input, separator)).isEqualTo(afterLast);
   }
 
 }

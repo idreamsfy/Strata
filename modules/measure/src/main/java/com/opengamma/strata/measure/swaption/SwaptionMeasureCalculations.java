@@ -11,7 +11,7 @@ import java.time.LocalDate;
 
 import com.opengamma.strata.basics.currency.CurrencyAmount;
 import com.opengamma.strata.basics.currency.MultiCurrencyAmount;
-import com.opengamma.strata.basics.index.IborIndex;
+import com.opengamma.strata.basics.index.RateIndex;
 import com.opengamma.strata.collect.ArgChecker;
 import com.opengamma.strata.data.scenario.CurrencyScenarioArray;
 import com.opengamma.strata.data.scenario.MultiCurrencyScenarioArray;
@@ -78,7 +78,7 @@ final class SwaptionMeasureCalculations {
       RatesScenarioMarketData ratesMarketData,
       SwaptionScenarioMarketData swaptionMarketData) {
 
-    IborIndex index = trade.getProduct().getIndex();
+    RateIndex index = trade.getProduct().getIndex();
     return CurrencyScenarioArray.of(
         ratesMarketData.getScenarioCount(),
         i -> presentValue(
@@ -103,7 +103,7 @@ final class SwaptionMeasureCalculations {
       RatesScenarioMarketData ratesMarketData,
       SwaptionScenarioMarketData swaptionMarketData) {
 
-    IborIndex index = trade.getProduct().getIndex();
+    RateIndex index = trade.getProduct().getIndex();
     return MultiCurrencyScenarioArray.of(
         ratesMarketData.getScenarioCount(),
         i -> pv01RatesCalibratedSum(
@@ -129,7 +129,7 @@ final class SwaptionMeasureCalculations {
       RatesScenarioMarketData ratesMarketData,
       SwaptionScenarioMarketData swaptionMarketData) {
 
-    IborIndex index = trade.getProduct().getIndex();
+    RateIndex index = trade.getProduct().getIndex();
     return ScenarioArray.of(
         ratesMarketData.getScenarioCount(),
         i -> pv01RatesCalibratedBucketed(
@@ -155,7 +155,7 @@ final class SwaptionMeasureCalculations {
       RatesScenarioMarketData ratesMarketData,
       SwaptionScenarioMarketData swaptionMarketData) {
 
-    IborIndex index = trade.getProduct().getIndex();
+    RateIndex index = trade.getProduct().getIndex();
     return MultiCurrencyScenarioArray.of(
         ratesMarketData.getScenarioCount(),
         i -> pv01RatesMarketQuoteSum(
@@ -182,7 +182,7 @@ final class SwaptionMeasureCalculations {
       RatesScenarioMarketData ratesMarketData,
       SwaptionScenarioMarketData swaptionMarketData) {
 
-    IborIndex index = trade.getProduct().getIndex();
+    RateIndex index = trade.getProduct().getIndex();
     return ScenarioArray.of(
         ratesMarketData.getScenarioCount(),
         i -> pv01RatesMarketQuoteBucketed(
@@ -216,37 +216,36 @@ final class SwaptionMeasureCalculations {
   }
 
   //-------------------------------------------------------------------------
-  // calculates bachelier (normal) vega for all scenarios
-  ScenarioArray<CurrencyParameterSensitivities> bachelierVega(
+  // calculates normal vega for all scenarios
+  ScenarioArray<CurrencyParameterSensitivities> vegaMarketQuoteBucketed(
       ResolvedSwaptionTrade trade,
       RatesScenarioMarketData ratesMarketData,
       SwaptionScenarioMarketData swaptionMarketData) {
 
-    IborIndex index = trade.getProduct().getIndex();
+    RateIndex index = trade.getProduct().getIndex();
     return ScenarioArray.of(
         ratesMarketData.getScenarioCount(),
-        i -> bachelierVega(
+        i -> vegaMarketQuoteBucketed(
             trade,
             ratesMarketData.scenario(i).ratesProvider(),
             swaptionMarketData.scenario(i).volatilities(index)));
   }
 
-  //  bachelier (normal) vega for one scenario
-  CurrencyParameterSensitivities bachelierVega(
+  //  normal vega for one scenario
+  CurrencyParameterSensitivities vegaMarketQuoteBucketed(
       ResolvedSwaptionTrade trade,
       RatesProvider ratesProvider,
       SwaptionVolatilities volatilities) {
 
     if (!volatilities.getVolatilityType().equals(NORMAL_VOLATILITY)) {
-      throw new IllegalArgumentException("Bachelier vega calculation requires normal volatilities.");
+      throw new IllegalArgumentException("Vega calculation requires normal volatilities");
     }
-
-    PointSensitivities pointSensitivity = pointSensitivityBachelierVega(trade, ratesProvider, volatilities);
+    PointSensitivities pointSensitivity = pointSensitivityVega(trade, ratesProvider, volatilities);
     return volatilities.parameterSensitivity(pointSensitivity);
   }
 
-  //  bachelier (normal) vega point sensitivity
-  private PointSensitivities pointSensitivityBachelierVega(
+  //  normal vega point sensitivity
+  private PointSensitivities pointSensitivityVega(
       ResolvedSwaptionTrade trade,
       RatesProvider ratesProvider,
       SwaptionVolatilities volatilities) {
@@ -261,7 +260,7 @@ final class SwaptionMeasureCalculations {
       RatesScenarioMarketData ratesMarketData,
       SwaptionScenarioMarketData swaptionMarketData) {
 
-    IborIndex index = trade.getProduct().getIndex();
+    RateIndex index = trade.getProduct().getIndex();
     return MultiCurrencyScenarioArray.of(
         ratesMarketData.getScenarioCount(),
         i -> currencyExposure(

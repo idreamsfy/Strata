@@ -50,7 +50,7 @@ import com.opengamma.strata.product.swap.ResolvedSwapLeg;
 import com.opengamma.strata.product.swap.Swap;
 import com.opengamma.strata.product.swap.SwapIndex;
 import com.opengamma.strata.product.swap.SwapLegType;
-import com.opengamma.strata.product.swap.type.FixedIborSwapConvention;
+import com.opengamma.strata.product.swap.type.FixedFloatSwapConvention;
 
 /**
  * Test {@link SabrExtrapolationReplicationCmsPeriodPricer}.
@@ -134,6 +134,17 @@ public class SabrExtrapolationReplicationCmsPeriodPricerTest {
       new RatesFiniteDifferenceSensitivityCalculator(EPS);  
   private static final DiscountingSwapProductPricer PRICER_SWAP =
       DiscountingSwapProductPricer.DEFAULT;
+  
+  @Test
+  public void swap_pricer() {
+    assertThat(PRICER.getSwapPricer()).isEqualTo(DiscountingSwapProductPricer.DEFAULT);
+  }
+  
+  @Test
+  public void parameters() {
+    assertThat(PRICER.getMu()).isEqualTo(MU);
+    assertThat(PRICER.getCutOffStrike()).isEqualTo(CUT_OFF_STRIKE);
+  }
 
   @Test
   public void test_presentValue_zero() {
@@ -761,7 +772,7 @@ public class SabrExtrapolationReplicationCmsPeriodPricerTest {
 
   // creates and resolves the underlying swap
   private static ResolvedSwap createUnderlyingSwap(LocalDate fixingDate) {
-    FixedIborSwapConvention conv = EUR_EURIBOR_1100_5Y.getTemplate().getConvention();
+    FixedFloatSwapConvention conv = EUR_EURIBOR_1100_5Y.getTemplate().getConvention();
     LocalDate effectiveDate = conv.calculateSpotDateFromTradeDate(fixingDate, REF_DATA);
     LocalDate maturityDate = effectiveDate.plus(EUR_EURIBOR_1100_5Y.getTemplate().getTenor());
     Swap swap = conv.toTrade(fixingDate, effectiveDate, maturityDate, BuySell.BUY, 1d, 1d).getProduct();

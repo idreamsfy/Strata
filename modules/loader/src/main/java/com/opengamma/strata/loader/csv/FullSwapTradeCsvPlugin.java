@@ -5,32 +5,82 @@
  */
 package com.opengamma.strata.loader.csv;
 
+import static com.opengamma.strata.loader.csv.CsvLoaderColumns.ACCRUAL_METHOD_FIELD;
+import static com.opengamma.strata.loader.csv.CsvLoaderColumns.COMPOUNDING_METHOD_FIELD;
+import static com.opengamma.strata.loader.csv.CsvLoaderColumns.CURRENCY_FIELD;
+import static com.opengamma.strata.loader.csv.CsvLoaderColumns.DATE_ADJ_CAL_FIELD;
+import static com.opengamma.strata.loader.csv.CsvLoaderColumns.DATE_ADJ_CNV_FIELD;
+import static com.opengamma.strata.loader.csv.CsvLoaderColumns.DAY_COUNT_FIELD;
+import static com.opengamma.strata.loader.csv.CsvLoaderColumns.DIRECTION_FIELD;
+import static com.opengamma.strata.loader.csv.CsvLoaderColumns.END_DATE_CAL_FIELD;
+import static com.opengamma.strata.loader.csv.CsvLoaderColumns.END_DATE_CNV_FIELD;
+import static com.opengamma.strata.loader.csv.CsvLoaderColumns.END_DATE_FIELD;
+import static com.opengamma.strata.loader.csv.CsvLoaderColumns.FINAL_STUB_AMOUNT_CURRENCY_FIELD;
+import static com.opengamma.strata.loader.csv.CsvLoaderColumns.FINAL_STUB_AMOUNT_FIELD;
+import static com.opengamma.strata.loader.csv.CsvLoaderColumns.FINAL_STUB_INDEX_FIELD;
+import static com.opengamma.strata.loader.csv.CsvLoaderColumns.FINAL_STUB_INTERPOLATED_INDEX_FIELD;
+import static com.opengamma.strata.loader.csv.CsvLoaderColumns.FINAL_STUB_RATE_FIELD;
+import static com.opengamma.strata.loader.csv.CsvLoaderColumns.FIRST_RATE_FIELD;
+import static com.opengamma.strata.loader.csv.CsvLoaderColumns.FIRST_REGULAR_RATE_FIELD;
+import static com.opengamma.strata.loader.csv.CsvLoaderColumns.FIRST_REGULAR_START_DATE_FIELD;
+import static com.opengamma.strata.loader.csv.CsvLoaderColumns.FIXED_RATE_FIELD;
+import static com.opengamma.strata.loader.csv.CsvLoaderColumns.FIXING_OFFSET_ADJ_CAL_FIELD;
+import static com.opengamma.strata.loader.csv.CsvLoaderColumns.FIXING_OFFSET_ADJ_CNV_FIELD;
+import static com.opengamma.strata.loader.csv.CsvLoaderColumns.FIXING_OFFSET_CAL_FIELD;
+import static com.opengamma.strata.loader.csv.CsvLoaderColumns.FIXING_OFFSET_DAYS_FIELD;
+import static com.opengamma.strata.loader.csv.CsvLoaderColumns.FIXING_RELATIVE_TO_FIELD;
+import static com.opengamma.strata.loader.csv.CsvLoaderColumns.FREQUENCY_FIELD;
+import static com.opengamma.strata.loader.csv.CsvLoaderColumns.FUTURE_VALUE_NOTIONAL_FIELD;
+import static com.opengamma.strata.loader.csv.CsvLoaderColumns.FX_RESET_INDEX_FIELD;
+import static com.opengamma.strata.loader.csv.CsvLoaderColumns.FX_RESET_INITIAL_NOTIONAL_FIELD;
+import static com.opengamma.strata.loader.csv.CsvLoaderColumns.FX_RESET_OFFSET_ADJ_CAL_FIELD;
+import static com.opengamma.strata.loader.csv.CsvLoaderColumns.FX_RESET_OFFSET_ADJ_CNV_FIELD;
+import static com.opengamma.strata.loader.csv.CsvLoaderColumns.FX_RESET_OFFSET_CAL_FIELD;
+import static com.opengamma.strata.loader.csv.CsvLoaderColumns.FX_RESET_OFFSET_DAYS_FIELD;
+import static com.opengamma.strata.loader.csv.CsvLoaderColumns.FX_RESET_RELATIVE_TO_FIELD;
+import static com.opengamma.strata.loader.csv.CsvLoaderColumns.GEARING_FIELD;
+import static com.opengamma.strata.loader.csv.CsvLoaderColumns.INDEX_FIELD;
+import static com.opengamma.strata.loader.csv.CsvLoaderColumns.INFLATION_FIRST_INDEX_VALUE_FIELD;
+import static com.opengamma.strata.loader.csv.CsvLoaderColumns.INFLATION_LAG_FIELD;
+import static com.opengamma.strata.loader.csv.CsvLoaderColumns.INFLATION_METHOD_FIELD;
+import static com.opengamma.strata.loader.csv.CsvLoaderColumns.INITIAL_STUB_AMOUNT_CURRENCY_FIELD;
+import static com.opengamma.strata.loader.csv.CsvLoaderColumns.INITIAL_STUB_AMOUNT_FIELD;
+import static com.opengamma.strata.loader.csv.CsvLoaderColumns.INITIAL_STUB_INDEX_FIELD;
+import static com.opengamma.strata.loader.csv.CsvLoaderColumns.INITIAL_STUB_INTERPOLATED_INDEX_FIELD;
+import static com.opengamma.strata.loader.csv.CsvLoaderColumns.INITIAL_STUB_RATE_FIELD;
+import static com.opengamma.strata.loader.csv.CsvLoaderColumns.KNOWN_AMOUNT_FIELD;
+import static com.opengamma.strata.loader.csv.CsvLoaderColumns.LAST_REGULAR_END_DATE_FIELD;
+import static com.opengamma.strata.loader.csv.CsvLoaderColumns.NEGATIVE_RATE_METHOD_FIELD;
+import static com.opengamma.strata.loader.csv.CsvLoaderColumns.NOTIONAL_CURRENCY_FIELD;
+import static com.opengamma.strata.loader.csv.CsvLoaderColumns.NOTIONAL_FIELD;
+import static com.opengamma.strata.loader.csv.CsvLoaderColumns.NOTIONAL_FINAL_EXCHANGE_FIELD;
+import static com.opengamma.strata.loader.csv.CsvLoaderColumns.NOTIONAL_INITIAL_EXCHANGE_FIELD;
+import static com.opengamma.strata.loader.csv.CsvLoaderColumns.NOTIONAL_INTERMEDIATE_EXCHANGE_FIELD;
+import static com.opengamma.strata.loader.csv.CsvLoaderColumns.OVERRIDE_START_DATE_CAL_FIELD;
+import static com.opengamma.strata.loader.csv.CsvLoaderColumns.OVERRIDE_START_DATE_CNV_FIELD;
+import static com.opengamma.strata.loader.csv.CsvLoaderColumns.OVERRIDE_START_DATE_FIELD;
+import static com.opengamma.strata.loader.csv.CsvLoaderColumns.PAYMENT_FIRST_REGULAR_START_DATE_FIELD;
+import static com.opengamma.strata.loader.csv.CsvLoaderColumns.PAYMENT_FREQUENCY_FIELD;
+import static com.opengamma.strata.loader.csv.CsvLoaderColumns.PAYMENT_LAST_REGULAR_END_DATE_FIELD;
+import static com.opengamma.strata.loader.csv.CsvLoaderColumns.PAYMENT_OFFSET_ADJ_CAL_FIELD;
+import static com.opengamma.strata.loader.csv.CsvLoaderColumns.PAYMENT_OFFSET_ADJ_CNV_FIELD;
+import static com.opengamma.strata.loader.csv.CsvLoaderColumns.PAYMENT_OFFSET_CAL_FIELD;
+import static com.opengamma.strata.loader.csv.CsvLoaderColumns.PAYMENT_OFFSET_DAYS_FIELD;
+import static com.opengamma.strata.loader.csv.CsvLoaderColumns.PAYMENT_RELATIVE_TO_FIELD;
+import static com.opengamma.strata.loader.csv.CsvLoaderColumns.RATE_CUT_OFF_DAYS_FIELD;
+import static com.opengamma.strata.loader.csv.CsvLoaderColumns.RESET_DATE_CAL_FIELD;
+import static com.opengamma.strata.loader.csv.CsvLoaderColumns.RESET_DATE_CNV_FIELD;
+import static com.opengamma.strata.loader.csv.CsvLoaderColumns.RESET_FREQUENCY_FIELD;
+import static com.opengamma.strata.loader.csv.CsvLoaderColumns.RESET_METHOD_FIELD;
+import static com.opengamma.strata.loader.csv.CsvLoaderColumns.ROLL_CONVENTION_FIELD;
+import static com.opengamma.strata.loader.csv.CsvLoaderColumns.SPREAD_FIELD;
+import static com.opengamma.strata.loader.csv.CsvLoaderColumns.START_DATE_CAL_FIELD;
+import static com.opengamma.strata.loader.csv.CsvLoaderColumns.START_DATE_CNV_FIELD;
+import static com.opengamma.strata.loader.csv.CsvLoaderColumns.START_DATE_FIELD;
+import static com.opengamma.strata.loader.csv.CsvLoaderColumns.STUB_CONVENTION_FIELD;
+import static com.opengamma.strata.loader.csv.CsvLoaderColumns.TRADE_TYPE_FIELD;
 import static com.opengamma.strata.loader.csv.CsvLoaderUtils.formattedDouble;
 import static com.opengamma.strata.loader.csv.CsvLoaderUtils.formattedPercentage;
-import static com.opengamma.strata.loader.csv.SwapTradeCsvPlugin.KNOWN_AMOUNT_FIELD;
-import static com.opengamma.strata.loader.csv.TradeCsvLoader.CURRENCY_FIELD;
-import static com.opengamma.strata.loader.csv.TradeCsvLoader.DATE_ADJ_CAL_FIELD;
-import static com.opengamma.strata.loader.csv.TradeCsvLoader.DATE_ADJ_CNV_FIELD;
-import static com.opengamma.strata.loader.csv.TradeCsvLoader.DAY_COUNT_FIELD;
-import static com.opengamma.strata.loader.csv.TradeCsvLoader.DIRECTION_FIELD;
-import static com.opengamma.strata.loader.csv.TradeCsvLoader.END_DATE_CAL_FIELD;
-import static com.opengamma.strata.loader.csv.TradeCsvLoader.END_DATE_CNV_FIELD;
-import static com.opengamma.strata.loader.csv.TradeCsvLoader.END_DATE_FIELD;
-import static com.opengamma.strata.loader.csv.TradeCsvLoader.FIRST_REGULAR_START_DATE_FIELD;
-import static com.opengamma.strata.loader.csv.TradeCsvLoader.FIXED_RATE_FIELD;
-import static com.opengamma.strata.loader.csv.TradeCsvLoader.FREQUENCY_FIELD;
-import static com.opengamma.strata.loader.csv.TradeCsvLoader.INDEX_FIELD;
-import static com.opengamma.strata.loader.csv.TradeCsvLoader.LAST_REGULAR_END_DATE_FIELD;
-import static com.opengamma.strata.loader.csv.TradeCsvLoader.NOTIONAL_FIELD;
-import static com.opengamma.strata.loader.csv.TradeCsvLoader.OVERRIDE_START_DATE_CAL_FIELD;
-import static com.opengamma.strata.loader.csv.TradeCsvLoader.OVERRIDE_START_DATE_CNV_FIELD;
-import static com.opengamma.strata.loader.csv.TradeCsvLoader.OVERRIDE_START_DATE_FIELD;
-import static com.opengamma.strata.loader.csv.TradeCsvLoader.ROLL_CONVENTION_FIELD;
-import static com.opengamma.strata.loader.csv.TradeCsvLoader.START_DATE_CAL_FIELD;
-import static com.opengamma.strata.loader.csv.TradeCsvLoader.START_DATE_CNV_FIELD;
-import static com.opengamma.strata.loader.csv.TradeCsvLoader.START_DATE_FIELD;
-import static com.opengamma.strata.loader.csv.TradeCsvLoader.STUB_CONVENTION_FIELD;
-import static com.opengamma.strata.loader.csv.TradeCsvLoader.TYPE_FIELD;
 
 import java.time.LocalDate;
 import java.time.Period;
@@ -45,6 +95,7 @@ import java.util.Set;
 import java.util.TreeMap;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Iterables;
 import com.google.common.primitives.Ints;
 import com.opengamma.strata.basics.currency.Currency;
@@ -108,67 +159,12 @@ import com.opengamma.strata.product.swap.SwapTrade;
 /**
  * Handles the CSV file format for Swap trades.
  */
-final class FullSwapTradeCsvPlugin implements TradeTypeCsvWriter<SwapTrade> {
+final class FullSwapTradeCsvPlugin implements TradeCsvWriterPlugin<SwapTrade> {
 
   /**
    * The singleton instance of the plugin.
    */
   public static final FullSwapTradeCsvPlugin INSTANCE = new FullSwapTradeCsvPlugin();
-
-  // CSV column headers
-  private static final String PAYMENT_FREQUENCY_FIELD = "Payment Frequency";
-  private static final String PAYMENT_RELATIVE_TO_FIELD = "Payment Relative To";
-  private static final String PAYMENT_OFFSET_DAYS_FIELD = "Payment Offset Days";
-  private static final String PAYMENT_OFFSET_CAL_FIELD = "Payment Offset Calendar";
-  private static final String PAYMENT_OFFSET_ADJ_CNV_FIELD = "Payment Offset Adjustment Convention";
-  private static final String PAYMENT_OFFSET_ADJ_CAL_FIELD = "Payment Offset Adjustment Calendar";
-  private static final String COMPOUNDING_METHOD_FIELD = "Compounding Method";
-  private static final String PAYMENT_FIRST_REGULAR_START_DATE_FIELD = "Payment First Regular Start Date";
-  private static final String PAYMENT_LAST_REGULAR_END_DATE_FIELD = "Payment Last Regular End Date";
-
-  private static final String NOTIONAL_CURRENCY_FIELD = "Notional Currency";
-  private static final String NOTIONAL_INITIAL_EXCHANGE_FIELD = "Notional Initial Exchange";
-  private static final String NOTIONAL_INTERMEDIATE_EXCHANGE_FIELD = "Notional Intermediate Exchange";
-  private static final String NOTIONAL_FINAL_EXCHANGE_FIELD = "Notional Final Exchange";
-  private static final String FX_RESET_INDEX_FIELD = "FX Reset Index";
-  private static final String FX_RESET_RELATIVE_TO_FIELD = "FX Reset Relative To";
-  private static final String FX_RESET_OFFSET_DAYS_FIELD = "FX Reset Offset Days";
-  private static final String FX_RESET_OFFSET_CAL_FIELD = "FX Reset Offset Calendar";
-  private static final String FX_RESET_OFFSET_ADJ_CNV_FIELD = "FX Reset Offset Adjustment Convention";
-  private static final String FX_RESET_OFFSET_ADJ_CAL_FIELD = "FX Reset Offset Adjustment Calendar";
-  private static final String FX_RESET_INITIAL_NOTIONAL_FIELD = "FX Reset Initial Notional";
-
-  private static final String INITIAL_STUB_RATE_FIELD = "Initial Stub Rate";
-  private static final String INITIAL_STUB_AMOUNT_FIELD = "Initial Stub Amount";
-  private static final String INITIAL_STUB_AMOUNT_CURRENCY_FIELD = "Initial Stub Amount Currency";
-  private static final String INITIAL_STUB_INDEX_FIELD = "Initial Stub Index";
-  private static final String INITIAL_STUB_INTERPOLATED_INDEX_FIELD = "Initial Stub Interpolated Index";
-  private static final String FINAL_STUB_RATE_FIELD = "Final Stub Rate";
-  private static final String FINAL_STUB_AMOUNT_FIELD = "Final Stub Amount";
-  private static final String FINAL_STUB_AMOUNT_CURRENCY_FIELD = "Final Stub Amount Currency";
-  private static final String FINAL_STUB_INDEX_FIELD = "Final Stub Index";
-  private static final String FINAL_STUB_INTERPOLATED_INDEX_FIELD = "Final Stub Interpolated Index";
-  private static final String RESET_FREQUENCY_FIELD = "Reset Frequency";
-  private static final String RESET_DATE_CNV_FIELD = "Reset Date Convention";
-  private static final String RESET_DATE_CAL_FIELD = "Reset Date Calendar";
-  private static final String RESET_METHOD_FIELD = "Reset Method";
-  private static final String FIXING_RELATIVE_TO_FIELD = "Fixing Relative To";
-  private static final String FIXING_OFFSET_DAYS_FIELD = "Fixing Offset Days";
-  private static final String FIXING_OFFSET_CAL_FIELD = "Fixing Offset Calendar";
-  private static final String FIXING_OFFSET_ADJ_CNV_FIELD = "Fixing Offset Adjustment Convention";
-  private static final String FIXING_OFFSET_ADJ_CAL_FIELD = "Fixing Offset Adjustment Calendar";
-  private static final String FUTURE_VALUE_NOTIONAL_FIELD = "Future Value Notional";
-  private static final String NEGATIVE_RATE_METHOD_FIELD = "Negative Rate Method";
-  private static final String FIRST_RATE_FIELD = "First Rate";
-  private static final String FIRST_REGULAR_RATE_FIELD = "First Regular Rate";
-  private static final String ACCRUAL_METHOD_FIELD = "Accrual Method";
-  private static final String RATE_CUT_OFF_DAYS_FIELD = "Rate Cut Off Days";
-  private static final String INFLATION_LAG_FIELD = "Inflation Lag";
-  private static final String INFLATION_METHOD_FIELD = "Inflation Method";
-  private static final String INFLATION_FIRST_INDEX_VALUE_FIELD = "Inflation First Index Value";
-
-  private static final String GEARING_FIELD = "Gearing";
-  private static final String SPREAD_FIELD = "Spread";
 
   //-------------------------------------------------------------------------
   /**
@@ -820,7 +816,7 @@ final class FullSwapTradeCsvPlugin implements TradeTypeCsvWriter<SwapTrade> {
 
   //-------------------------------------------------------------------------
   @Override
-  public List<String> headers(List<SwapTrade> trades) {
+  public Set<String> headers(List<SwapTrade> trades) {
     // determine what elements of trades are present
     int legs = 0;
     Set<SwapLegType> legTypes = new HashSet<>();
@@ -868,7 +864,7 @@ final class FullSwapTradeCsvPlugin implements TradeTypeCsvWriter<SwapTrade> {
       }
     }
     // select the correct headers
-    List<String> headers = new ArrayList<>();
+    LinkedHashSet<String> headers = new LinkedHashSet<>();
     if (variable) {
       headers.add(START_DATE_FIELD);
     }
@@ -980,10 +976,20 @@ final class FullSwapTradeCsvPlugin implements TradeTypeCsvWriter<SwapTrade> {
 
   @Override
   public void writeCsv(CsvRowOutputWithHeaders csv, SwapTrade trade) {
-    csv.writeCell(TradeCsvLoader.TYPE_FIELD, "Swap");
+    csv.writeCell(TRADE_TYPE_FIELD, "Swap");
     VariableElements variableElements = writeProduct(csv, trade.getProduct());
     csv.writeNewLine();
     variableElements.writeLines(csv);
+  }
+
+  @Override
+  public String getName() {
+    return SwapTrade.class.getSimpleName();
+  }
+
+  @Override
+  public Set<Class<?>> supportedTradeTypes() {
+    return ImmutableSet.of(SwapTrade.class);
   }
 
   // writes the product to CSV
@@ -1244,7 +1250,7 @@ final class FullSwapTradeCsvPlugin implements TradeTypeCsvWriter<SwapTrade> {
 
     private HashMap<String, String> createInner(LocalDate date) {
       HashMap<String, String> innerMap = new HashMap<>();
-      innerMap.put(TYPE_FIELD, "Variable");
+      innerMap.put(TRADE_TYPE_FIELD, "Variable");
       innerMap.put(START_DATE_FIELD, date.toString());
       return innerMap;
     }

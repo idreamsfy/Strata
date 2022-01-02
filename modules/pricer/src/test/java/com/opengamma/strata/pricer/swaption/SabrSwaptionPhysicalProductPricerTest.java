@@ -6,6 +6,7 @@
 package com.opengamma.strata.pricer.swaption;
 
 import static com.opengamma.strata.basics.currency.Currency.USD;
+import static com.opengamma.strata.product.swap.type.FixedOvernightSwapConventions.USD_FIXED_1Y_SOFR_OIS;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatIllegalArgumentException;
 import static org.assertj.core.api.Assertions.fail;
@@ -150,14 +151,14 @@ public class SabrSwaptionPhysicalProductPricerTest {
 
   //-------------------------------------------------------------------------
   @Test
-  public void validate_physical_settlement() {
+  void validate_physical_settlement() {
     assertThatIllegalArgumentException()
         .isThrownBy(() -> SWAPTION_PRICER.presentValue(SWAPTION_CASH, RATE_PROVIDER, VOLS));
   }
 
   //-------------------------------------------------------------------------
   @Test
-  public void test_presentValue() {
+  void test_presentValue() {
     CurrencyAmount computedRec = SWAPTION_PRICER.presentValue(SWAPTION_REC_LONG, RATE_PROVIDER, VOLS);
     CurrencyAmount computedPay = SWAPTION_PRICER.presentValue(SWAPTION_PAY_SHORT, RATE_PROVIDER, VOLS);
     double forward = SWAP_PRICER.parRate(RSWAP_REC, RATE_PROVIDER);
@@ -174,9 +175,52 @@ public class SabrSwaptionPhysicalProductPricerTest {
     assertThat(computedPay.getCurrency()).isEqualTo(USD);
     assertThat(computedPay.getAmount()).isCloseTo(expectedPay, offset(NOTIONAL * TOL));
   }
+  
+  /* Test the present value of a swaption on OIS */
+  @Test
+  void test_presentValue_OIS() {
+    Swap oisRec = USD_FIXED_1Y_SOFR_OIS.createTrade(
+        MATURITY_DATE.toLocalDate(), TENOR, BuySell.SELL, NOTIONAL, RATE, REF_DATA).getProduct();
+    ResolvedSwap oisRecResolved = oisRec.resolve(REF_DATA);
+    ResolvedSwaption swaptionRecLong = Swaption.builder()
+        .expiryDate(AdjustableDate.of(MATURITY_DATE.toLocalDate()))
+        .expiryTime(MATURITY_DATE.toLocalTime())
+        .expiryZone(MATURITY_DATE.getZone())
+        .longShort(LongShort.LONG)
+        .swaptionSettlement(PHYSICAL_SETTLE)
+        .underlying(oisRec)
+        .build().resolve(REF_DATA);
+    Swap oisPay = USD_FIXED_1Y_SOFR_OIS.createTrade(
+        MATURITY_DATE.toLocalDate(), TENOR, BuySell.BUY, NOTIONAL, RATE, REF_DATA).getProduct();
+    ResolvedSwaption swaptionPayShort = Swaption.builder()
+        .expiryDate(AdjustableDate.of(MATURITY_DATE.toLocalDate()))
+        .expiryTime(MATURITY_DATE.toLocalTime())
+        .expiryZone(MATURITY_DATE.getZone())
+        .longShort(LongShort.SHORT)
+        .swaptionSettlement(PHYSICAL_SETTLE)
+        .underlying(oisPay)
+        .build().resolve(REF_DATA);
+    CurrencyAmount computedRec = SWAPTION_PRICER.presentValue(swaptionRecLong, RATE_PROVIDER, VOLS);
+    CurrencyAmount computedPay = SWAPTION_PRICER.presentValue(swaptionPayShort, RATE_PROVIDER, VOLS);
+    MultiCurrencyAmount computedSwap = SWAP_PRICER.presentValue(oisRecResolved, RATE_PROVIDER);
+    double forward = SWAP_PRICER.parRate(oisRecResolved, RATE_PROVIDER);
+    double pvbp = SWAP_PRICER.getLegPricer().pvbp(oisRecResolved.getLegs(SwapLegType.FIXED).get(0), RATE_PROVIDER);
+    double volatility = VOLS.volatility(swaptionRecLong.getExpiry(), TENOR_YEAR, RATE, forward);
+    double maturity = VOLS.relativeTime(swaptionRecLong.getExpiry());
+    double expectedRec = pvbp * BlackFormulaRepository.price(forward + SwaptionSabrRateVolatilityDataSet.SHIFT,
+        RATE + SwaptionSabrRateVolatilityDataSet.SHIFT, maturity, volatility, false);
+    double expectedPay = -pvbp * BlackFormulaRepository.price(forward + SwaptionSabrRateVolatilityDataSet.SHIFT,
+        RATE + SwaptionSabrRateVolatilityDataSet.SHIFT, maturity, volatility, true);
+    assertThat(computedRec.getCurrency()).isEqualTo(USD);
+    assertThat(computedRec.getAmount()).isCloseTo(expectedRec, offset(NOTIONAL * TOL));
+    assertThat(computedPay.getCurrency()).isEqualTo(USD);
+    assertThat(computedPay.getAmount()).isCloseTo(expectedPay, offset(NOTIONAL * TOL));
+    assertThat(computedRec.getAmount() + computedPay.getAmount()).isCloseTo(computedSwap.getAmount(USD).getAmount(),
+        offset(NOTIONAL * TOL));
+  }
 
   @Test
-  public void test_presentValue_atMaturity() {
+  void test_presentValue_atMaturity() {
     CurrencyAmount computedRec =
         SWAPTION_PRICER.presentValue(SWAPTION_REC_LONG, RATE_PROVIDER_AT_MATURITY, VOLS_AT_MATURITY);
     CurrencyAmount computedPay =
@@ -187,7 +231,7 @@ public class SabrSwaptionPhysicalProductPricerTest {
   }
 
   @Test
-  public void test_presentValue_afterExpiry() {
+  void test_presentValue_afterExpiry() {
     CurrencyAmount computedRec =
         SWAPTION_PRICER.presentValue(SWAPTION_REC_LONG, RATE_PROVIDER_AFTER_MATURITY, VOLS_AFTER_MATURITY);
     CurrencyAmount computedPay =
@@ -197,7 +241,7 @@ public class SabrSwaptionPhysicalProductPricerTest {
   }
 
   @Test
-  public void test_presentValue_parity() {
+  void test_presentValue_parity() {
     CurrencyAmount pvRecLong = SWAPTION_PRICER.presentValue(SWAPTION_REC_LONG, RATE_PROVIDER, VOLS);
     CurrencyAmount pvRecShort = SWAPTION_PRICER.presentValue(SWAPTION_REC_SHORT, RATE_PROVIDER, VOLS);
     CurrencyAmount pvPayLong = SWAPTION_PRICER.presentValue(SWAPTION_PAY_LONG, RATE_PROVIDER, VOLS);
@@ -210,7 +254,7 @@ public class SabrSwaptionPhysicalProductPricerTest {
   }
 
   @Test
-  public void test_presentValue_parity_atMaturity() {
+  void test_presentValue_parity_atMaturity() {
     CurrencyAmount pvRecLong =
         SWAPTION_PRICER.presentValue(SWAPTION_REC_LONG, RATE_PROVIDER_AT_MATURITY, VOLS_AT_MATURITY);
     CurrencyAmount pvRecShort =
@@ -228,7 +272,7 @@ public class SabrSwaptionPhysicalProductPricerTest {
 
   //-------------------------------------------------------------------------
   @Test
-  public void test_currencyExposure() {
+  void test_currencyExposure() {
     MultiCurrencyAmount computedRec = SWAPTION_PRICER.currencyExposure(SWAPTION_REC_LONG, RATE_PROVIDER, VOLS);
     MultiCurrencyAmount computedPay = SWAPTION_PRICER.currencyExposure(SWAPTION_PAY_SHORT, RATE_PROVIDER, VOLS);
     PointSensitivityBuilder pointRec =
@@ -246,7 +290,7 @@ public class SabrSwaptionPhysicalProductPricerTest {
   }
 
   @Test
-  public void test_currencyExposure_atMaturity() {
+  void test_currencyExposure_atMaturity() {
     MultiCurrencyAmount computedRec = SWAPTION_PRICER.currencyExposure(
         SWAPTION_REC_LONG, RATE_PROVIDER_AT_MATURITY, VOLS_AT_MATURITY);
     MultiCurrencyAmount computedPay = SWAPTION_PRICER.currencyExposure(
@@ -266,7 +310,7 @@ public class SabrSwaptionPhysicalProductPricerTest {
   }
 
   @Test
-  public void test_currencyExposure_afterMaturity() {
+  void test_currencyExposure_afterMaturity() {
     MultiCurrencyAmount computedRec = SWAPTION_PRICER.currencyExposure(
         SWAPTION_REC_LONG, RATE_PROVIDER_AFTER_MATURITY, VOLS_AFTER_MATURITY);
     MultiCurrencyAmount computedPay = SWAPTION_PRICER.currencyExposure(
@@ -279,7 +323,7 @@ public class SabrSwaptionPhysicalProductPricerTest {
 
   //-------------------------------------------------------------------------
   @Test
-  public void test_impliedVolatility() {
+  void test_impliedVolatility() {
     double computedRec = SWAPTION_PRICER.impliedVolatility(SWAPTION_REC_LONG, RATE_PROVIDER, VOLS);
     double computedPay = SWAPTION_PRICER.impliedVolatility(SWAPTION_PAY_SHORT, RATE_PROVIDER, VOLS);
     double forward = SWAP_PRICER.parRate(RSWAP_REC, RATE_PROVIDER);
@@ -289,7 +333,7 @@ public class SabrSwaptionPhysicalProductPricerTest {
   }
 
   @Test
-  public void test_impliedVolatility_atMaturity() {
+  void test_impliedVolatility_atMaturity() {
     double computedRec =
         SWAPTION_PRICER.impliedVolatility(SWAPTION_REC_LONG, RATE_PROVIDER_AT_MATURITY, VOLS_AT_MATURITY);
     double computedPay =
@@ -301,7 +345,7 @@ public class SabrSwaptionPhysicalProductPricerTest {
   }
 
   @Test
-  public void test_impliedVolatility_afterMaturity() {
+  void test_impliedVolatility_afterMaturity() {
     assertThatIllegalArgumentException()
         .isThrownBy(() -> SWAPTION_PRICER.impliedVolatility(
         SWAPTION_REC_LONG, RATE_PROVIDER_AFTER_MATURITY, VOLS_AFTER_MATURITY));
@@ -312,7 +356,7 @@ public class SabrSwaptionPhysicalProductPricerTest {
 
   //-------------------------------------------------------------------------
   @Test
-  public void test_presentValueDelta_parity() {
+  void test_presentValueDelta_parity() {
     double pvbp = SWAP_PRICER.getLegPricer()
         .pvbp(SWAPTION_REC_LONG.getUnderlying().getLegs(SwapLegType.FIXED).get(0), RATE_PROVIDER);
     CurrencyAmount deltaRec = SWAPTION_PRICER.presentValueDelta(SWAPTION_REC_LONG, RATE_PROVIDER, VOLS);
@@ -321,7 +365,7 @@ public class SabrSwaptionPhysicalProductPricerTest {
   }
 
   @Test
-  public void test_presentValueDelta_afterMaturity() {
+  void test_presentValueDelta_afterMaturity() {
     CurrencyAmount deltaRec =
         SWAPTION_PRICER.presentValueDelta(SWAPTION_REC_LONG, RATE_PROVIDER_AFTER_MATURITY, VOLS_AFTER_MATURITY);
     assertThat(deltaRec.getAmount()).isCloseTo(0, offset(TOLERANCE_DELTA));
@@ -331,7 +375,7 @@ public class SabrSwaptionPhysicalProductPricerTest {
   }
 
   @Test
-  public void test_presentValueDelta_atMaturity() {
+  void test_presentValueDelta_atMaturity() {
     double forward = SWAP_PRICER.parRate(RSWAP_REC, RATE_PROVIDER_AT_MATURITY);
     double pvbp = SWAP_PRICER.getLegPricer()
         .pvbp(SWAPTION_REC_LONG.getUnderlying().getLegs(SwapLegType.FIXED).get(0), RATE_PROVIDER_AT_MATURITY);
@@ -345,7 +389,7 @@ public class SabrSwaptionPhysicalProductPricerTest {
 
   //-------------------------------------------------------------------------
   @Test
-  public void test_presentValueSensitivityRatesStickyModel() {
+  void test_presentValueSensitivityRatesStickyModel() {
     PointSensitivityBuilder pointRec =
         SWAPTION_PRICER.presentValueSensitivityRatesStickyModel(SWAPTION_REC_LONG, RATE_PROVIDER, VOLS);
     CurrencyParameterSensitivities computedRec = RATE_PROVIDER.parameterSensitivity(pointRec.build());
@@ -361,7 +405,7 @@ public class SabrSwaptionPhysicalProductPricerTest {
   }
 
   @Test
-  public void test_presentValueSensitivityRatesStickyModel_stickyStrike() {
+  void test_presentValueSensitivityRatesStickyModel_stickyStrike() {
     SwaptionVolatilities volSabr = SwaptionSabrRateVolatilityDataSet.getVolatilitiesUsd(VAL_DATE, false);
     double impliedVol = SWAPTION_PRICER.impliedVolatility(SWAPTION_REC_LONG, RATE_PROVIDER, volSabr);
     SurfaceMetadata blackMeta =
@@ -385,7 +429,7 @@ public class SabrSwaptionPhysicalProductPricerTest {
   }
 
   @Test
-  public void test_presentValueSensitivityRatesStickyModel_atMaturity() {
+  void test_presentValueSensitivityRatesStickyModel_atMaturity() {
     PointSensitivityBuilder pointRec =
         SWAPTION_PRICER.presentValueSensitivityRatesStickyModel(SWAPTION_REC_LONG, RATE_PROVIDER_AT_MATURITY, VOLS_AT_MATURITY);
     CurrencyParameterSensitivities computedRec =
@@ -401,7 +445,7 @@ public class SabrSwaptionPhysicalProductPricerTest {
   }
 
   @Test
-  public void test_presentValueSensitivityRatesStickyModel_afterMaturity() {
+  void test_presentValueSensitivityRatesStickyModel_afterMaturity() {
     PointSensitivities pointRec = SWAPTION_PRICER.presentValueSensitivityRatesStickyModel(
         SWAPTION_REC_LONG, RATE_PROVIDER_AFTER_MATURITY, VOLS_AFTER_MATURITY).build();
     for (PointSensitivity sensi : pointRec.getSensitivities()) {
@@ -415,7 +459,7 @@ public class SabrSwaptionPhysicalProductPricerTest {
   }
 
   @Test
-  public void test_presentValueSensitivity_parity() {
+  void test_presentValueSensitivity_parity() {
     CurrencyParameterSensitivities pvSensiRecLong = RATE_PROVIDER.parameterSensitivity(
         SWAPTION_PRICER.presentValueSensitivityRatesStickyModel(SWAPTION_REC_LONG, RATE_PROVIDER, VOLS).build());
     CurrencyParameterSensitivities pvSensiRecShort = RATE_PROVIDER.parameterSensitivity(
@@ -437,7 +481,7 @@ public class SabrSwaptionPhysicalProductPricerTest {
 
   //-------------------------------------------------------------------------
   @Test
-  public void test_presentValueVega_parity() {
+  void test_presentValueVega_parity() {
     SwaptionSensitivity vegaRec = SWAPTION_PRICER
         .presentValueSensitivityModelParamsVolatility(SWAPTION_REC_LONG, RATE_PROVIDER, VOLS);
     SwaptionSensitivity vegaPay = SWAPTION_PRICER
@@ -446,7 +490,7 @@ public class SabrSwaptionPhysicalProductPricerTest {
   }
 
   @Test
-  public void test_presentValueVega_atMaturity() {
+  void test_presentValueVega_atMaturity() {
     SwaptionSensitivity vegaRec = SWAPTION_PRICER.presentValueSensitivityModelParamsVolatility(
         SWAPTION_REC_LONG, RATE_PROVIDER_AT_MATURITY, VOLS_AT_MATURITY);
     assertThat(vegaRec.getSensitivity()).isCloseTo(0, offset(TOLERANCE_DELTA));
@@ -456,7 +500,7 @@ public class SabrSwaptionPhysicalProductPricerTest {
   }
 
   @Test
-  public void test_presentValueVega_afterMaturity() {
+  void test_presentValueVega_afterMaturity() {
     SwaptionSensitivity vegaRec = SWAPTION_PRICER.presentValueSensitivityModelParamsVolatility(
         SWAPTION_REC_LONG, RATE_PROVIDER_AFTER_MATURITY, VOLS_AFTER_MATURITY);
     assertThat(vegaRec.getSensitivity()).isCloseTo(0, offset(TOLERANCE_DELTA));
@@ -466,7 +510,7 @@ public class SabrSwaptionPhysicalProductPricerTest {
   }
 
   @Test
-  public void test_presentValueVega_SwaptionSensitivity() {
+  void test_presentValueVega_SwaptionSensitivity() {
     SwaptionSensitivity vegaRec = SWAPTION_PRICER
         .presentValueSensitivityModelParamsVolatility(SWAPTION_REC_LONG, RATE_PROVIDER, VOLS);
     assertThat(VOLS.parameterSensitivity(vegaRec)).isEqualTo(CurrencyParameterSensitivities.empty());
@@ -474,7 +518,7 @@ public class SabrSwaptionPhysicalProductPricerTest {
 
   //-------------------------------------------------------------------------
   @Test
-  public void test_presentValueSensitivityModelParamsSabr() {
+  void test_presentValueSensitivityModelParamsSabr() {
     PointSensitivities sensiRec =
         SWAPTION_PRICER.presentValueSensitivityModelParamsSabr(SWAPTION_REC_LONG, RATE_PROVIDER, VOLS).build();
     PointSensitivities sensiPay =
@@ -505,7 +549,7 @@ public class SabrSwaptionPhysicalProductPricerTest {
       SwaptionSabrSensitivity sens = (SwaptionSabrSensitivity) point;
       assertThat(sens.getCurrency()).isEqualTo(USD);
       assertThat(sens.getVolatilitiesName()).isEqualTo(VOLS.getName());
-      assertThat(sens.getTenor()).isEqualTo((double) TENOR_YEAR);
+      assertThat(sens.getTenor()).isEqualTo(TENOR_YEAR);
       if (sens.getSensitivityType() == type) {
         assertThat(sens.getSensitivity()).isCloseTo(expected, offset(NOTIONAL * tol));
         return;
@@ -515,7 +559,7 @@ public class SabrSwaptionPhysicalProductPricerTest {
   }
 
   @Test
-  public void test_presentValueSensitivityModelParamsSabr_atMaturity() {
+  void test_presentValueSensitivityModelParamsSabr_atMaturity() {
     PointSensitivities sensiRec = SWAPTION_PRICER.presentValueSensitivityModelParamsSabr(
         SWAPTION_REC_LONG, RATE_PROVIDER_AT_MATURITY, VOLS_AT_MATURITY).build();
     assertSensitivity(sensiRec, SabrParameterType.ALPHA, 0, TOL);
@@ -531,7 +575,7 @@ public class SabrSwaptionPhysicalProductPricerTest {
   }
 
   @Test
-  public void test_presentValueSensitivityModelParamsSabr_afterMaturity() {
+  void test_presentValueSensitivityModelParamsSabr_afterMaturity() {
     PointSensitivities sensiRec = SWAPTION_PRICER.presentValueSensitivityModelParamsSabr(
         SWAPTION_REC_LONG, RATE_PROVIDER_AFTER_MATURITY, VOLS_AFTER_MATURITY).build();
     assertThat(sensiRec.getSensitivities()).hasSize(0);
@@ -541,7 +585,7 @@ public class SabrSwaptionPhysicalProductPricerTest {
   }
 
   @Test
-  public void test_presentValueSensitivityModelParamsSabr_parity() {
+  void test_presentValueSensitivityModelParamsSabr_parity() {
     PointSensitivities pvSensiRecLong =
         SWAPTION_PRICER.presentValueSensitivityModelParamsSabr(SWAPTION_REC_LONG, RATE_PROVIDER, VOLS).build();
     PointSensitivities pvSensiRecShort =
@@ -584,13 +628,13 @@ public class SabrSwaptionPhysicalProductPricerTest {
 
   //-------------------------------------------------------------------------
   @Test
-  public void regressionPv() {
+  void regressionPv() {
     CurrencyAmount pvComputed = SWAPTION_PRICER.presentValue(SWAPTION_PAY_LONG, RATE_PROVIDER, VOLS_REGRESSION);
     assertThat(pvComputed.getAmount()).isCloseTo(3156216.489577751, offset(REGRESSION_TOL * NOTIONAL));
   }
 
   @Test
-  public void regressionPvCurveSensi() {
+  void regressionPvCurveSensi() {
     PointSensitivityBuilder point =
         SWAPTION_PRICER.presentValueSensitivityRatesStickyModel(SWAPTION_PAY_LONG, RATE_PROVIDER, VOLS_REGRESSION);
     CurrencyParameterSensitivities sensiComputed = RATE_PROVIDER.parameterSensitivity(point.build());
@@ -606,7 +650,7 @@ public class SabrSwaptionPhysicalProductPricerTest {
   }
 
   @Test
-  public void regressionPvSurfaceSensi() {
+  void regressionPvSurfaceSensi() {
     PointSensitivities pointComputed =
         SWAPTION_PRICER.presentValueSensitivityModelParamsSabr(SWAPTION_PAY_LONG, RATE_PROVIDER, VOLS_REGRESSION).build();
     assertSensitivity(pointComputed, SabrParameterType.ALPHA, 6.5786313367554754E7, REGRESSION_TOL);

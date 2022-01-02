@@ -5,6 +5,10 @@
  */
 package com.opengamma.strata.loader.csv;
 
+import static com.opengamma.strata.loader.csv.CsvLoaderColumns.CCP_FIELD;
+import static com.opengamma.strata.loader.csv.CsvLoaderColumns.DESCRIPTION_FIELD;
+import static com.opengamma.strata.loader.csv.CsvLoaderColumns.NAME_FIELD;
+
 import java.util.List;
 import java.util.Optional;
 
@@ -16,11 +20,13 @@ import com.opengamma.strata.product.SecurityTrade;
 import com.opengamma.strata.product.Trade;
 import com.opengamma.strata.product.TradeInfo;
 import com.opengamma.strata.product.TradeInfoBuilder;
+import com.opengamma.strata.product.capfloor.IborCapFloorTrade;
 import com.opengamma.strata.product.common.CcpId;
 import com.opengamma.strata.product.credit.CdsIndexTrade;
 import com.opengamma.strata.product.credit.CdsTrade;
 import com.opengamma.strata.product.deposit.TermDepositTrade;
 import com.opengamma.strata.product.fra.FraTrade;
+import com.opengamma.strata.product.fx.FxNdfTrade;
 import com.opengamma.strata.product.fx.FxSingleTrade;
 import com.opengamma.strata.product.fx.FxSwapTrade;
 import com.opengamma.strata.product.fxopt.FxVanillaOptionTrade;
@@ -73,11 +79,11 @@ public interface TradeCsvInfoResolver {
    * @param builder  the builder to update
    */
   public default void parseStandardAttributes(CsvRow row, TradeInfoBuilder builder) {
-    row.findValue(TradeCsvLoader.DESCRIPTION_FIELD)
+    row.findValue(DESCRIPTION_FIELD)
         .ifPresent(str -> builder.addAttribute(AttributeType.DESCRIPTION, str));
-    row.findValue(TradeCsvLoader.NAME_FIELD)
+    row.findValue(NAME_FIELD)
         .ifPresent(str -> builder.addAttribute(AttributeType.NAME, str));
-    row.findValue(TradeCsvLoader.CCP_FIELD)
+    row.findValue(CCP_FIELD)
         .ifPresent(str -> builder.addAttribute(AttributeType.CCP, CcpId.of(str)));
   }
 
@@ -265,6 +271,23 @@ public interface TradeCsvInfoResolver {
   }
 
   /**
+   * Completes the FX NDF trade, potentially parsing additional columns.
+   * <p>
+   * This is called after the trade has been parsed and after
+   * {@link #parseTradeInfo(CsvRow, TradeInfoBuilder)}.
+   * <p>
+   * By default this calls {@link #completeTradeCommon(CsvRow, Trade)}.
+   *
+   * @param row  the CSV row to parse
+   * @param trade  the parsed trade
+   * @return the updated trade
+   */
+  public default FxNdfTrade completeTrade(CsvRow row, FxNdfTrade trade) {
+    //do nothing
+    return completeTradeCommon(row, trade);
+  }
+
+  /**
    * Completes the CDS trade, potentially parsing additional columns.
    * <p>
    * This is called after the trade has been parsed and after
@@ -298,6 +321,23 @@ public interface TradeCsvInfoResolver {
     return completeTradeCommon(row, trade);
   }
 
+  /**
+   * Completes the CapFloor trade, potentially parsing additional columns.
+   * <p>
+   * This is called after the trade has been parsed and after
+   * {@link #parseTradeInfo(CsvRow, TradeInfoBuilder)}.
+   * <p>
+   * By default this calls {@link #completeTradeCommon(CsvRow, Trade)}.
+   *
+   * @param row  the CSV row to parse
+   * @param trade  the parsed trade
+   * @return the updated trade
+   */
+  public default IborCapFloorTrade completeTrade(CsvRow row, IborCapFloorTrade trade) {
+    //do nothing
+    return completeTradeCommon(row, trade);
+  }
+
   //-------------------------------------------------------------------------
   /**
    * Parses a FRA trade from CSV.
@@ -320,7 +360,7 @@ public interface TradeCsvInfoResolver {
    * @throws RuntimeException if the row contains invalid data
    */
   public default SecurityQuantityTrade parseSecurityTrade(CsvRow row, TradeInfo info) {
-    return SecurityCsvPlugin.parseTrade(row, info, this);
+    return SecurityTradeCsvPlugin.parseTradeWithPriceInfo(row, info, this);
   }
 
   /**
@@ -410,6 +450,18 @@ public interface TradeCsvInfoResolver {
   }
 
   /**
+   * Parses a FX NDF trade from CSV.
+   *
+   * @param row  the CSV row to parse
+   * @param info  the trade info
+   * @return the FX NDF trade
+   * @throws RuntimeException if the row contains invalid data
+   */
+  public default FxNdfTrade parseFxNdfTrade(CsvRow row, TradeInfo info) {
+    return FxNdfTradeCsvPlugin.parse(row, info, this);
+  }
+
+  /**
    * Parses a CDS trade from CSV.
    * 
    * @param row  the CSV row to parse
@@ -430,7 +482,19 @@ public interface TradeCsvInfoResolver {
    * @throws RuntimeException if the row contains invalid data
    */
   public default CdsIndexTrade parseCdsIndexTrade(CsvRow row, TradeInfo info) {
-    return CdsTradeCsvPlugin.parseCdsIndex(row, info, this);
+    return CdsIndexTradeCsvPlugin.parseCdsIndex(row, info, this);
+  }
+
+  /**
+   * Parses a CapFloor trade from CSV.
+   *
+   * @param row the CSV row to parse
+   * @param info the trade info
+   * @return the CapFloor trade
+   * @throws RuntimeException if the row contains invalid data
+   */
+  public default IborCapFloorTrade parseCapFloorTrade(CsvRow row, TradeInfo info) {
+    return IborCapFloorTradeCsvPlugin.parseCapFloor(row, info, this);
   }
 
   //-------------------------------------------------------------------------

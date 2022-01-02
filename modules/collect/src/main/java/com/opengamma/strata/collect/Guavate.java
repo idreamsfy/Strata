@@ -46,6 +46,7 @@ import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
+import com.google.common.collect.MoreCollectors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.opengamma.strata.collect.tuple.ObjIntPair;
 import com.opengamma.strata.collect.tuple.Pair;
@@ -237,6 +238,48 @@ public final class Guavate {
 
   //-------------------------------------------------------------------------
   /**
+   * Converts a list from the first element and remaining varargs.
+   * <p>
+   * This can be used to create a list of at least size one.
+   * 
+   * @param <T>  the type of the elements
+   * @param first  the first element
+   * @param remaining  the remaining elements
+   * @return a list formed from the first and remaining elements
+   */
+  @SafeVarargs
+  public static <T> ImmutableList<T> list(T first, T... remaining) {
+    ImmutableList.Builder<T> builder = ImmutableList.<T>builderWithExpectedSize(remaining.length + 1);
+    builder.add(first);
+    for (T element : remaining) {
+      builder.add(element);
+    }
+    return builder.build();
+  }
+
+  /**
+   * Converts a set from the first element and remaining varargs.
+   * <p>
+   * This can be used to create a set of at least size one.
+   * The input may contain duplicates, which will be combined.
+   * 
+   * @param <T>  the type of the elements
+   * @param first  the first element
+   * @param remaining  the remaining elements
+   * @return a set formed from the first and remaining elements
+   */
+  @SafeVarargs
+  public static <T> ImmutableSet<T> set(T first, T... remaining) {
+    ImmutableSet.Builder<T> builder = ImmutableSet.<T>builderWithExpectedSize(remaining.length + 1);
+    builder.add(first);
+    for (T element : remaining) {
+      builder.add(element);
+    }
+    return builder.build();
+  }
+
+  //-------------------------------------------------------------------------
+  /**
    * Converts an iterable to a serial stream.
    * <p>
    * This is harder than it should be, a method {@code Stream.of(Iterable)}
@@ -311,6 +354,33 @@ public final class Guavate {
   public static <T> Iterable<T> inOptional(Optional<T> optional) {
     if (optional.isPresent()) {
       return ImmutableList.of(optional.get());
+    } else {
+      return ImmutableList.of();
+    }
+  }
+
+  /**
+   * Converts a nullable value to an iterable for use in the for-each statement.
+   * <p>
+   * In most cases {@code if (nullable != null)} would be preferred.
+   * <p>
+   * <pre>
+   *  for (Item item : inNullable(nullable)) {
+   *    // use the nullable value, code not called if the value is null
+   *  }
+   * </pre>
+   * <p>
+   * NOTE: This method is intended only for use with the for-each statement.
+   * It does in fact return a general purpose {@code Iterable}, but the method name
+   * is focussed on the for-each use case.
+   *
+   * @param <T>  the type of the nullable value
+   * @param nullable  the nullable value
+   * @return an iterable representation of the nullable
+   */
+  public static <T> Iterable<T> inNullable(T nullable) {
+    if (nullable != null) {
+      return ImmutableList.of(nullable);
     } else {
       return ImmutableList.of();
     }
@@ -527,6 +597,21 @@ public final class Guavate {
   }
 
   //-------------------------------------------------------------------------
+  /**
+   * Collector used at the end of a stream to extract either zero or one elements.
+   * <p>
+   * A collector is used to gather data at the end of a stream operation.
+   * This method returns a collector allowing streams to be gathered into an {@link Optional}.
+   * The collector throws {@code IllegalArgumentException} if the stream consists of two or more elements.
+   * The collector throws {@code NullPointerException} if the stream consists of a null element.
+   *
+   * @param <T>  the type of element in the list
+   * @return the immutable list collector
+   */
+  public static <T> Collector<T, ?, Optional<T>> toOptional() {
+    return MoreCollectors.toOptional();
+  }
+
   /**
    * Collector used at the end of a stream to build an immutable list.
    * <p>
@@ -1255,6 +1340,29 @@ public final class Guavate {
 
   //-------------------------------------------------------------------------
   /**
+   * Returns a generified {@code Class} instance.
+   * <p>
+   * It is not possible in Java generics to get a {@code Class} object with the desired generic
+   * signature, such as {@code Class<List<String>>}. This method provides a way to get such a value.
+   * The method returns the input parameter, but the compiler sees the result as being a different type.
+   * <p>
+   * Note that the generic part of the resulting type is not checked and can be unsound.
+   * The safest choice is to explicitly specify the type you want, by assigning to a variable or constant:
+   * <pre>
+   *   Class&lt;List&lt;String&gt;&gt; cls = genericClass(List.class);
+   * </pre>
+   *
+   * @param <T> the partially specified generic type, such as {@code List} from a constant such as {@code List.class}
+   * @param <S> the fully specified generic type, such as {@code List<String>}
+   * @param cls  the class instance to base the result in, such as {@code List.class}
+   * @return the class instance from the input, with whatever generic parameter is desired
+   */
+  @SuppressWarnings("unchecked")
+  public static <T, S extends T> Class<S> genericClass(Class<T> cls) {
+    return (Class<S>) cls;
+  }
+
+  /**
    * Finds the caller class.
    * <p>
    * This takes an argument which is the number of stack levels to look back.
@@ -1274,6 +1382,79 @@ public final class Guavate {
     Class<?> callerClass(int callStackDepth) {
       return getClassContext()[callStackDepth];
     }
+  }
+
+  //-------------------------------------------------------------------------
+  /**
+   * Gets the substring before the first occurrence of the separator.
+   * <p>
+   * This returns the string before the first occurrence of the separator.
+   * If the separator is not found, the input is returned.
+   *
+   * @param str  the input string to search
+   * @param separator  the separator to find
+   * @return the substring
+   */
+  public static String substringBeforeFirst(String str, String separator) {
+    int pos = str.indexOf(separator);
+    if (pos < 0) {
+      return str;
+    }
+    return str.substring(0, pos);
+  }
+
+  /**
+   * Gets the substring after the first occurrence of the separator.
+   * <p>
+   * This returns the string after the first occurrence of the separator.
+   * If the separator is not found, the input is returned.
+   *
+   * @param str  the input string to search
+   * @param separator  the separator to find
+   * @return the substring
+   */
+  public static String substringAfterFirst(String str, String separator) {
+    int pos = str.indexOf(separator);
+    if (pos < 0) {
+      return str;
+    }
+    return str.substring(pos + separator.length());
+  }
+
+  /**
+   * Gets the substring before the last occurrence of the separator.
+   * <p>
+   * This returns the string before the last occurrence of the separator.
+   * If the separator is not found, the input is returned.
+   *
+   * @param str  the input string to search
+   * @param separator  the separator to find
+   * @return the substring
+   */
+  public static String substringBeforeLast(String str, String separator) {
+    int pos = str.lastIndexOf(separator);
+    if (pos < 0) {
+      return str;
+    }
+    return str.substring(0, pos);
+  }
+
+  /**
+   * Gets the substring after the last occurrence of the separator.
+   * <p>
+   * This returns the string after the last occurrence of the separator.
+   * If the separator is not found, the input is returned.
+   *
+   * @param str  the input string to search
+   * @param separator  the separator to find
+   * @return the substring
+   */
+  public static String substringAfterLast(String str, String separator) {
+    int pos = str.lastIndexOf(separator);
+    if (pos < 0) {
+      return str;
+    }
+    return str.substring(pos + separator.length());
   }
 
 }
