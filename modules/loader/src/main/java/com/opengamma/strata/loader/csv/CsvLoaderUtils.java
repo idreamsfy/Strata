@@ -16,7 +16,6 @@ import static com.opengamma.strata.loader.csv.CsvLoaderColumns.PREMIUM_DATE_CNV_
 import static com.opengamma.strata.loader.csv.CsvLoaderColumns.PREMIUM_DATE_FIELD;
 import static com.opengamma.strata.loader.csv.CsvLoaderColumns.PREMIUM_DIRECTION_FIELD;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.YearMonth;
@@ -38,8 +37,9 @@ import com.opengamma.strata.basics.date.DaysAdjustment;
 import com.opengamma.strata.basics.date.HolidayCalendarId;
 import com.opengamma.strata.basics.date.HolidayCalendarIds;
 import com.opengamma.strata.collect.ArgChecker;
-import com.opengamma.strata.collect.Messages;
+import com.opengamma.strata.collect.Decimal;
 import com.opengamma.strata.collect.io.CsvRow;
+import com.opengamma.strata.collect.result.ParseFailureException;
 import com.opengamma.strata.collect.tuple.DoublesPair;
 import com.opengamma.strata.collect.tuple.Pair;
 import com.opengamma.strata.loader.LoaderUtils;
@@ -208,16 +208,16 @@ public final class CsvLoaderUtils {
    * @param row  the CSV row to parse
    * @param type  the ETD type
    * @return the expiry year-month and variant
-   * @throws IllegalArgumentException if the row cannot be parsed
+   * @throws ParseFailureException if the row cannot be parsed
    */
   public static Pair<YearMonth, EtdVariant> parseEtdVariant(CsvRow row, EtdType type) {
     YearMonth yearMonth = row.getValue(EXPIRY_FIELD, LoaderUtils::parseYearMonth);
     int week = row.findValue(EXPIRY_WEEK_FIELD, LoaderUtils::parseInteger).orElse(0);
     int day = row.findValue(EXPIRY_DAY_FIELD, LoaderUtils::parseInteger).orElse(0);
-    Optional<EtdSettlementType> settleType = row.findValue(SETTLEMENT_TYPE_FIELD, CsvLoaderUtils::parseEtdSettlementType);
-    Optional<EtdOptionType> optionType = row.findValue(EXERCISE_STYLE_FIELD, CsvLoaderUtils::parseEtdOptionType);
+    Optional<EtdSettlementType> settleTypeOpt = row.findValue(SETTLEMENT_TYPE_FIELD, CsvLoaderUtils::parseEtdSettlementType);
+    Optional<EtdOptionType> optionTypeOpt = row.findValue(EXERCISE_STYLE_FIELD, CsvLoaderUtils::parseEtdOptionType);
     // check valid combinations
-    if (!settleType.isPresent()) {
+    if (!settleTypeOpt.isPresent()) {
       if (day == 0) {
         if (week == 0) {
           return Pair.of(yearMonth, EtdVariant.ofMonthly());
@@ -228,23 +228,24 @@ public final class CsvLoaderUtils {
         if (week == 0) {
           return Pair.of(yearMonth, EtdVariant.ofDaily(day));
         } else {
-          throw new IllegalArgumentException("ETD date columns conflict, cannot set both expiry day and expiry week");
+          throw new ParseFailureException(
+              "Unable to parse ETD variant, date columns conflict, must not  set both expiry day and expiry week");
         }
       }
     } else {
       if (day == 0) {
-        throw new IllegalArgumentException("ETD date columns conflict, must set expiry day for Flex " + type);
+        throw new ParseFailureException("Unable to parse ETD variant for Flex '{value}', must set expiry day", type);
       }
       if (week != 0) {
-        throw new IllegalArgumentException("ETD date columns conflict, cannot set expiry week for Flex " + type);
+        throw new ParseFailureException("Unable to parse ETD variant for Flex '{value}', must not set expiry week", type);
       }
       if (type == EtdType.FUTURE) {
-        return Pair.of(yearMonth, EtdVariant.ofFlexFuture(day, settleType.get()));
+        return Pair.of(yearMonth, EtdVariant.ofFlexFuture(day, settleTypeOpt.get()));
       } else {
-        if (!optionType.isPresent()) {
-          throw new IllegalArgumentException("ETD option type not found for Flex Option");
+        if (!optionTypeOpt.isPresent()) {
+          throw new ParseFailureException("Unable to parse ETD variant for Flex Option, must set option type", type);
         }
-        return Pair.of(yearMonth, EtdVariant.ofFlexOption(day, settleType.get(), optionType.get()));
+        return Pair.of(yearMonth, EtdVariant.ofFlexOption(day, settleTypeOpt.get(), optionTypeOpt.get()));
       }
     }
   }
@@ -254,12 +255,16 @@ public final class CsvLoaderUtils {
    *
    * @param str  the string to parse
    * @return the settlement type
-   * @throws IllegalArgumentException if the string cannot be parsed
+   * @throws ParseFailureException if the string cannot be parsed
    */
   public static EtdSettlementType parseEtdSettlementType(String str) {
-    String upper = str.toUpperCase(Locale.ENGLISH);
-    EtdSettlementType fromCode = SETTLEMENT_BY_CODE.get(upper);
-    return fromCode != null ? fromCode : EtdSettlementType.of(str);
+    try {
+      String upper = str.toUpperCase(Locale.ENGLISH);
+      EtdSettlementType fromCode = SETTLEMENT_BY_CODE.get(upper);
+      return fromCode != null ? fromCode : EtdSettlementType.of(str);
+    } catch (IllegalArgumentException ex) {
+      throw new ParseFailureException("Unable to parse ETD settlement type from '{value}'", str);
+    }
   }
 
   /**
@@ -267,7 +272,7 @@ public final class CsvLoaderUtils {
    *
    * @param str  the string to parse
    * @return the option type
-   * @throws IllegalArgumentException if the string cannot be parsed
+   * @throws ParseFailureException if the string cannot be parsed
    */
   public static EtdOptionType parseEtdOptionType(String str) {
     switch (str.toUpperCase(Locale.ENGLISH)) {
@@ -278,9 +283,8 @@ public final class CsvLoaderUtils {
       case "E":
         return EtdOptionType.EUROPEAN;
       default:
-        throw new IllegalArgumentException(
-            "Unknown EtdOptionType value, must be 'American' or 'European' but was '" + str + "'; " +
-                "parser is case insensitive and also accepts 'A' and 'E'");
+        throw new ParseFailureException(
+            "Unable to parse ETD option type from '{value}', must be 'American', 'European', 'A' or 'E' (case insensitive)", str);
     }
   }
 
@@ -290,7 +294,7 @@ public final class CsvLoaderUtils {
    *
    * @param row  the CSV row to parse
    * @return the quantity, long first, short second
-   * @throws IllegalArgumentException if the row cannot be parsed
+   * @throws ParseFailureException if the row cannot be parsed
    */
   public static DoublesPair parseQuantity(CsvRow row) {
     Optional<Double> quantityOpt = row.findValue(QUANTITY_FIELD, LoaderUtils::parseDouble);
@@ -301,9 +305,9 @@ public final class CsvLoaderUtils {
     Optional<Double> longQuantityOpt = row.findValue(LONG_QUANTITY_FIELD, LoaderUtils::parseDouble);
     Optional<Double> shortQuantityOpt = row.findValue(SHORT_QUANTITY_FIELD, LoaderUtils::parseDouble);
     if (!longQuantityOpt.isPresent() && !shortQuantityOpt.isPresent()) {
-      throw new IllegalArgumentException(
-          Messages.format("Security must contain a quantity column, either '{}' or '{}' and '{}'",
-              QUANTITY_FIELD, LONG_QUANTITY_FIELD, SHORT_QUANTITY_FIELD));
+      throw new ParseFailureException(
+          "Security must contain a quantity column, either '{}' or '{}' and '{}'",
+          QUANTITY_FIELD, LONG_QUANTITY_FIELD, SHORT_QUANTITY_FIELD);
     }
     double longQuantity = ArgChecker.notNegative(longQuantityOpt.orElse(0d), LONG_QUANTITY_FIELD);
     double shortQuantity = ArgChecker.notNegative(shortQuantityOpt.orElse(0d), SHORT_QUANTITY_FIELD);
@@ -317,7 +321,8 @@ public final class CsvLoaderUtils {
    * @param dateField  the date field
    * @param timeField  the time field
    * @param zoneField  the zone field
-   * @return  the zoned date time
+   * @return the zoned date time
+   * @throws ParseFailureException if the row cannot be parsed
    */
   public static ZonedDateTime parseZonedDateTime(CsvRow row, String dateField, String timeField, String zoneField) {
     LocalDate date = row.getValue(dateField, LoaderUtils::parseDate);
@@ -335,7 +340,7 @@ public final class CsvLoaderUtils {
    * @param conventionField  the convention field
    * @param calendarField  the calendar field
    * @return the adjustment
-   * @throws IllegalArgumentException if the row cannot be parsed
+   * @throws ParseFailureException if the row cannot be parsed
    */
   public static AdjustableDate parseAdjustableDate(
       CsvRow row,
@@ -359,7 +364,7 @@ public final class CsvLoaderUtils {
    * @param defaultConvention  the default convention
    * @param currency  the applicable currency, used for defaulting
    * @return the adjustment
-   * @throws IllegalArgumentException if the row cannot be parsed
+   * @throws ParseFailureException if the row cannot be parsed
    */
   public static AdjustableDate parseAdjustableDate(
       CsvRow row,
@@ -386,6 +391,7 @@ public final class CsvLoaderUtils {
    * @param conventionField  the convention field
    * @param calendarField  the calendar field
    * @return the adjustable payment
+   * @throws ParseFailureException if the row cannot be parsed
    */
   public static AdjustablePayment parseAdjustablePayment(
       CsvRow row,
@@ -409,6 +415,7 @@ public final class CsvLoaderUtils {
    * @param knockTypeField the knock type field
    * @param barrierLevelField the barrier level field
    * @return the barrier
+   * @throws ParseFailureException if the row cannot be parsed
    */
   public static Barrier parseBarrier(
       CsvRow row,
@@ -428,6 +435,7 @@ public final class CsvLoaderUtils {
    *
    * @param row the CSV row to parse
    * @return the barrier
+   * @throws ParseFailureException if the row cannot be parsed
    */
   public static Barrier parseBarrierFromDefaultFields(CsvRow row) {
     return parseBarrier(row, BARRIER_TYPE_FIELD, KNOCK_TYPE_FIELD, BARRIER_LEVEL_FIELD);
@@ -438,9 +446,9 @@ public final class CsvLoaderUtils {
    *
    * @param row  the CSV row to parse
    * @return the adjustable payment
+   * @throws ParseFailureException if the row cannot be parsed
    */
   public static AdjustablePayment parsePremiumFromDefaultFields(CsvRow row) {
-
     return parseAdjustablePayment(
         row,
         PREMIUM_CURRENCY_FIELD,
@@ -459,7 +467,7 @@ public final class CsvLoaderUtils {
    * @param conventionField  the convention field
    * @param calendarField  the calendar field
    * @return the adjustment
-   * @throws IllegalArgumentException if the row cannot be parsed
+   * @throws ParseFailureException if the row cannot be parsed
    */
   public static Optional<BusinessDayAdjustment> parseBusinessDayAdjustment(
       CsvRow row,
@@ -490,7 +498,7 @@ public final class CsvLoaderUtils {
    * @param cnvField  the convention field
    * @param calField  the calendar field
    * @return the adjustment
-   * @throws IllegalArgumentException if the row cannot be parsed
+   * @throws ParseFailureException if the row cannot be parsed
    */
   public static DaysAdjustment parseDaysAdjustment(
       CsvRow row,
@@ -519,7 +527,7 @@ public final class CsvLoaderUtils {
    * @param currencyField  the currency field
    * @param amountField  the amount field
    * @return the currency amount
-   * @throws IllegalArgumentException if the row cannot be parsed
+   * @throws ParseFailureException if the row cannot be parsed
    */
   public static CurrencyAmount parseCurrencyAmount(CsvRow row, String currencyField, String amountField) {
     Currency currency = row.getValue(currencyField, LoaderUtils::parseCurrency);
@@ -535,7 +543,7 @@ public final class CsvLoaderUtils {
    * @param amountField  the amount field
    * @param directionField  the direction field
    * @return the currency amount
-   * @throws IllegalArgumentException if the row cannot be parsed
+   * @throws ParseFailureException if the row cannot be parsed
    */
   public static CurrencyAmount parseCurrencyAmountWithDirection(
       CsvRow row,
@@ -556,7 +564,7 @@ public final class CsvLoaderUtils {
    * @param dateField  the date field
    * @param conventionField  the convention field
    * @param calendarField  the calendar field
-   * @return  the adjustable date option
+   * @return the adjustable date option
    */
   public static Optional<AdjustableDate> tryParseAdjustableDate(
       CsvRow row,
@@ -605,7 +613,7 @@ public final class CsvLoaderUtils {
    * Tries parsing the premium using the default premium fields.
    *
    * @param row  the CSV row to parse
-   * @return  the premium option
+   * @return the premium option
    */
   public static Optional<AdjustablePayment> tryParsePremiumFromDefaultFields(CsvRow row) {
     return tryParseAdjustablePayment(
@@ -626,7 +634,7 @@ public final class CsvLoaderUtils {
    * @param amountField  the amount field
    * @param directionField  the direction field
    * @param dateField  the date field
-   * @return  the adjustable payment option
+   * @return the adjustable payment option
    */
   public static Optional<AdjustablePayment> tryParseAdjustablePayment(
       CsvRow row,
@@ -661,7 +669,7 @@ public final class CsvLoaderUtils {
    * @param dateField  the date field
    * @param conventionField  the date convention field
    * @param calendarField  the date calendar field
-   * @return  the adjustable payment option
+   * @return the adjustable payment option
    */
   public static Optional<AdjustablePayment> tryParseAdjustablePayment(
       CsvRow row,
@@ -700,8 +708,7 @@ public final class CsvLoaderUtils {
    * @return the formatted percentage value
    */
   public static String formattedPercentage(double value) {
-    String str = BigDecimal.valueOf(value).movePointRight(2).toPlainString();
-    return str.endsWith(".0") ? str.substring(0, str.length() - 2) : str;
+    return Decimal.of(value).movePoint(2).toString();
   }
 
   /**
@@ -713,8 +720,7 @@ public final class CsvLoaderUtils {
    * @return the formatted value
    */
   public static String formattedDouble(double value) {
-    String str = BigDecimal.valueOf(value).toPlainString();
-    return str.endsWith(".0") ? str.substring(0, str.length() - 2) : str;
+    return Decimal.of(value).toString();
   }
 
 }

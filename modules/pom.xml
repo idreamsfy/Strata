@@ -5,12 +5,12 @@
   <parent>
     <groupId>com.opengamma</groupId>
     <artifactId>corporate-parent</artifactId>
-    <version>2.7.6</version>
+    <version>2.8.0</version>
     <relativePath />
   </parent>
   <groupId>com.opengamma.strata</groupId>
   <artifactId>strata-parent</artifactId>
-  <version>2.10.24-SNAPSHOT</version>
+  <version>2.12.15-SNAPSHOT</version>
   <packaging>pom</packaging>
   <name>Strata-Parent</name>
   <description>OpenGamma Strata Parent</description>
@@ -230,6 +230,48 @@
         </configuration>
       </plugin>
     </plugins>
+    <pluginManagement>
+      <plugins>
+        <plugin>
+          <groupId>org.jboss.bridger</groupId>
+          <artifactId>bridger</artifactId>
+          <version>${bridger.version}</version>
+          <dependencies>
+            <!-- Support Java 17 -->
+            <dependency>
+              <groupId>org.ow2.asm</groupId>
+              <artifactId>asm</artifactId>
+              <version>${asm.version}</version>
+            </dependency>
+          </dependencies>
+        </plugin>
+        <!--This plugin's configuration is used to store Eclipse m2e settings only. It has no influence on the Maven build itself.-->
+        <plugin>
+          <groupId>org.eclipse.m2e</groupId>
+          <artifactId>lifecycle-mapping</artifactId>
+          <version>1.0.0</version>
+          <configuration>
+            <lifecycleMappingMetadata>
+              <pluginExecutions>
+                <pluginExecution>
+                  <pluginExecutionFilter>
+                    <groupId>org.jboss.bridger</groupId>
+                    <artifactId>bridger</artifactId>
+                    <versionRange>[${bridger.version},)</versionRange>
+                    <goals>
+                      <goal>transform</goal>
+                    </goals>
+                  </pluginExecutionFilter>
+                  <action>
+                    <ignore />
+                  </action>
+                </pluginExecution>
+              </pluginExecutions>
+            </lifecycleMappingMetadata>
+          </configuration>
+        </plugin>
+      </plugins>
+    </pluginManagement>
   </build>
 
   <!-- ==================================================================== -->
@@ -560,7 +602,6 @@
                   <goal>jar-no-fork</goal>
                 </goals>
                 <configuration>
-                  <skipIfEmpty>true</skipIfEmpty>
                   <archive>
                     <manifest>
                       <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
@@ -588,7 +629,6 @@
                   <goal>jar</goal>
                 </goals>
                 <configuration>
-                  <skipIfEmpty>true</skipIfEmpty>
                   <archive>
                     <manifest>
                       <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
@@ -722,20 +762,25 @@
     <!-- Locate the root directory of the multi-module build -->
     <root.dir>${project.basedir}/..</root.dir>
     <!-- Versions -->
-    <assertj.version>3.21.0</assertj.version>
-    <guava.version>31.0.1-jre</guava.version><!-- didn't want to go beyond v27 but forced to by security https://github.com/google/guava/issues/3320 -->
+    <asm.version>9.3</asm.version>
+    <assertj.version>3.23.1</assertj.version>
+    <bridger.version>1.6.Final</bridger.version>
+    <guava.version>31.1-jre</guava.version><!-- didn't want to go beyond v27 but forced to by security https://github.com/google/guava/issues/3320 -->
     <guava-docs.version>26.0-jre</guava-docs.version>
     <jcommander.version>1.78</jcommander.version>
     <joda-convert.version>2.2.2</joda-convert.version>
-    <joda-beans.version>2.8.1</joda-beans.version>
+    <joda-beans.version>2.8.3</joda-beans.version>
     <joda.beans.version>${joda-beans.version}</joda.beans.version>
-    <junit5.version>5.8.2</junit5.version>
-    <mockito.version>3.9.0</mockito.version>
-    <slf4j.version>1.7.32</slf4j.version>
+    <junit5.version>5.9.0</junit5.version>
+    <mockito.version>4.8.0</mockito.version>
+    <slf4j.version>1.7.36</slf4j.version>
+    <!-- Versions after M3 cause RequireFilesExist to reject relative paths -->
+    <extra-enforcer-rules.version>1.2</extra-enforcer-rules.version>
+    <maven-enforcer-plugin.version>3.0.0-M3</maven-enforcer-plugin.version>
     <!-- Properties for maven-checkstyle-plugin -->
     <!-- versions must be retained to allow the version to be overridden on the command line -->
-    <build-config.version>2.6.0</build-config.version>
-    <checkstyle.version>8.26</checkstyle.version>
+    <build-config.version>2.8.1</build-config.version>
+    <checkstyle.version>8.45.1</checkstyle.version>
     <!-- Properties for maven-javadoc-plugin -->
     <windowtitle>OpenGamma Strata</windowtitle>
     <doctitle><![CDATA[<h1>OpenGamma Strata</h1>]]></doctitle>

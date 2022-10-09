@@ -54,7 +54,7 @@ INR-OMIBOR,INR,TRUE,Act/365F,INMU,0,0,Act/365F
 NOK-NOWA,NOK,TRUE,Act/Act Year,NOOS,0,0,Act/360
 
 # standard name
-NZD-NZIONA,NZD,TRUE,Act/365F,NZBD,0,0,Act/365F
+NZD-NZIONA,NZD,TRUE,Act/365F,NZAU+NZWE,0,0,Act/365F
 
 # standard name
 PLN-POLONIA,PLN,TRUE,Act/365F,PLWA,0,0,Act/365F
@@ -75,6 +75,10 @@ SGD-SONAR,SGD,TRUE,Act/365F,SGSI,0,0,Act/365F
 # SORA, which is the Alternative Reference Rate for SGD
 # if a term SORA is created, that can be named TSORA
 SGD-SORA,SGD,TRUE,Act/365F,SGSI,1,0,Act/365F
+
+# standard name
+# https://www.bot.or.th/App/THOR
+THB-THOR,THB,TRUE,Act/365F,THBA,0,2,Act/365F
 
 # standard name
 # (Overnight TRLIBOR not the same and less well used)

@@ -234,7 +234,7 @@ public class TradeCsvLoaderTest {
     FailureItem failureItem = loadedData.getFailures().get(0);
     assertThat(failureItem.getReason().toString()).isEqualTo("PARSING");
     assertThat(failureItem.getMessage())
-        .isEqualTo("CSV trade file type 'FX' could not be parsed at line 2: " +
+        .isEqualTo("CSV trade file 'fxtrades_legs_same_direction.csv' type 'FX' could not be parsed at line 2: " +
             "FxSingle legs must not have the same direction: Pay, Pay");
     List<Trade> loadedTrades = loadedData.getValue();
     assertThat(loadedTrades).hasSize(0);
@@ -1523,8 +1523,8 @@ public class TradeCsvLoaderTest {
     FailureItem failure = result.getFailures().get(0);
     assertThat(failure.getReason()).isEqualTo(FailureReason.PARSING);
     assertThat(failure.getMessage())
-        .isEqualTo("CSV trade file type 'Swap' could not be parsed at line 2: " +
-            "Swap leg must not define both 'Leg 1 Fixed Rate' and 'Leg 1 Known Amount'");
+        .isEqualTo("CSV trade file 'Unknown.txt' type 'Swap' could not be parsed at line 2: " +
+            "Swap leg 1 must not define both kinds of fixed leg: 'Leg 1 Fixed Rate' and 'Leg 1 Known Amount'");
   }
 
   @Test
@@ -1566,8 +1566,8 @@ public class TradeCsvLoaderTest {
     FailureItem failure = result.getFailures().get(0);
     assertThat(failure.getReason()).isEqualTo(FailureReason.PARSING);
     assertThat(failure.getMessage())
-        .isEqualTo("CSV trade file type 'Swap' could not be parsed at line 2: Swap leg must not define both " +
-            "'Leg 1 Fixed Rate' or 'Leg 1 Known Amount' and 'Leg 1 Index'");
+        .isEqualTo("CSV trade file 'Unknown.txt' type 'Swap' could not be parsed at line 2: Swap leg 1 must not define " +
+            "both floating and fixed leg columns: 'Leg 1 Index' and 'Leg 1 Fixed Rate' or 'Leg 1 Known Amount'");
   }
 
   @Test
@@ -1609,8 +1609,8 @@ public class TradeCsvLoaderTest {
     FailureItem failure = result.getFailures().get(0);
     assertThat(failure.getReason()).isEqualTo(FailureReason.PARSING);
     assertThat(failure.getMessage())
-        .isEqualTo("CSV trade file type 'Swap' could not be parsed at line 2: Swap leg must not " +
-            "define both 'Leg 1 Fixed Rate' or 'Leg 1 Known Amount' and 'Leg 1 Index'");
+        .isEqualTo("CSV trade file 'Unknown.txt' type 'Swap' could not be parsed at line 2: Swap leg 1 must not define " +
+            "both floating and fixed leg columns: 'Leg 1 Index' and 'Leg 1 Fixed Rate' or 'Leg 1 Known Amount'");
   }
 
   //-------------------------------------------------------------------------
@@ -1925,17 +1925,47 @@ public class TradeCsvLoaderTest {
     List<CdsIndexTrade> filtered = trades.getValue().stream()
         .flatMap(filtering(CdsIndexTrade.class))
         .collect(toImmutableList());
-    assertThat(filtered).hasSize(3);
+    assertThat(filtered).hasSize(4);
 
     CdsIndexTrade expected0 = expectedCdsIndex0();
     CdsIndexTrade expected1 = expectedCdsIndex1();
     CdsIndexTrade expected2 = expectedCdsIndex2();
+    CdsIndexTrade expected3 = expectedCdsIndex3();
 
     assertBeanEquals(expected0, filtered.get(0));
     assertBeanEquals(expected1, filtered.get(1));
     assertBeanEquals(expected2, filtered.get(2));
+    assertBeanEquals(expected3, filtered.get(3));
 
-    checkRoundtrip(CdsIndexTrade.class, filtered, expected0, expected1, expected2);
+    checkRoundtrip(CdsIndexTrade.class, filtered, expected0, expected1, expected2, expected3);
+  }
+
+  @Test
+  public void test_load_invalidCdsIndexId() {
+    ImmutableMap<String, String> csvMap = ImmutableMap.<String, String>builder()
+        .put("Strata Trade Type", "CDS Index")
+        .put("Id Scheme", "OG")
+        .put("Id", "123456")
+        .put("Buy Sell", "Buy")
+        .put("Fixed Rate", "5")
+        .put("Currency", "GBP")
+        .put("Notional", "1000000")
+        .put("Start Date", "2017-05-02")
+        .put("End Date", "2022-05-02")
+        .put("Frequency", "12M")
+        .put("RED Code", "FOOBAR")
+        .build();
+
+    String csv = Joiner.on(',').join(csvMap.keySet()) + "\n" + Joiner.on(',').join(csvMap.values());
+
+    TradeCsvLoader test = TradeCsvLoader.standard();
+    ValueWithFailures<List<CdsIndexTrade>> result = test.parse(ImmutableList.of(CharSource.wrap(csv)), CdsIndexTrade.class);
+    assertThat(result.getFailures().size()).as(result.getFailures().toString()).isEqualTo(1);
+    FailureItem failure = result.getFailures().get(0);
+    assertThat(failure.getReason()).isEqualTo(FailureReason.PARSING);
+    assertThat(failure.getMessage())
+        .isEqualTo("CSV trade file 'Unknown.txt' type 'CDS Index' could not be parsed at line 2: RED9 must be present " +
+            "for CdsIndex but found: RED6");
   }
 
   private CdsIndexTrade expectedCdsIndex0() {
@@ -2016,6 +2046,30 @@ public class TradeCsvLoaderTest {
         .build();
   }
 
+  private CdsIndexTrade expectedCdsIndex3() {
+    CdsIndex cdsIndex = CdsIndex.builder()
+        .buySell(BUY)
+        .currency(GBP)
+        .notional(1_000_000)
+        .fixedRate(0.05)
+        .cdsIndexId(StandardId.of("OG-Ticker", "FOOBARCDS-CDX-STD"))
+        .paymentSchedule(PeriodicSchedule.builder()
+            .startDate(date(2017, 6, 1))
+            .endDate(date(2022, 6, 1))
+            .frequency(Frequency.P12M)
+            .businessDayAdjustment(BusinessDayAdjustment.NONE)
+            .stubConvention(StubConvention.SMART_INITIAL)
+            .build())
+        .build();
+    return CdsIndexTrade.builder()
+        .info(TradeInfo.builder()
+            .id(StandardId.of("OG", "123455"))
+            .tradeDate(date(2017, 6, 1))
+            .build())
+        .product(cdsIndex)
+        .build();
+  }
+
   //-------------------------------------------------------------------------
   @Test
   public void test_load_filtered() {
@@ -2024,7 +2078,7 @@ public class TradeCsvLoaderTest {
         ImmutableList.of(FILE.getCharSource()), ImmutableList.of(FraTrade.class, TermDepositTrade.class));
 
     assertThat(trades.getValue()).hasSize(6);
-    assertThat(trades.getFailures()).hasSize(23);
+    assertThat(trades.getFailures()).hasSize(24);
     assertThat(trades.getFailures().get(0).getMessage()).isEqualTo(
         "Trade type not allowed " + SwapTrade.class.getName() + ", only these types are supported: FraTrade, TermDepositTrade");
   }
@@ -2258,7 +2312,7 @@ public class TradeCsvLoaderTest {
     assertThat(trades.getFailures()).hasSize(1);
     FailureItem failure = trades.getFailures().get(0);
     assertThat(failure.getReason()).isEqualTo(FailureReason.PARSING);
-    assertThat(failure.getMessage().contains("CSV file could not be parsed")).isTrue();
+    assertThat(failure.getMessage()).startsWith("CSV trade file 'Unknown.txt' could not be parsed");
   }
 
   @Test
@@ -2269,7 +2323,7 @@ public class TradeCsvLoaderTest {
     assertThat(trades.getFailures()).hasSize(1);
     FailureItem failure = trades.getFailures().get(0);
     assertThat(failure.getReason()).isEqualTo(FailureReason.PARSING);
-    assertThat(failure.getMessage().contains("CSV file does not contain 'Strata Trade Type' header")).isTrue();
+    assertThat(failure.getMessage()).startsWith("CSV trade file 'Unknown.txt' does not contain 'Strata Trade Type' header");
   }
 
   @Test
@@ -2280,7 +2334,7 @@ public class TradeCsvLoaderTest {
     assertThat(trades.getFailures()).hasSize(1);
     FailureItem failure = trades.getFailures().get(0);
     assertThat(failure.getReason()).isEqualTo(FailureReason.PARSING);
-    assertThat(failure.getMessage()).isEqualTo("CSV trade file type 'Foo' is not known at line 2");
+    assertThat(failure.getMessage()).isEqualTo("CSV trade file 'Unknown.txt' contained unknown trade type 'Foo' at line 2");
   }
 
   @Test
@@ -2304,7 +2358,7 @@ public class TradeCsvLoaderTest {
     assertThat(trades.getFailures()).hasSize(1);
     FailureItem failure = trades.getFailures().get(0);
     assertThat(failure.getReason()).isEqualTo(FailureReason.PARSING);
-    assertThat(failure.getMessage()).isEqualTo("CSV trade file type 'Foo' is not known at line 2");
+    assertThat(failure.getMessage()).isEqualTo("CSV trade file 'Unknown.txt' contained unknown trade type 'Foo' at line 2");
   }
 
   @Test
@@ -2377,7 +2431,7 @@ public class TradeCsvLoaderTest {
     FailureItem failure = trades.getFailures().get(0);
     assertThat(failure.getReason()).isEqualTo(FailureReason.PARSING);
     assertThat(failure.getMessage())
-        .isEqualTo("CSV trade file type 'Fra' could not be parsed at line 2: Header not found: 'Notional'");
+        .isEqualTo("CSV trade file 'Unknown.txt' type 'Fra' could not be parsed at line 2: Header not found: 'Notional'");
   }
 
   @Test
@@ -2390,7 +2444,7 @@ public class TradeCsvLoaderTest {
     assertThat(failure.getReason()).isEqualTo(FailureReason.PARSING);
     assertThat(failure.getMessage())
         .isEqualTo(
-            "CSV trade file type 'Swap' could not be parsed at line 2: Swap trade had invalid combination of fields. " +
+            "CSV trade file 'Unknown.txt' type 'Swap' could not be parsed at line 2: Swap trade had invalid combination of fields. " +
                 "Must include either 'Convention' or '" + "Leg 1 Direction'");
   }
 
@@ -2404,7 +2458,7 @@ public class TradeCsvLoaderTest {
     FailureItem failure = trades.getFailures().get(0);
     assertThat(failure.getReason()).isEqualTo(FailureReason.PARSING);
     assertThat(failure.getMessage())
-        .isEqualTo("CSV trade file type 'BulletPayment' could not be parsed at line 2: Header not found: 'Currency'");
+        .isEqualTo("CSV trade file 'Unknown.txt' type 'BulletPayment' could not be parsed at line 2: Header not found: 'Currency'");
   }
 
   @Test
@@ -2417,7 +2471,7 @@ public class TradeCsvLoaderTest {
     FailureItem failure = trades.getFailures().get(0);
     assertThat(failure.getReason()).isEqualTo(FailureReason.PARSING);
     assertThat(failure.getMessage())
-        .isEqualTo("CSV trade file type 'TermDeposit' could not be parsed at line 2: Header not found: 'Notional'");
+        .isEqualTo("CSV trade file 'Unknown.txt' type 'TermDeposit' could not be parsed at line 2: Header not found: 'Notional'");
   }
 
   //-------------------------------------------------------------------------

@@ -15,6 +15,7 @@ import static com.opengamma.strata.basics.currency.Currency.HUF;
 import static com.opengamma.strata.basics.currency.Currency.JPY;
 import static com.opengamma.strata.basics.currency.Currency.KRW;
 import static com.opengamma.strata.basics.currency.Currency.MXN;
+import static com.opengamma.strata.basics.currency.Currency.MYR;
 import static com.opengamma.strata.basics.currency.Currency.NZD;
 import static com.opengamma.strata.basics.currency.Currency.PLN;
 import static com.opengamma.strata.basics.currency.Currency.SEK;
@@ -334,6 +335,37 @@ public class IborIndexTest {
   }
 
   @Test
+  public void test_usdTermSofr() {
+    assertThat(IborIndex.of("USD-SOFRCMETERM-1M").getName()).isEqualTo("USD-SOFRCMETERM-1M");
+    assertThat(IborIndex.of("USD-SOFRCMETERM-3M").getName()).isEqualTo("USD-SOFRCMETERM-3M");
+    assertThat(IborIndex.of("USD-SOFRCMETERM-6M").getName()).isEqualTo("USD-SOFRCMETERM-6M");
+    assertThat(IborIndex.of("USD-SOFRCMETERM-12M").getName()).isEqualTo("USD-SOFRCMETERM-12M");
+  }
+
+  @Test
+  public void test_gbpSoniaIceTerm() {
+    assertThat(IborIndex.of("GBP-SONIAICETERM-1M").getName()).isEqualTo("GBP-SONIAICETERM-1M");
+    assertThat(IborIndex.of("GBP-SONIAICETERM-3M").getName()).isEqualTo("GBP-SONIAICETERM-3M");
+    assertThat(IborIndex.of("GBP-SONIAICETERM-6M").getName()).isEqualTo("GBP-SONIAICETERM-6M");
+    assertThat(IborIndex.of("GBP-SONIAICETERM-12M").getName()).isEqualTo("GBP-SONIAICETERM-12M");
+  }
+
+  @Test
+  public void test_gbpSoniaRefinitivTerm() {
+    assertThat(IborIndex.of("GBP-SONIAREFINITIVTERM-1M").getName()).isEqualTo("GBP-SONIAREFINITIVTERM-1M");
+    assertThat(IborIndex.of("GBP-SONIAREFINITIVTERM-3M").getName()).isEqualTo("GBP-SONIAREFINITIVTERM-3M");
+    assertThat(IborIndex.of("GBP-SONIAREFINITIVTERM-6M").getName()).isEqualTo("GBP-SONIAREFINITIVTERM-6M");
+    assertThat(IborIndex.of("GBP-SONIAREFINITIVTERM-12M").getName()).isEqualTo("GBP-SONIAREFINITIVTERM-12M");
+  }
+
+  @Test
+  public void test_jpyTorf() {
+    assertThat(IborIndex.of("JPY-TORF-1M").getName()).isEqualTo("JPY-TORF-1M");
+    assertThat(IborIndex.of("JPY-TORF-3M").getName()).isEqualTo("JPY-TORF-3M");
+    assertThat(IborIndex.of("JPY-TORF-6M").getName()).isEqualTo("JPY-TORF-6M");
+  }
+
+  @Test
   public void test_bbsw1m() {
     IborIndex test = IborIndex.of("AUD-BBSW-1M");
     assertThat(test.getCurrency()).isEqualTo(AUD);
@@ -549,6 +581,26 @@ public class IborIndexTest {
     assertThat(test.getDayCount()).isEqualTo(ACT_360);
     assertThat(test.getDefaultFixedLegDayCount()).isEqualTo(ACT_360);
     assertThat(test.toString()).isEqualTo("MXN-TIIE-4W");
+  }
+
+  @Test
+  public void test_myr_klibor() {
+    HolidayCalendarId cal = HolidayCalendarId.of("MYKL");
+    IborIndex test = IborIndex.of("MYR-KLIBOR-3M");
+    assertThat(test.getCurrency()).isEqualTo(MYR);
+    assertThat(test.getName()).isEqualTo("MYR-KLIBOR-3M");
+    assertThat(test.getTenor()).isEqualTo(TENOR_3M);
+    assertThat(test.getFixingCalendar()).isEqualTo(cal);
+    assertThat(test.getFixingDateOffset())
+        .isEqualTo(DaysAdjustment.ofCalendarDays(0, BusinessDayAdjustment.of(PRECEDING, cal)));
+    assertThat(test.getEffectiveDateOffset())
+        .isEqualTo(DaysAdjustment.ofCalendarDays(0, BusinessDayAdjustment.of(FOLLOWING, cal)));
+    assertThat(test.getMaturityDateOffset())
+        .isEqualTo(TenorAdjustment.of(
+            TENOR_3M, PeriodAdditionConventions.NONE, BusinessDayAdjustment.of(MODIFIED_FOLLOWING, cal)));
+    assertThat(test.getDayCount()).isEqualTo(ACT_365F);
+    assertThat(test.getDefaultFixedLegDayCount()).isEqualTo(ACT_365F);
+    assertThat(test.toString()).isEqualTo("MYR-KLIBOR-3M");
   }
 
   @Test

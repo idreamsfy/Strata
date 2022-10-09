@@ -131,14 +131,13 @@ public final class HolidayCalendarId
       if (cal != null) {
         return cal;
       }
-      cal = HolidayCalendars.NO_HOLIDAYS;
       for (HolidayCalendarId splitId : ids) {
         HolidayCalendar splitCal = refData.queryValueOrNull(splitId);
         if (splitCal == null) {
           throw new ReferenceDataNotFoundException(Messages.format(
               "Reference data not found for '{}' of type 'HolidayCalendarId' when finding '{}'", splitId, id));
         }
-        cal = fn.apply(cal, splitCal);
+        cal = cal != null ? fn.apply(cal, splitCal) : splitCal;
       }
       return cal;
     };
@@ -189,6 +188,17 @@ public final class HolidayCalendarId
         .map(HolidayCalendarId::findDefaultByCurrency)
         .flatMap(filteringOptional())
         .reduce(HolidayCalendarIds.NO_HOLIDAYS, HolidayCalendarId::combinedWith);
+  }
+
+  //-------------------------------------------------------------------------
+  /**
+   * Checks if the holiday calendar is a combined or linked calendar.
+   *
+   * @param id the holiday calendar id
+   * @return if the holiday calendar is a combined or linked calendar
+   */
+  public static boolean isCompositeCalendar(HolidayCalendarId id) {
+    return id.getName().indexOf('~') >= 0 || id.getName().indexOf('+') >= 0;
   }
 
   //-------------------------------------------------------------------------

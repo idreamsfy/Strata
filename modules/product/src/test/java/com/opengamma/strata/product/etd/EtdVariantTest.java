@@ -59,7 +59,7 @@ public class EtdVariantTest {
     EtdVariant test = EtdVariant.ofFlexFuture(2, EtdSettlementType.CASH);
     assertThat(test.getType()).isEqualTo(EtdExpiryType.DAILY);
     assertThat(test.getDateCode().getAsInt()).isEqualTo(2);
-    assertThat(test.getSettlementType().get()).isEqualTo(EtdSettlementType.CASH);
+    assertThat(test.getSettlementType()).hasValue(EtdSettlementType.CASH);
     assertThat(test.getOptionType()).isNotPresent();
     assertThat(test.isFlex()).isTrue();
     assertThat(test.getCode()).isEqualTo("02C");
@@ -71,8 +71,8 @@ public class EtdVariantTest {
     EtdVariant test = EtdVariant.ofFlexOption(24, EtdSettlementType.CASH, EtdOptionType.AMERICAN);
     assertThat(test.getType()).isEqualTo(EtdExpiryType.DAILY);
     assertThat(test.getDateCode().getAsInt()).isEqualTo(24);
-    assertThat(test.getSettlementType().get()).isEqualTo(EtdSettlementType.CASH);
-    assertThat(test.getOptionType().get()).isEqualTo(EtdOptionType.AMERICAN);
+    assertThat(test.getSettlementType()).hasValue(EtdSettlementType.CASH);
+    assertThat(test.getOptionType()).hasValue(EtdOptionType.AMERICAN);
     assertThat(test.isFlex()).isTrue();
     assertThat(test.getCode()).isEqualTo("24CA");
     assertThat(EtdVariant.parseCode(test.getCode())).isEqualTo(test);

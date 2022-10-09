@@ -24,7 +24,7 @@ import org.joda.beans.impl.direct.DirectPrivateBeanBuilder;
 
 import com.opengamma.strata.basics.date.DayCount;
 import com.opengamma.strata.market.surface.interpolator.SurfaceInterpolator;
-import com.opengamma.strata.product.swap.type.FixedIborSwapConvention;
+import com.opengamma.strata.product.swap.type.FixedFloatSwapConvention;
 
 /**
  * Definition of standard inputs to SABR swaption calibration.
@@ -42,7 +42,7 @@ public final class SabrSwaptionDefinition
    * The swap convention that the volatilities are to be used for.
    */
   @PropertyDefinition(validate = "notNull")
-  private final FixedIborSwapConvention convention;
+  private final FixedFloatSwapConvention convention;
   /**
    * The day count to use.
    */
@@ -66,7 +66,7 @@ public final class SabrSwaptionDefinition
    */
   public static SabrSwaptionDefinition of(
       SwaptionVolatilitiesName name,
-      FixedIborSwapConvention convention,
+      FixedFloatSwapConvention convention,
       DayCount dayCount,
       SurfaceInterpolator interpolator) {
 
@@ -93,7 +93,7 @@ public final class SabrSwaptionDefinition
 
   private SabrSwaptionDefinition(
       SwaptionVolatilitiesName name,
-      FixedIborSwapConvention convention,
+      FixedFloatSwapConvention convention,
       DayCount dayCount,
       SurfaceInterpolator interpolator) {
     JodaBeanUtils.notNull(name, "name");
@@ -125,7 +125,7 @@ public final class SabrSwaptionDefinition
    * Gets the swap convention that the volatilities are to be used for.
    * @return the value of the property, not null
    */
-  public FixedIborSwapConvention getConvention() {
+  public FixedFloatSwapConvention getConvention() {
     return convention;
   }
 
@@ -203,8 +203,8 @@ public final class SabrSwaptionDefinition
     /**
      * The meta-property for the {@code convention} property.
      */
-    private final MetaProperty<FixedIborSwapConvention> convention = DirectMetaProperty.ofImmutable(
-        this, "convention", SabrSwaptionDefinition.class, FixedIborSwapConvention.class);
+    private final MetaProperty<FixedFloatSwapConvention> convention = DirectMetaProperty.ofImmutable(
+        this, "convention", SabrSwaptionDefinition.class, FixedFloatSwapConvention.class);
     /**
      * The meta-property for the {@code dayCount} property.
      */
@@ -274,7 +274,7 @@ public final class SabrSwaptionDefinition
      * The meta-property for the {@code convention} property.
      * @return the meta-property, not null
      */
-    public MetaProperty<FixedIborSwapConvention> convention() {
+    public MetaProperty<FixedFloatSwapConvention> convention() {
       return convention;
     }
 
@@ -328,7 +328,7 @@ public final class SabrSwaptionDefinition
   private static final class Builder extends DirectPrivateBeanBuilder<SabrSwaptionDefinition> {
 
     private SwaptionVolatilitiesName name;
-    private FixedIborSwapConvention convention;
+    private FixedFloatSwapConvention convention;
     private DayCount dayCount;
     private SurfaceInterpolator interpolator;
 
@@ -362,7 +362,7 @@ public final class SabrSwaptionDefinition
           this.name = (SwaptionVolatilitiesName) newValue;
           break;
         case 2039569265:  // convention
-          this.convention = (FixedIborSwapConvention) newValue;
+          this.convention = (FixedFloatSwapConvention) newValue;
           break;
         case 1905311443:  // dayCount
           this.dayCount = (DayCount) newValue;
