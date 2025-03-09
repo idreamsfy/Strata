@@ -20,6 +20,7 @@ import java.util.Optional;
 import java.util.OptionalDouble;
 import java.util.OptionalInt;
 import java.util.OptionalLong;
+import java.util.Set;
 import java.util.Spliterator;
 import java.util.Spliterators;
 import java.util.TreeMap;
@@ -27,6 +28,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.function.BiConsumer;
 import java.util.function.BiFunction;
 import java.util.function.BinaryOperator;
 import java.util.function.Consumer;
@@ -48,6 +50,7 @@ import com.google.common.collect.ImmutableSetMultimap;
 import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.MoreCollectors;
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -181,6 +184,24 @@ public final class Guavate {
 
   //-------------------------------------------------------------------------
   /**
+   * Combines two list multimaps into a single list multimap.
+   *
+   * @param first  the first list multimap
+   * @param second  the second list multimap
+   * @param <K>  the type of the keys
+   * @param <V>  the type of the values
+   * @return a combined list multi map
+   */
+  public static <K, V> ImmutableListMultimap<K, V> combineListMultimaps(
+      ListMultimap<? extends K, ? extends V> first,
+      ListMultimap<? extends K, ? extends V> second) {
+
+    return Stream.concat(first.entries().stream(), second.entries().stream())
+        .collect(toImmutableListMultimap(Map.Entry::getKey, Map.Entry::getValue));
+  }
+
+  //-------------------------------------------------------------------------
+  /**
    * Combines a map with new entries, choosing the last entry if there is a duplicate key.
    *
    * @param baseMap  the base map
@@ -303,6 +324,18 @@ public final class Guavate {
   public static <T> Optional<T> first(Iterable<T> iterable) {
     Iterator<T> it = iterable.iterator();
     return it.hasNext() ? Optional.of(it.next()) : Optional.empty();
+  }
+
+  /**
+   * Gets the only element from the collection, returning empty if the collection is empty or has more than one element.
+   * 
+   * @param <T>  the type of element in the optional
+   * @param iterable  the iterable to query
+   * @return the first value, empty if empty or more than one element
+   */
+  public static <T> Optional<T> only(Iterable<T> iterable) {
+    Iterator<T> it = iterable.iterator();
+    return it.hasNext() ? Optional.of(it.next()).filter(element -> !it.hasNext()) : Optional.empty();
   }
 
   //-------------------------------------------------------------------------
@@ -668,11 +701,37 @@ public final class Guavate {
    *
    * @param <T>  the type of element in the stream
    * @return the operator
+   * @throws IllegalArgumentException if more than one element is present
    */
   public static <T> BinaryOperator<T> ensureOnlyOne() {
     return (a, b) -> {
       throw new IllegalArgumentException(Messages.format(
           "Multiple values found where only one was expected: {} and {}", a, b));
+    };
+  }
+
+  /**
+   * Reducer used in a stream to ensure there is no more than one matching element.
+   * <p>
+   * This method returns an operator that can be used with {@link Stream#reduce(BinaryOperator)}
+   * that returns either zero or one elements from the stream. Unlike {@link Stream#findFirst()}
+   * or {@link Stream#findAny()}, this approach ensures an exception is thrown if there
+   * is more than one element in the stream.
+   * <p>
+   * This would be used as follows (with a static import):
+   * <pre>
+   *   stream.filter(...).reduce(ensureOnlyOne()).get();
+   * </pre>
+   *
+   * @param <T>  the type of element in the stream
+   * @param message the message template for the {@link IllegalArgumentException} with "{}" placeholders
+   * @param args the arguments for the message
+   * @return the operator
+   * @throws IllegalArgumentException if more than one element is present
+   */
+  public static <T> BinaryOperator<T> ensureOnlyOne(String message, Object... args) {
+    return (a, b) -> {
+      throw new IllegalArgumentException(Messages.format(message, args));
     };
   }
 
@@ -762,10 +821,60 @@ public final class Guavate {
    * The collector throws {@code NullPointerException} if the stream consists of a null element.
    *
    * @param <T>  the type of element in the list
-   * @return the immutable list collector
+   * @return the optional collector
    */
   public static <T> Collector<T, ?, Optional<T>> toOptional() {
     return MoreCollectors.toOptional();
+  }
+
+  /**
+   * Collector used at the end of a stream to extract one element.
+   * <p>
+   * A collector is used to gather data at the end of a stream operation.
+   * This method returns a collector allowing streams to be gathered into an {@link Optional}.
+   * The collector throws {@code NullPointerException} if the stream consists of a null element.
+   * The collector returns empty if the stream consists of zero, two or more elements.
+   *
+   * @param <T>  the type of element in the list
+   * @return the collector
+   */
+  public static <T> Collector<T, ?, Optional<T>> toOnly() {
+    return new OnlyCollector<T>();
+  }
+
+  static class OnlyCollector<T> implements Collector<T, OnlyCollector<T>, Optional<T>> {
+    private T value;
+    private int count;
+
+    @Override
+    public Supplier<OnlyCollector<T>> supplier() {
+      return OnlyCollector::new;
+    }
+
+    @Override
+    public BiConsumer<OnlyCollector<T>, T> accumulator() {
+      return (state, value) -> {
+        state.value = value;
+        state.count++;
+      };
+    }
+
+    @Override
+    public BinaryOperator<OnlyCollector<T>> combiner() {
+      return (a, b) -> {
+        throw new UnsupportedOperationException("OnlyCollector does not support parallel processing");
+      };
+    }
+
+    @Override
+    public Function<OnlyCollector<T>, Optional<T>> finisher() {
+      return state -> state.count == 1 ? Optional.of(state.value) : Optional.empty();
+    }
+
+    @Override
+    public Set<Characteristics> characteristics() {
+      return ImmutableSet.of();
+    }
   }
 
   /**
