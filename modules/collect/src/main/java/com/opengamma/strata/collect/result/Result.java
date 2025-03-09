@@ -5,8 +5,11 @@
  */
 package com.opengamma.strata.collect.result;
 
+import static com.opengamma.strata.collect.Guavate.toImmutableList;
+
 import java.io.Serializable;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Objects;
@@ -15,6 +18,7 @@ import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import java.util.stream.Collector;
 import java.util.stream.Stream;
 
 import org.joda.beans.Bean;
@@ -113,8 +117,7 @@ public final class Result<T>
    * @return a failure result
    */
   public static <R> Result<R> failure(FailureReason reason, String message, Object... messageArgs) {
-    String msg = Messages.format(message, messageArgs);
-    return new Result<>(Failure.of(FailureItem.ofAutoStackTrace(reason, msg, 1)));
+    return new Result<>(Failure.of(FailureItem.ofAutoStackTrace(1, reason, message, messageArgs)));
   }
 
   /**
@@ -460,6 +463,47 @@ public final class Result<T>
     return ofNullable(value, FailureReason.MISSING_DATA, "Found null where a value was expected");
   }
 
+  /**
+   * Returns a success result containing the value if present, else returns a failure result
+   * with the specified reason and message.
+   * <p>
+   * The message is produced using a template that contains zero to many "{}" placeholders.
+   * Each placeholder is replaced by the next available argument.
+   * If there are too few arguments, then the message will be left with placeholders.
+   * If there are too many arguments, then the excess arguments are appended to the
+   * end of the message. No attempt is made to format the arguments.
+   * See {@link Messages#format(String, Object...)} for more details.
+   *
+   * @param <R> the expected type of the result
+   * @param value  the potentially null value
+   * @param reason  the reason for the failure
+   * @param message  a message explaining the failure, uses "{}" for inserting {@code messageArgs}
+   * @param messageArgs  the arguments for the message
+   * @return a success result if the value is non-null, else a failure result
+   */
+  public static <R> Result<R> ofOptional(
+      Optional<R> value,
+      FailureReason reason,
+      String message,
+      Object... messageArgs) {
+
+    return value
+        .map(Result::success)
+        .orElse(Result.failure(reason, message, messageArgs));
+  }
+
+  /**
+   * Returns a success result containing the value if present, else returns a failure result
+   * with a reason of {@link FailureReason#MISSING_DATA} and message to say an unexpected empty value was found.
+   *
+   * @param <R> the expected type of the result
+   * @param value  the potentially null value
+   * @return a success result if the value is non-null, else a failure result
+   */
+  public static <R> Result<R> ofOptional(Optional<R> value) {
+    return ofOptional(value, FailureReason.MISSING_DATA, "Found empty where a value was expected");
+  }
+
   //-------------------------------------------------------------------------
   /**
    * Checks if all the results are successful.
@@ -632,8 +676,61 @@ public final class Result<T>
     }
   }
 
+  /**
+   * Returns a collector that can be used to create a collected {@link Result}
+   * from a stream of {@link Result} instances, using the provided collector.
+   *
+   * @param <T> the type of the success value in the {@link Result}
+   * @param <R> the type of the collection returned by the collector
+   * @param collector the collector to combine the results
+   * @return a {@link Collector}
+   */
+  public static <T, R> Collector<Result<? extends T>, ?, Result<R>> toCombinedResult(Collector<T, ?, R> collector) {
+    return Collector.of(
+        () -> new Result.StreamBuilder<>(collector),
+        StreamBuilder::add,
+        StreamBuilder::combine,
+        StreamBuilder::build);
+  }
+
   private static <T> Stream<T> extractSuccesses(Iterable<? extends Result<T>> results) {
     return Guavate.stream(results).map(Result::getValue);
+  }
+
+  // mutable combined instance builder for use in stream collection
+  // using a single dedicated collector is more efficient than a reduction with multiple calls to combinedWith()
+  private static final class StreamBuilder<T, A, R> {
+
+    private final Collector<T, A, R> collector;
+    private final A collection;
+    private final ImmutableList.Builder<Failure> failures = ImmutableList.builder();
+
+    private StreamBuilder(Collector<T, A, R> collector) {
+      this.collector = collector;
+      this.collection = collector.supplier().get();
+    }
+
+    private void add(Result<? extends T> item) {
+      item.ifSuccess(value -> collector.accumulator().accept(collection, value));
+      item.ifFailure(failures::add);
+    }
+
+    private StreamBuilder<T, A, R> combine(Result.StreamBuilder<T, A, R> builder) {
+      collector.combiner().apply(collection, builder.collection);
+      failures.addAll(builder.failures.build());
+      return this;
+    }
+
+    private Result<R> build() {
+      List<FailureItem> failureItems = failures.build().stream()
+          .flatMap(failure -> failure.getItems().stream())
+          .collect(toImmutableList());
+      if (failureItems.isEmpty()) {
+        return success(collector.finisher().apply(collection));
+      } else {
+        return failure(Failure.of(failureItems));
+      }
+    }
   }
 
   //-------------------------------------------------------------------------

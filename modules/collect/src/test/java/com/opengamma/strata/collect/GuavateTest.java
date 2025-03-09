@@ -54,6 +54,7 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSetMultimap;
 import com.google.common.collect.ImmutableSortedMap;
 import com.google.common.collect.ImmutableSortedSet;
+import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Ordering;
 import com.opengamma.strata.collect.tuple.ObjIntPair;
 import com.opengamma.strata.collect.tuple.Pair;
@@ -159,6 +160,15 @@ public class GuavateTest {
 
   //-------------------------------------------------------------------------
   @Test
+  public void test_combineListMultimaps() {
+    ListMultimap<String, String> listMultimap1 = ImmutableListMultimap.of("a", "one", "b", "two", "a", "three");
+    ListMultimap<String, String> listMultimap2 = ImmutableListMultimap.of("a", "four", "b", "five");
+    ListMultimap<String, String> test = Guavate.combineListMultimaps(listMultimap1, listMultimap2);
+    assertThat(test).isEqualTo(ImmutableListMultimap.of("a", "one", "b", "two", "a", "three", "a", "four", "b", "five"));
+  }
+
+  //-------------------------------------------------------------------------
+  @Test
   public void test_tryCatchToOptional() {
     assertThat(Guavate.tryCatchToOptional(() -> LocalDate.parse("2020-06-01"))).hasValue(LocalDate.of(2020, 6, 1));
     assertThat(Guavate.tryCatchToOptional(() -> null)).isEmpty();
@@ -224,9 +234,17 @@ public class GuavateTest {
   //-------------------------------------------------------------------------
   @Test
   public void test_first() {
-    assertThat(Guavate.first(ImmutableSet.of())).isEqualTo(Optional.empty());
+    assertThat(Guavate.first(ImmutableSet.of())).isEmpty();
     assertThat(Guavate.first(ImmutableSet.of("a"))).hasValue("a");
     assertThat(Guavate.first(ImmutableSet.of("a", "b"))).hasValue("a");
+  }
+
+  //-------------------------------------------------------------------------
+  @Test
+  public void test_only() {
+    assertThat(Guavate.only(ImmutableSet.of())).isEmpty();
+    assertThat(Guavate.only(ImmutableSet.of("a"))).hasValue("a");
+    assertThat(Guavate.only(ImmutableSet.of("a", "b"))).isEmpty();
   }
 
   //-------------------------------------------------------------------------
@@ -416,6 +434,17 @@ public class GuavateTest {
     assertThatIllegalArgumentException().isThrownBy(() -> Stream.of("a", "b").reduce(Guavate.ensureOnlyOne()));
   }
 
+  @Test
+  public void test_ensureOnlyOne_withCustomMessage() {
+    String message = "Expected one letter but found multiple for date {}";
+    LocalDate arg = LocalDate.of(2024, 4, 24);
+    assertThat(Stream.empty().reduce(Guavate.ensureOnlyOne(message, arg))).isEqualTo(Optional.empty());
+    assertThat(Stream.of("a").reduce(Guavate.ensureOnlyOne(message, arg))).isEqualTo(Optional.of("a"));
+    assertThatIllegalArgumentException().isThrownBy(() -> Stream.of("a", "b")
+            .reduce(Guavate.ensureOnlyOne(message, arg)))
+        .withMessage(Messages.format(message, arg));
+  }
+
   //-------------------------------------------------------------------------
   @Test
   public void test_casting() {
@@ -454,6 +483,16 @@ public class GuavateTest {
         .isEqualTo(Optional.empty());
     assertThatIllegalArgumentException().isThrownBy(() -> list.stream().collect(Guavate.toOptional()));
     assertThatNullPointerException().isThrownBy(() -> Stream.of((String[]) null).collect(Guavate.toOptional()));
+  }
+
+  //-------------------------------------------------------------------------
+  @Test
+  public void test_toOnly() {
+    List<String> list = Arrays.asList("a", "ab");
+    assertThat(list.stream().filter(s -> s.length() == 1).collect(Guavate.toOnly())).hasValue("a");
+    assertThat(list.stream().filter(s -> s.length() == 0).collect(Guavate.toOnly())).isEmpty();
+    assertThat(list.stream().collect(Guavate.toOnly())).isEmpty();
+    assertThatNullPointerException().isThrownBy(() -> Stream.of((String[]) null).collect(Guavate.toOnly()));
   }
 
   //-------------------------------------------------------------------------
